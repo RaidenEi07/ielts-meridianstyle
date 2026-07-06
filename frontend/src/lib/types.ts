@@ -407,6 +407,20 @@ export interface BulkImportResult {
   errors: string[];
 }
 
+// ---- Xuất/nhập ngân hàng câu hỏi theo danh mục ----
+
+export interface ImportSummary {
+  categoriesCreated: number;
+  categoriesReused: number;
+  passagesCreated: number;
+  passagesReused: number;
+  tagsCreated: number;
+  tagsReused: number;
+  questionsCreated: number;
+  questionsSkippedDuplicate: number;
+  warnings: string[];
+}
+
 // ---- Public portal (Giai đoạn 7) ----
 
 export interface TeacherPublic {

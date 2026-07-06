@@ -1,12 +1,18 @@
 "use client";
 
+import { Download, Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, questionBankApi } from "@/lib/api";
 import { TYPE_META } from "@/lib/questionTypes";
-import type { QuestionCategoryNode, QuestionDetail, QuestionSummary } from "@/lib/types";
+import type {
+  ImportSummary,
+  QuestionCategoryNode,
+  QuestionDetail,
+  QuestionSummary,
+} from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { PreviewModal } from "./PreviewModal";
@@ -22,6 +28,9 @@ export default function QuestionBankPage() {
   const [activeCat, setActiveCat] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<QuestionDetail | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState<ImportSummary | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const confirm = useConfirm();
 
   useEffect(() => {
@@ -89,6 +98,43 @@ export default function QuestionBankPage() {
     }
   }
 
+  async function exportCategory(id: number, name: string) {
+    if (!accessToken) return;
+    setError(null);
+    try {
+      const blob = await questionBankApi.exportCategory(accessToken, id);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `question-bank-${name.trim().replace(/\s+/g, "-").toLowerCase()}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Xuất câu hỏi thất bại");
+    }
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !accessToken) return;
+    setError(null);
+    setImportResult(null);
+    setImporting(true);
+    try {
+      const result = await questionBankApi.importBundle(accessToken, file);
+      setImportResult(result);
+      refresh();
+      questionBankApi.categories(accessToken).then(setCategories).catch(() => {});
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Nhập câu hỏi thất bại");
+    } finally {
+      setImporting(false);
+    }
+  }
+
   if (!hydrated || !ready) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
   }
@@ -131,6 +177,7 @@ export default function QuestionBankPage() {
                   label={c.name}
                   indent={c.parentId !== null}
                   onClick={() => setActiveCat(c.id)}
+                  onExport={() => exportCategory(c.id, c.name)}
                 />
               ))}
             </ul>
@@ -141,14 +188,73 @@ export default function QuestionBankPage() {
         <main>
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-xl font-bold">Câu hỏi ({questions.length})</h1>
-            <Link
-              href="/teacher/questions/new"
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
-            >
-              + Tạo câu hỏi mới
-            </Link>
+            <div className="flex items-center gap-2">
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".zip"
+                className="hidden"
+                onChange={handleImportFile}
+              />
+              <button
+                type="button"
+                disabled={importing}
+                onClick={() => importInputRef.current?.click()}
+                className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-text disabled:opacity-60"
+              >
+                <Upload className="h-4 w-4" />
+                {importing ? "Đang nhập…" : "Nhập"}
+              </button>
+              <Link
+                href="/teacher/questions/new"
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+              >
+                + Tạo câu hỏi mới
+              </Link>
+            </div>
           </div>
           {error && <p className="mb-3 text-sm text-red">{error}</p>}
+          {importResult && (
+            <div className="mb-4 rounded-card border border-border bg-surface p-4 text-sm">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="font-semibold">Kết quả nhập</h3>
+                <button
+                  type="button"
+                  onClick={() => setImportResult(null)}
+                  className="text-faint hover:text-text"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <ul className="space-y-1 text-muted">
+                <li>
+                  Danh mục: {importResult.categoriesCreated} tạo mới,{" "}
+                  {importResult.categoriesReused} tái sử dụng
+                </li>
+                <li>
+                  Passage: {importResult.passagesCreated} tạo mới,{" "}
+                  {importResult.passagesReused} tái sử dụng
+                </li>
+                <li>
+                  Tag: {importResult.tagsCreated} tạo mới, {importResult.tagsReused} tái sử dụng
+                </li>
+                <li>
+                  Câu hỏi: {importResult.questionsCreated} tạo mới,{" "}
+                  {importResult.questionsSkippedDuplicate} bỏ qua (trùng tên)
+                </li>
+              </ul>
+              {importResult.warnings.length > 0 && (
+                <div className="mt-2 border-t border-border pt-2">
+                  <p className="mb-1 font-medium text-red">Cảnh báo:</p>
+                  <ul className="list-inside list-disc space-y-0.5 text-red">
+                    {importResult.warnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
           <div className="overflow-hidden rounded-card border border-border bg-surface">
             <table className="w-full text-left text-sm">
               <thead className="bg-soft text-muted">
@@ -251,14 +357,16 @@ function CatItem({
   label,
   indent,
   onClick,
+  onExport,
 }: {
   active: boolean;
   label: string;
   indent?: boolean;
   onClick: () => void;
+  onExport?: () => void;
 }) {
   return (
-    <li>
+    <li className="group flex items-center">
       <button
         type="button"
         onClick={onClick}
@@ -268,6 +376,19 @@ function CatItem({
       >
         {label}
       </button>
+      {onExport && (
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onExport();
+          }}
+          title="Xuất câu hỏi của danh mục này ra file .zip"
+          className="shrink-0 rounded-lg p-1.5 text-faint opacity-0 transition-opacity hover:bg-soft hover:text-primary group-hover:opacity-100"
+        >
+          <Download className="h-3.5 w-3.5" />
+        </button>
+      )}
     </li>
   );
 }

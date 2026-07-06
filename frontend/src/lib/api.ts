@@ -12,6 +12,7 @@ import type {
   Enrollment,
   MeResponse,
   GradebookRow,
+  ImportSummary,
   PassageSummary,
   PublicStats,
   QuestionCategoryNode,
@@ -457,7 +458,78 @@ export const questionBankApi = {
       method: "POST",
       token,
     }),
+
+  exportCategory: (token: string, categoryId: number) =>
+    exportCategoryZip(token, categoryId),
+
+  importBundle: (token: string, file: File) => importBundleZip(token, file),
 };
+
+// ---- Xuất/nhập ngân hàng câu hỏi (file .zip: manifest.json + ảnh/audio đính kèm) ----
+
+async function exportCategoryZip(
+  token: string,
+  categoryId: number,
+  _retried = false,
+): Promise<Blob> {
+  let res: Response;
+  try {
+    res = await fetch(
+      `${API_BASE_URL}/api/admin/question-bank/categories/${categoryId}/export`,
+      { headers: { Authorization: `Bearer ${token}` } },
+    );
+  } catch {
+    throw new ApiError(0, "Không thể kết nối tới máy chủ. Backend đã chạy chưa?");
+  }
+
+  if (res.status === 401 && !_retried && tokenRefresher) {
+    const fresh = await tokenRefresher();
+    if (fresh) return exportCategoryZip(fresh, categoryId, true);
+  }
+
+  if (!res.ok) {
+    const data = await res.json().catch(() => null);
+    const message =
+      (data && typeof data.message === "string" && data.message) ||
+      `Xuất câu hỏi thất bại (${res.status})`;
+    throw new ApiError(res.status, message);
+  }
+  return res.blob();
+}
+
+async function importBundleZip(
+  token: string,
+  file: File,
+  _retried = false,
+): Promise<ImportSummary> {
+  const form = new FormData();
+  form.append("file", file);
+
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE_URL}/api/admin/question-bank/import`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+  } catch {
+    throw new ApiError(0, "Không thể kết nối tới máy chủ. Backend đã chạy chưa?");
+  }
+
+  if (res.status === 401 && !_retried && tokenRefresher) {
+    const fresh = await tokenRefresher();
+    if (fresh) return importBundleZip(fresh, file, true);
+  }
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const message =
+      (data && typeof data.message === "string" && data.message) ||
+      `Nhập câu hỏi thất bại (${res.status})`;
+    throw new ApiError(res.status, message, data?.details);
+  }
+  return data as ImportSummary;
+}
 
 // ---- Quiz player ----
 

@@ -68,12 +68,20 @@ public class MediaService {
     }
 
     private String store(MultipartFile file, String subDir, String extension) {
+        try {
+            return storeRawBytes(file.getBytes(), subDir, extension);
+        } catch (IOException e) {
+            throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Lưu file thất bại");
+        }
+    }
+
+    /** Ghi bytes thô (vd. đọc từ file zip import) xuống uploads/{subDir}/, trả về URL công khai. */
+    public String storeRawBytes(byte[] bytes, String subDir, String extension) {
         String filename = UUID.randomUUID() + extension;
         try {
             Path dir = Path.of(properties.getUploads().getDir(), subDir);
             Files.createDirectories(dir);
-            Path target = dir.resolve(filename);
-            file.transferTo(target);
+            Files.write(dir.resolve(filename), bytes);
         } catch (IOException e) {
             throw new ApiException(HttpStatus.INTERNAL_SERVER_ERROR, "Lưu file thất bại");
         }

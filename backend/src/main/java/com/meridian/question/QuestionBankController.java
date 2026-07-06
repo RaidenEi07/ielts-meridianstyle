@@ -1,5 +1,6 @@
 package com.meridian.question;
 
+import com.meridian.question.dto.ImportSummaryDto;
 import com.meridian.question.dto.PassageDto;
 import com.meridian.question.dto.QuestionBankRequests;
 import com.meridian.question.dto.QuestionCategoryDto;
@@ -12,7 +13,9 @@ import com.meridian.security.CurrentUserProvider;
 import jakarta.validation.Valid;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,6 +26,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 /**
  * Ngân hàng câu hỏi (Giai đoạn 3). Mọi endpoint yêu cầu capability
@@ -36,14 +40,16 @@ public class QuestionBankController {
 
     private final QuestionTaxonomyService taxonomyService;
     private final QuestionService questionService;
+    private final QuestionBankExportService exportService;
     private final CurrentUserProvider currentUser;
     private final PermissionService permissionService;
 
     public QuestionBankController(QuestionTaxonomyService taxonomyService,
-            QuestionService questionService, CurrentUserProvider currentUser,
-            PermissionService permissionService) {
+            QuestionService questionService, QuestionBankExportService exportService,
+            CurrentUserProvider currentUser, PermissionService permissionService) {
         this.taxonomyService = taxonomyService;
         this.questionService = questionService;
+        this.exportService = exportService;
         this.currentUser = currentUser;
         this.permissionService = permissionService;
     }
@@ -165,5 +171,24 @@ public class QuestionBankController {
         UUID uid = guard();
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(questionService.duplicateQuestion(uid, id));
+    }
+
+    // ---- Xuất/Nhập theo danh mục ----
+
+    @GetMapping("/categories/{id}/export")
+    public ResponseEntity<byte[]> exportCategory(@PathVariable Long id) {
+        guard();
+        byte[] zip = exportService.exportCategory(id);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"question-bank-" + id + ".zip\"")
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .body(zip);
+    }
+
+    @PostMapping("/import")
+    public ImportSummaryDto importBundle(@RequestParam("file") MultipartFile file) {
+        UUID uid = guard();
+        return exportService.importBundle(uid, file);
     }
 }
