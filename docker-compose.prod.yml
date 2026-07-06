@@ -1,0 +1,70 @@
+# Full-stack production compose: PostgreSQL + Spring Boot backend + Next.js frontend.
+# Dev-only Postgres (docker-compose.yml) is separate; this file builds and runs
+# every service from source via each app's Dockerfile.
+#
+# Usage:
+#   cp .env.example .env   # rồi chỉnh JWT_SECRET, mật khẩu cho production
+#   docker compose -f docker-compose.prod.yml up -d --build
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: meridian-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-meridian}
+      POSTGRES_USER: ${DB_USER:-meridian}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-meridian}
+    volumes:
+      - meridian_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-meridian} -d ${DB_NAME:-meridian}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+    container_name: meridian-backend
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_URL: jdbc:postgresql://postgres:5432/${DB_NAME:-meridian}
+      DB_USER: ${DB_USER:-meridian}
+      DB_PASSWORD: ${DB_PASSWORD:-meridian}
+      SERVER_PORT: 8090
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required (min 32 chars)}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-900}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-1209600}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:3100}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@meridian.edu.vn}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@123}
+    ports:
+      - "${BACKEND_PORT:-8090}:8090"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/config/public"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8090}
+    container_name: meridian-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8090}
+    ports:
+      - "${FRONTEND_PORT:-3100}:3100"
+
+volumes:
+  meridian_pgdata:

@@ -1,0 +1,25 @@
+# Env
+.env
+.env.local
+
+# Build output
+backend/target/
+backend/uploads/*
+!backend/uploads/.gitkeep
+frontend/.next/
+frontend/node_modules/
+frontend/*.tsbuildinfo
+frontend/next-env.d.ts
+
+# OS / IDE
+.DS_Store
+.idea/
+*.iml
+
+# Logs
+*.log
+npm-debug.log*
+
+# Claude Code local/session state (per-developer, not shared)
+.claude/settings.local.json
+.claude/*.lock
