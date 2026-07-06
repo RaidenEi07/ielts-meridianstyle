@@ -16,7 +16,8 @@ RUN ./mvnw -B -DskipTests package && \
 # ---------- Runtime stage ----------
 FROM eclipse-temurin:17-jre
 WORKDIR /app
-RUN useradd --system --create-home meridian
+RUN useradd --system --create-home meridian && \
+    mkdir -p /app/uploads && chown -R meridian:meridian /app
 USER meridian
 
 COPY --from=build --chown=meridian:meridian /app/app.jar app.jar

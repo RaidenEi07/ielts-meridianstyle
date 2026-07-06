@@ -43,8 +43,11 @@ services:
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@meridian.edu.vn}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin@123}
+      UPLOADS_PUBLIC_BASE_URL: ${UPLOADS_PUBLIC_BASE_URL:-http://localhost:8090}
     ports:
       - "${BACKEND_PORT:-8090}:8090"
+    volumes:
+      - meridian_uploads:/app/uploads
     healthcheck:
       test: ["CMD", "wget", "-qO-", "http://localhost:8090/api/config/public"]
       interval: 10s
@@ -68,3 +71,4 @@ services:
 
 volumes:
   meridian_pgdata:
+  meridian_uploads:
