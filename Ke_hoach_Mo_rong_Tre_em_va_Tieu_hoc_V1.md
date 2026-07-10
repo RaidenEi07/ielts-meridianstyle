@@ -2,7 +2,7 @@
 
 **Dựa trên:** tài liệu "YÊU CẦU SẢN PHẨM — Nền tảng học tiếng Anh qua video, nhóm Trẻ em & Tiểu học" (`Mo ta web.docx`).
 **Bối cảnh:** đây là hướng mở rộng tiếp theo của dự án **Anh ngữ Meridian**, cộng thêm vào (không thay thế) nền tảng IELTS/học sinh-sinh viên hiện có (Phase 1–9 đã hoàn thành). Đánh số giai đoạn trong tài liệu này tiếp nối từ Phase 9 hiện tại.
-**Tài liệu liên quan:** [Tom_tat_Kha_thi_Mo_rong_Tre_em_Tieu_hoc.md](./Tom_tat_Kha_thi_Mo_rong_Tre_em_Tieu_hoc.md) (bản rút gọn cho đội khác) · [Tom_tat_Chi_phi_va_Deadline_Mo_rong_Tre_em_Tieu_hoc.md](./Tom_tat_Chi_phi_va_Deadline_Mo_rong_Tre_em_Tieu_hoc.md) (giá thành + deadline dự tính) · [Khung_Noi_dung_Phat_am_va_Game.md](./Khung_Noi_dung_Phat_am_va_Game.md) (khung chuẩn bị nội dung cho Phase 15/17/19, dùng song song với lúc code) · [Ghi_chu_Cai_tien_IELTS_theo_Dang_bai.md](./Ghi_chu_Cai_tien_IELTS_theo_Dang_bai.md) (ghi chú riêng, chưa ưu tiên).
+**Tài liệu liên quan:** [Tom_tat_Kha_thi_Mo_rong_Tre_em_Tieu_hoc.md](./Tom_tat_Kha_thi_Mo_rong_Tre_em_Tieu_hoc.md) (bản rút gọn cho đội khác) · [Tom_tat_Chi_phi_va_Deadline_Mo_rong_Tre_em_Tieu_hoc.md](./Tom_tat_Chi_phi_va_Deadline_Mo_rong_Tre_em_Tieu_hoc.md) (giá thành + deadline dự tính) · [So_do_Tong_Quat_Nghiep_Vu.md](./So_do_Tong_Quat_Nghiep_Vu.md) (sơ đồ luồng cho BA/phi kỹ thuật) · [So_do_Ky_thuat.md](./So_do_Ky_thuat.md) (sơ đồ kiến trúc/dữ liệu cho đội kỹ thuật) · [Khung_Noi_dung_Phat_am_va_Game.md](./Khung_Noi_dung_Phat_am_va_Game.md) (khung chuẩn bị nội dung cho Phase 15/17/19, dùng song song với lúc code) · [Ghi_chu_Cai_tien_IELTS_theo_Dang_bai.md](./Ghi_chu_Cai_tien_IELTS_theo_Dang_bai.md) (ghi chú riêng, chưa ưu tiên).
 
 ---
 
