@@ -73,7 +73,7 @@ flowchart TD
 
     subgraph Future["🔜 Mở rộng"]
         FU1["Khu vực phụ huynh"]
-        FU2["Trang \"Vào học\" chọn nhóm/khóa"]
+        FU2["Trang Vào học — chọn nhóm/khóa"]
         FU3["Màn hình 1 buổi học"]
         FU4["Khu vực trò chơi"]
     end
