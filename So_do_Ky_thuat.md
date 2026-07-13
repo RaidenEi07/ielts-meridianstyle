@@ -84,7 +84,7 @@ flowchart TD
 
 ---
 
-## 3. Mô hình dữ liệu (nhóm theo migration Flyway, 16 migration hiện có + kế hoạch)
+## 3. Mô hình dữ liệu (nhóm theo migration Flyway, 17 migration hiện có + kế hoạch)
 
 ```mermaid
 flowchart TB
@@ -112,8 +112,11 @@ flowchart TB
     subgraph M8["V14"]
         T8["teacher_student_assignments"]
     end
-    subgraph M9["🔜 Kế hoạch"]
-        T9["parent_child_profiles,<br/>lessons, lesson_progress,<br/>points_ledger, badges"]
+    subgraph M9["✅ V17 (MVP tháng 7, đã triển khai)"]
+        T9["question_categories.audience,<br/>course_categories.audience_group,<br/>course_sections.video_url"]
+    end
+    subgraph M10["🔜 V18+ kế hoạch (v2 — xem ERD chi tiết bên dưới)"]
+        T10["parent_child_profiles,<br/>lesson_progress,<br/>points_ledger, badges, user_badges"]
     end
 
     T1 --> T2
@@ -122,11 +125,83 @@ flowchart TB
     T3 --> T4
     T4 --> T5
     T1 --> T8
-    T1 -.mẫu hình.-> T9
-    T2 -.tái dùng.-> T9
+    T3 -.mở rộng.-> T9
+    T2 -.mở rộng.-> T9
+    T1 -.mẫu hình.-> T10
+    T2 -.tái dùng.-> T10
 ```
 
 *V10–V13, V15–V16 là migration chỉnh sửa nhỏ (đổi đăng nhập sang username, thêm sort order, thêm trường giải thích câu hỏi, thêm cấu hình trang chủ) — không tạo module dữ liệu mới nên không tách riêng.*
+
+### 3.1. ERD chi tiết — các bảng còn lại cho v2 (Phase 11 hồ sơ phụ huynh, Phase 19 game hóa)
+
+*Vẽ theo Task #4 của Phase 10 ([Ke_hoach_Mo_rong_Tre_em_va_Tieu_hoc_V1.md](./Ke_hoach_Mo_rong_Tre_em_va_Tieu_hoc_V1.md)). Không vẽ lại `lesson`/`lesson_progress` riêng cho Phase 12 — xem ghi chú "Quyết định kiến trúc" ngay dưới đây, lý do không cần bảng `lesson` mới.*
+
+```mermaid
+erDiagram
+    users ||--o{ parent_child_profiles : "là phụ huynh (parent_id)"
+    users ||--o{ parent_child_profiles : "là hồ sơ con (child_id)"
+    users ||--o{ lesson_progress : "hoàn thành (user_id)"
+    course_sections ||--o{ lesson_progress : "được đánh dấu qua (section_id)"
+    users ||--o{ points_ledger : "tích/tiêu điểm (user_id)"
+    users ||--o{ user_badges : "đạt được (user_id)"
+    badges ||--o{ user_badges : "trao qua (badge_id)"
+
+    users {
+        uuid id PK
+        string username
+    }
+    course_sections {
+        bigint id PK
+        bigint course_id FK
+        string video_url "đã có từ V17 (MVP)"
+    }
+    parent_child_profiles {
+        bigint id PK
+        uuid parent_id FK
+        uuid child_id FK
+        timestamp created_at
+    }
+    lesson_progress {
+        bigint id PK
+        uuid user_id FK
+        bigint section_id FK
+        timestamp completed_at
+        timestamp created_at
+    }
+    points_ledger {
+        bigint id PK
+        uuid user_id FK
+        int delta "cộng/trừ điểm, âm khi đổi thưởng"
+        string reason "vd GAME_MEMORY_WIN, REDEEM_BADGE"
+        string reference_type "nullable, vd game_session"
+        bigint reference_id "nullable"
+        timestamp created_at
+    }
+    badges {
+        bigint id PK
+        string code UK
+        string name
+        text description
+        string icon_url
+        int points_cost "nullable, null nếu không đổi bằng điểm"
+        timestamp created_at
+    }
+    user_badges {
+        bigint id PK
+        uuid user_id FK
+        bigint badge_id FK
+        timestamp earned_at
+    }
+```
+
+**Quyết định kiến trúc — không tạo bảng `lesson` mới cho Phase 12:** kế hoạch gốc đề xuất 1 entity `Lesson` riêng dưới `CourseSection`. Nhưng MVP tháng 7 (đã triển khai production) đã dùng thẳng `CourseSection` làm đơn vị "bài học" (thêm cột `video_url` trực tiếp, 1 section = 1 bài). Vì thực tế đã chạy đúng mô hình này, v2 **tiếp tục dùng `CourseSection` làm bài học**, không tạo `Lesson` trùng lặp — chỉ thêm bảng `lesson_progress` (mô phỏng `quiz_attempts`) để lưu trạng thái hoàn thành + tính logic mở khóa tuần tự (section N mở khi có `lesson_progress` cho section N-1, tính lúc truy vấn — không lưu cờ khóa/mở riêng để tránh dữ liệu cũ sai lệch).
+
+**Điểm cần chốt khi code Phase 12:** thời điểm ghi `lesson_progress.completed_at` — đề xuất: tự động đánh dấu hoàn thành ngay khi học sinh **nộp bài luyện tập** (`QuizAttempt` của quiz gắn với section đó chuyển sang `SUBMITTED`/`GRADED`, không yêu cầu điểm tối thiểu vì đây là luyện tập chứ không phải bài thi). Với bài chỉ có video không có luyện tập, cần thêm 1 nút "Hoàn thành" gọi API đánh dấu trực tiếp.
+
+**Không tạo bảng leaderboard riêng:** tính bảng xếp hạng bằng truy vấn `SUM(delta) GROUP BY user_id` trên `points_ledger` tại thời điểm đọc, tránh đồng bộ 2 nguồn dữ liệu. Nếu sau này số liệu lớn ảnh hưởng hiệu năng mới cân nhắc thêm bảng tổng hợp/cache.
+
+**Đối chiếu không xung đột schema hiện có (Task #5 Phase 10):** `parent_child_profiles`/`lesson_progress`/`points_ledger`/`badges`/`user_badges` là tên bảng mới, không trùng bảng nào trong 17 migration hiện có. `parent_id`/`child_id`/`user_id` đều FK vào `users.id` (UUID) theo đúng kiểu khóa chính hiện tại — không cần đổi kiểu dữ liệu ở bảng `users`.
 
 ---
 
