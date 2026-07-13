@@ -3,6 +3,8 @@ package com.meridian.catalog;
 import com.meridian.rbac.Context;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -46,6 +48,10 @@ public class CourseCategory {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "exam_template_id")
     private ExamTemplate examTemplate;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "audience_group", nullable = false, length = 20)
+    private CourseAudienceGroup audienceGroup = CourseAudienceGroup.IELTS;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "context_id")

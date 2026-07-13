@@ -63,7 +63,7 @@ public class QuestionBankDataInitializer implements CommandLineRunner {
 
         QuestionCategoryDto cat = taxonomy.createCategory(
                 new QuestionBankRequests.CreateCategory(
-                        "IELTS Reading - Academic", null, "Câu hỏi mẫu cho Reading"));
+                        "IELTS Reading - Academic", null, "Câu hỏi mẫu cho Reading", null));
         PassageDto passage = taxonomy.createPassage(
                 new QuestionBankRequests.UpsertPassage(
                         "The History of Tea",

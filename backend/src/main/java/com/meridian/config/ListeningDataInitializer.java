@@ -85,7 +85,7 @@ public class ListeningDataInitializer implements CommandLineRunner {
         QuestionCategoryDto category = taxonomyService.createCategory(
                 new QuestionBankRequests.CreateCategory(
                         "IELTS Listening - Academic", null,
-                        "Câu hỏi Note Completion cho Listening"));
+                        "Câu hỏi Note Completion cho Listening", null));
 
         PassageDto passage = taxonomyService.createPassage(
                 new QuestionBankRequests.UpsertPassage(

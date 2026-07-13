@@ -8,5 +8,7 @@ public interface QuestionCategoryRepository extends JpaRepository<QuestionCatego
 
     List<QuestionCategory> findAllByOrderByNameAsc();
 
+    List<QuestionCategory> findAllByAudienceOrderByNameAsc(Audience audience);
+
     Optional<QuestionCategory> findByNameIgnoreCase(String name);
 }

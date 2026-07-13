@@ -4,9 +4,11 @@ import type {
   AppNotification,
   AttemptPlayer,
   AttemptResult,
+  Audience,
   AuthResponse,
   BulkImportResult,
   Category,
+  CourseAudienceGroup,
   CourseDetail,
   CourseSummary,
   Enrollment,
@@ -128,10 +130,13 @@ export const authApi = {
 export const catalogApi = {
   categories: () => apiFetch<Category[]>("/api/catalog/categories"),
 
-  courses: (categoryId?: number) =>
-    apiFetch<CourseSummary[]>(
-      categoryId ? `/api/catalog/courses?categoryId=${categoryId}` : "/api/catalog/courses",
-    ),
+  courses: (params?: { categoryId?: number; audienceGroup?: CourseAudienceGroup }) => {
+    const q = new URLSearchParams();
+    if (params?.categoryId) q.set("categoryId", String(params.categoryId));
+    if (params?.audienceGroup) q.set("audienceGroup", params.audienceGroup);
+    const qs = q.toString();
+    return apiFetch<CourseSummary[]>(`/api/catalog/courses${qs ? `?${qs}` : ""}`);
+  },
 
   course: (id: number) => apiFetch<CourseDetail>(`/api/catalog/courses/${id}`),
 
@@ -159,7 +164,13 @@ export const portalApi = {
 export const catalogAdminApi = {
   createCategory: (
     token: string,
-    req: { name: string; slug?: string; description?: string; examTemplateCode?: string },
+    req: {
+      name: string;
+      slug?: string;
+      description?: string;
+      examTemplateCode?: string;
+      audienceGroup?: CourseAudienceGroup;
+    },
   ) =>
     apiFetch<Category>("/api/admin/catalog/categories", {
       method: "POST",
@@ -170,7 +181,12 @@ export const catalogAdminApi = {
   updateCategory: (
     token: string,
     id: number,
-    req: { name?: string; description?: string; examTemplateCode?: string },
+    req: {
+      name?: string;
+      description?: string;
+      examTemplateCode?: string;
+      audienceGroup?: CourseAudienceGroup;
+    },
   ) =>
     apiFetch<Category>(`/api/admin/catalog/categories/${id}`, {
       method: "PUT",
@@ -228,14 +244,22 @@ export const catalogAdminApi = {
   deleteCourse: (token: string, id: number) =>
     apiFetch<void>(`/api/admin/catalog/courses/${id}`, { method: "DELETE", token }),
 
-  createSection: (token: string, courseId: number, req: { title: string; sortOrder?: number }) =>
+  createSection: (
+    token: string,
+    courseId: number,
+    req: { title: string; sortOrder?: number; videoUrl?: string },
+  ) =>
     apiFetch<Section>(`/api/admin/catalog/courses/${courseId}/sections`, {
       method: "POST",
       body: req,
       token,
     }),
 
-  updateSection: (token: string, id: number, req: { title?: string; sortOrder?: number }) =>
+  updateSection: (
+    token: string,
+    id: number,
+    req: { title?: string; sortOrder?: number; videoUrl?: string },
+  ) =>
     apiFetch<Section>(`/api/admin/catalog/sections/${id}`, {
       method: "PUT",
       body: req,
@@ -372,8 +396,13 @@ export const enrollmentApi = {
 // ---- Question bank (staff, cần question:manage) ----
 
 export const questionBankApi = {
-  categories: (token: string) =>
-    apiFetch<QuestionCategoryNode[]>("/api/admin/question-bank/categories", { token }),
+  categories: (token: string, audience?: Audience) =>
+    apiFetch<QuestionCategoryNode[]>(
+      audience
+        ? `/api/admin/question-bank/categories?audience=${audience}`
+        : "/api/admin/question-bank/categories",
+      { token },
+    ),
 
   questions: (token: string, categoryId?: number) =>
     apiFetch<QuestionSummary[]>(
@@ -415,7 +444,7 @@ export const questionBankApi = {
 
   createCategory: (
     token: string,
-    req: { name: string; parentId?: number; description?: string },
+    req: { name: string; parentId?: number; description?: string; audience?: Audience },
   ) =>
     apiFetch<QuestionCategoryNode>("/api/admin/question-bank/categories", {
       method: "POST",
@@ -781,4 +810,6 @@ export const mediaApi = {
     uploadMedia("/api/admin/media/images", "Tải ảnh thất bại", token, file),
   uploadAudio: (token: string, file: File) =>
     uploadMedia("/api/admin/media/audio", "Tải audio thất bại", token, file),
+  uploadVideo: (token: string, file: File) =>
+    uploadMedia("/api/admin/media/videos", "Tải video thất bại", token, file),
 };

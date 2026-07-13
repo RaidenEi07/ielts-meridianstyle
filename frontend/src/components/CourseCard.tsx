@@ -2,10 +2,10 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import type { CourseSummary } from "@/lib/types";
 
-export function CourseCard({ course }: { course: CourseSummary }) {
+export function CourseCard({ course, href }: { course: CourseSummary; href?: string }) {
   return (
     <Link
-      href={`/courses/${course.id}`}
+      href={href ?? `/courses/${course.id}`}
       className="group flex flex-col overflow-hidden rounded-[18px] border border-border bg-surface transition-shadow hover:shadow-[0_12px_36px_-14px_rgba(38,33,27,.13)]"
     >
       {/* Ảnh bìa (ảnh đại diện, hoặc placeholder hatch nếu chưa có) */}

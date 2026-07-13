@@ -37,8 +37,9 @@ public class CatalogPublicController {
 
     @GetMapping("/courses")
     public List<CourseSummaryDto> courses(
-            @RequestParam(name = "categoryId", required = false) Long categoryId) {
-        return catalogService.listPublishedCourses(categoryId);
+            @RequestParam(name = "categoryId", required = false) Long categoryId,
+            @RequestParam(name = "audienceGroup", required = false) CourseAudienceGroup audienceGroup) {
+        return catalogService.listPublishedCourses(categoryId, audienceGroup);
     }
 
     @GetMapping("/courses/{id}")

@@ -33,11 +33,21 @@ public class QuestionTaxonomyService {
                 .map(QuestionCategoryDto::from).toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<QuestionCategoryDto> listCategories(Audience audience) {
+        if (audience == null) {
+            return listCategories();
+        }
+        return categoryRepository.findAllByAudienceOrderByNameAsc(audience).stream()
+                .map(QuestionCategoryDto::from).toList();
+    }
+
     @Transactional
     public QuestionCategoryDto createCategory(QuestionBankRequests.CreateCategory req) {
         QuestionCategory category = new QuestionCategory();
         category.setName(req.name());
         category.setDescription(req.description());
+        category.setAudience(req.audience() != null ? req.audience() : Audience.IELTS);
         if (req.parentId() != null) {
             category.setParent(categoryRepository.findById(req.parentId())
                     .orElseThrow(() -> ApiException.notFound("Không tìm thấy danh mục cha")));

@@ -15,6 +15,9 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     List<Course> findByCategoryIdAndStatusOrderByCreatedAtDesc(
             Long categoryId, CourseStatus status);
 
+    List<Course> findByCategory_AudienceGroupAndStatusOrderByCreatedAtDesc(
+            CourseAudienceGroup audienceGroup, CourseStatus status);
+
     List<Course> findByCategoryIdOrderByCreatedAtDesc(Long categoryId);
 
     List<Course> findAllByOrderByCreatedAtDesc();

@@ -2,6 +2,8 @@ package com.meridian.question;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -36,6 +38,10 @@ public class QuestionCategory {
 
     @Column(columnDefinition = "text")
     private String description;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Audience audience = Audience.IELTS;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

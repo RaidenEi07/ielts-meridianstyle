@@ -20,7 +20,7 @@ export default function CoursesPage() {
   useEffect(() => {
     setLoading(true);
     catalogApi
-      .courses(activeCategory ?? undefined)
+      .courses({ categoryId: activeCategory ?? undefined })
       .then(setCourses)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));

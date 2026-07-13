@@ -57,15 +57,15 @@ public class CatalogDataInitializer implements CommandLineRunner {
                 new CategoryRequests.Create("Luyện thi IELTS",
                         "luyen-thi-ielts",
                         "Khóa luyện thi IELTS theo chuẩn phòng thi máy (CDT).",
-                        "IELTS"));
+                        "IELTS", null));
         catalogService.createCategory(uid,
                 new CategoryRequests.Create("Tiếng Anh giao tiếp",
                         "tieng-anh-giao-tiep",
-                        "Phản xạ giao tiếp theo chủ đề thực tế.", null));
+                        "Phản xạ giao tiếp theo chủ đề thực tế.", null, null));
         catalogService.createCategory(uid,
                 new CategoryRequests.Create("Ngữ pháp nền tảng",
                         "ngu-phap-nen-tang",
-                        "Hệ thống ngữ pháp từ cơ bản đến nâng cao.", null));
+                        "Hệ thống ngữ pháp từ cơ bản đến nâng cao.", null, null));
 
         CourseDetailDto course = catalogService.createCourse(uid,
                 new CourseRequests.CreateCourse(
@@ -78,11 +78,11 @@ public class CatalogDataInitializer implements CommandLineRunner {
                         "PUBLISHED"));
 
         catalogService.createSection(uid, course.id(),
-                new CourseRequests.CreateSection("Tuần 1-4: Nền tảng & Listening", 1));
+                new CourseRequests.CreateSection("Tuần 1-4: Nền tảng & Listening", 1, null));
         catalogService.createSection(uid, course.id(),
-                new CourseRequests.CreateSection("Tuần 5-8: Reading & Writing Task 1", 2));
+                new CourseRequests.CreateSection("Tuần 5-8: Reading & Writing Task 1", 2, null));
         catalogService.createSection(uid, course.id(),
-                new CourseRequests.CreateSection("Tuần 9-12: Luyện đề & thi thử", 3));
+                new CourseRequests.CreateSection("Tuần 9-12: Luyện đề & thi thử", 3, null));
 
         log.info("Đã seed {} danh mục và khóa học mẫu", categoryRepository.count());
     }

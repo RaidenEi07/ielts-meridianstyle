@@ -39,6 +39,9 @@ public class CourseSection {
     @Column(name = "sort_order", nullable = false)
     private int sortOrder = 0;
 
+    @Column(name = "video_url", length = 500)
+    private String videoUrl;
+
     @Column(name = "deleted_at")
     private Instant deletedAt;
 

@@ -1,5 +1,6 @@
 package com.meridian.catalog.dto;
 
+import com.meridian.catalog.CourseAudienceGroup;
 import com.meridian.catalog.CourseCategory;
 
 public record CategoryDto(
@@ -8,7 +9,8 @@ public record CategoryDto(
         String slug,
         String description,
         ExamTemplateSummary examTemplate,
-        Long contextId) {
+        Long contextId,
+        CourseAudienceGroup audienceGroup) {
 
     public static CategoryDto from(CourseCategory c) {
         return new CategoryDto(
@@ -17,6 +19,7 @@ public record CategoryDto(
                 c.getSlug(),
                 c.getDescription(),
                 ExamTemplateSummary.from(c.getExamTemplate()),
-                c.getContext() != null ? c.getContext().getId() : null);
+                c.getContext() != null ? c.getContext().getId() : null,
+                c.getAudienceGroup());
     }
 }

@@ -37,6 +37,10 @@ export interface ExamTemplateSummary {
   name: string;
 }
 
+export type CourseAudienceGroup = "TRE_EM" | "TIEU_HOC" | "IELTS";
+
+export type Audience = "IELTS" | "KIDS";
+
 export interface Category {
   id: number;
   name: string;
@@ -44,6 +48,7 @@ export interface Category {
   description: string | null;
   examTemplate: ExamTemplateSummary | null;
   contextId: number | null;
+  audienceGroup: CourseAudienceGroup;
 }
 
 export interface CourseSummary {
@@ -63,6 +68,7 @@ export interface Section {
   id: number;
   title: string;
   sortOrder: number;
+  videoUrl: string | null;
 }
 
 export interface CourseDetail extends CourseSummary {
@@ -87,6 +93,7 @@ export interface QuestionCategoryNode {
   name: string;
   parentId: number | null;
   description: string | null;
+  audience: Audience;
 }
 
 export interface QuestionSummary {

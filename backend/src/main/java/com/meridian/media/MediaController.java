@@ -55,4 +55,16 @@ public class MediaController {
         String url = mediaService.storeAudio(file);
         return Map.of("url", url);
     }
+
+    @PostMapping("/videos")
+    public Map<String, String> uploadVideo(@RequestParam("file") MultipartFile file) {
+        UUID uid = currentUser.require().id();
+        boolean allowed = permissionService.hasSystemCapability(uid, "question:manage")
+                || permissionService.hasSystemCapability(uid, "course:manage");
+        if (!allowed) {
+            throw ApiException.forbidden("Thiếu quyền tải video lên");
+        }
+        String url = mediaService.storeVideo(file);
+        return Map.of("url", url);
+    }
 }

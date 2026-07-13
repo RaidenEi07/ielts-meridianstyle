@@ -120,6 +120,7 @@ public class CatalogService {
         category.setSlug(slug);
         category.setDescription(req.description());
         category.setExamTemplate(resolveTemplate(req.examTemplateCode()));
+        category.setAudienceGroup(req.audienceGroup() != null ? req.audienceGroup() : CourseAudienceGroup.IELTS);
         category = categoryRepository.saveAndFlush(category);
 
         // Tạo CATEGORY context (con của SYSTEM) và gắn vào category.
@@ -146,6 +147,9 @@ public class CatalogService {
             category.setExamTemplate(
                     req.examTemplateCode().isBlank() ? null : resolveTemplate(req.examTemplateCode()));
         }
+        if (req.audienceGroup() != null) {
+            category.setAudienceGroup(req.audienceGroup());
+        }
         return CategoryDto.from(categoryRepository.save(category));
     }
 
@@ -161,10 +165,21 @@ public class CatalogService {
 
     @Transactional(readOnly = true)
     public List<CourseSummaryDto> listPublishedCourses(Long categoryId) {
-        List<Course> courses = (categoryId == null)
-                ? courseRepository.findByStatusOrderByCreatedAtDesc(CourseStatus.PUBLISHED)
-                : courseRepository.findByCategoryIdAndStatusOrderByCreatedAtDesc(
-                        categoryId, CourseStatus.PUBLISHED);
+        return listPublishedCourses(categoryId, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CourseSummaryDto> listPublishedCourses(Long categoryId, CourseAudienceGroup audienceGroup) {
+        List<Course> courses;
+        if (categoryId != null) {
+            courses = courseRepository.findByCategoryIdAndStatusOrderByCreatedAtDesc(
+                    categoryId, CourseStatus.PUBLISHED);
+        } else if (audienceGroup != null) {
+            courses = courseRepository.findByCategory_AudienceGroupAndStatusOrderByCreatedAtDesc(
+                    audienceGroup, CourseStatus.PUBLISHED);
+        } else {
+            courses = courseRepository.findByStatusOrderByCreatedAtDesc(CourseStatus.PUBLISHED);
+        }
         return courses.stream()
                 .map(c -> CourseSummaryDto.from(c, enrollmentRepository.countByCourseId(c.getId())))
                 .toList();
@@ -279,6 +294,7 @@ public class CatalogService {
         section.setCourse(course);
         section.setTitle(req.title());
         section.setSortOrder(req.sortOrder() != null ? req.sortOrder() : 0);
+        section.setVideoUrl(req.videoUrl());
         return SectionDto.from(sectionRepository.save(section));
     }
 
@@ -293,6 +309,9 @@ public class CatalogService {
         }
         if (req.sortOrder() != null) {
             section.setSortOrder(req.sortOrder());
+        }
+        if (req.videoUrl() != null) {
+            section.setVideoUrl(req.videoUrl().isBlank() ? null : req.videoUrl());
         }
         return SectionDto.from(sectionRepository.save(section));
     }

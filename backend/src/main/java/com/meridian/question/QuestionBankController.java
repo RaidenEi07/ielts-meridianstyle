@@ -63,9 +63,9 @@ public class QuestionBankController {
     // ---- Categories ----
 
     @GetMapping("/categories")
-    public List<QuestionCategoryDto> categories() {
+    public List<QuestionCategoryDto> categories(@RequestParam(required = false) Audience audience) {
         guard();
-        return taxonomyService.listCategories();
+        return taxonomyService.listCategories(audience);
     }
 
     @PostMapping("/categories")

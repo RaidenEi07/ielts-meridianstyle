@@ -1,5 +1,6 @@
 package com.meridian.catalog.dto;
 
+import com.meridian.catalog.CourseAudienceGroup;
 import jakarta.validation.constraints.NotBlank;
 
 /** Gom các request body cho Category. */
@@ -12,12 +13,14 @@ public final class CategoryRequests {
             @NotBlank(message = "Tên danh mục là bắt buộc") String name,
             String slug,
             String description,
-            String examTemplateCode) {
+            String examTemplateCode,
+            CourseAudienceGroup audienceGroup) {
     }
 
     public record Update(
             String name,
             String description,
-            String examTemplateCode) {
+            String examTemplateCode,
+            CourseAudienceGroup audienceGroup) {
     }
 }

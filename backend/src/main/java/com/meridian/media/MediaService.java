@@ -21,6 +21,8 @@ public class MediaService {
             Set.of("audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/wave",
                     "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/aac");
 
+    private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of("video/mp4");
+
     private final MeridianProperties properties;
 
     public MediaService(MeridianProperties properties) {
@@ -65,6 +67,17 @@ public class MediaService {
             default -> "";
         };
         return store(file, "audio", extension);
+    }
+
+    public String storeVideo(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw ApiException.badRequest("Chưa chọn file video");
+        }
+        String contentType = file.getContentType();
+        if (contentType == null || !ALLOWED_VIDEO_TYPES.contains(contentType)) {
+            throw ApiException.badRequest("Chỉ chấp nhận video MP4");
+        }
+        return store(file, "videos", ".mp4");
     }
 
     private String store(MultipartFile file, String subDir, String extension) {

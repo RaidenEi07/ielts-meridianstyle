@@ -7,7 +7,7 @@ import { ImageUploadField } from "@/components/ImageUploadField";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, catalogAdminApi, catalogApi } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
-import type { Category, CourseSummary } from "@/lib/types";
+import type { Category, CourseAudienceGroup, CourseSummary } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
@@ -167,6 +167,7 @@ function CategoryPanel({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [examTemplateCode, setExamTemplateCode] = useState("");
+  const [audienceGroup, setAudienceGroup] = useState<CourseAudienceGroup>("IELTS");
   const [error, setError] = useState<string | null>(null);
 
   async function submit(e: React.FormEvent) {
@@ -177,10 +178,12 @@ function CategoryPanel({
         name,
         description: description || undefined,
         examTemplateCode: examTemplateCode || undefined,
+        audienceGroup,
       });
       setName("");
       setDescription("");
       setExamTemplateCode("");
+      setAudienceGroup("IELTS");
       setCreating(false);
       onChanged();
     } catch (err) {
@@ -229,6 +232,15 @@ function CategoryPanel({
                 </option>
               ))}
             </select>
+            <select
+              value={audienceGroup}
+              onChange={(e) => setAudienceGroup(e.target.value as CourseAudienceGroup)}
+              className="input text-sm"
+            >
+              <option value="IELTS">Nhóm: IELTS</option>
+              <option value="TRE_EM">Nhóm: Trẻ em</option>
+              <option value="TIEU_HOC">Nhóm: Tiểu học</option>
+            </select>
             {error && <p className="text-xs text-red">{error}</p>}
             <button
               type="submit"
@@ -265,11 +277,18 @@ function CategoryPanel({
                 }`}
               >
                 {c.name}
-                {c.examTemplate && (
-                  <span className="rounded-full bg-red-soft px-2 py-0.5 text-[10px] font-bold text-red">
-                    {c.examTemplate.code}
-                  </span>
-                )}
+                <span className="flex items-center gap-1">
+                  {c.audienceGroup !== "IELTS" && (
+                    <span className="rounded-full bg-green-soft px-2 py-0.5 text-[10px] font-bold text-green">
+                      {c.audienceGroup === "TRE_EM" ? "Trẻ em" : "Tiểu học"}
+                    </span>
+                  )}
+                  {c.examTemplate && (
+                    <span className="rounded-full bg-red-soft px-2 py-0.5 text-[10px] font-bold text-red">
+                      {c.examTemplate.code}
+                    </span>
+                  )}
+                </span>
               </button>
             </li>
           ))}

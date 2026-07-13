@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { ApiError, questionBankApi } from "@/lib/api";
-import type { QuestionCategoryNode } from "@/lib/types";
+import type { Audience, QuestionCategoryNode } from "@/lib/types";
 
 export function CategoryForm({
   token,
@@ -19,6 +19,7 @@ export function CategoryForm({
   const [name, setName] = useState("");
   const [parentId, setParentId] = useState<number | "">("");
   const [description, setDescription] = useState("");
+  const [audience, setAudience] = useState<Audience>("IELTS");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,6 +31,7 @@ export function CategoryForm({
         name,
         parentId: parentId ? Number(parentId) : undefined,
         description: description || undefined,
+        audience,
       });
       onSaved(saved);
     } catch (err) {
@@ -59,6 +61,17 @@ export function CategoryForm({
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-muted">Mô tả (tùy chọn)</span>
         <input value={description} onChange={(e) => setDescription(e.target.value)} className="input" />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-muted">Nhóm đối tượng</span>
+        <select
+          value={audience}
+          onChange={(e) => setAudience(e.target.value as Audience)}
+          className="input"
+        >
+          <option value="IELTS">IELTS</option>
+          <option value="KIDS">Trẻ em / Tiểu học (KIDS)</option>
+        </select>
       </label>
       {error && <p className="text-sm text-red">{error}</p>}
       <div className="flex gap-2">

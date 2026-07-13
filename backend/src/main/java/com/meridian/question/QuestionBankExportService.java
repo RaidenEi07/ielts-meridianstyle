@@ -194,7 +194,7 @@ public class QuestionBankExportService {
         } else {
             QuestionCategoryDto created = taxonomyService.createCategory(
                     new QuestionBankRequests.CreateCategory(
-                            manifest.category().name(), null, manifest.category().description()));
+                            manifest.category().name(), null, manifest.category().description(), null));
             category = categoryRepository.findById(created.id()).orElseThrow();
         }
 
