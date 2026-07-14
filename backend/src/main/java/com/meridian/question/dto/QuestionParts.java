@@ -15,7 +15,8 @@ public final class QuestionParts {
 
     /** Matching. */
     public record MatchingPair(
-            Long id, String leftItem, String rightItem, int sortOrder) {
+            Long id, String leftItem, String rightItem, int sortOrder,
+            String leftImageUrl, String rightImageUrl) {
     }
 
     /** Drag & drop (text/marker): target = số placeholder hoặc nhãn zone. */

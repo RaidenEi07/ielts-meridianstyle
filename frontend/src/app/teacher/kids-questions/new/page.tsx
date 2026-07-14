@@ -7,9 +7,9 @@ import { PageHeader } from "@/components/PageHeader";
 import { questionBankApi } from "@/lib/api";
 import type { PassageSummary, QuestionCategoryNode, QuestionTag } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
-import { QuestionForm } from "../QuestionForm";
+import { QuestionForm } from "../../questions/QuestionForm";
 
-export default function NewQuestionPage() {
+export default function NewKidsQuestionPage() {
   const router = useRouter();
   const { accessToken, hydrated, loadMe } = useAuthStore();
   const [ready, setReady] = useState(false);
@@ -34,7 +34,7 @@ export default function NewQuestionPage() {
   }, [hydrated, accessToken]);
 
   const refreshCategories = () =>
-    questionBankApi.categories(token, "IELTS").then(setCategories).catch(() => {});
+    questionBankApi.categories(token, "KIDS").then(setCategories).catch(() => {});
 
   useEffect(() => {
     if (!allowed) return;
@@ -67,9 +67,9 @@ export default function NewQuestionPage() {
   return (
     <div className="min-h-screen bg-bg">
       <PageHeader
-        title="Tạo câu hỏi mới"
-        backHref="/teacher/questions"
-        backLabel="Ngân hàng câu hỏi"
+        title="Tạo câu hỏi mới — Trẻ em"
+        backHref="/teacher/kids-questions"
+        backLabel="Ngân hàng câu hỏi Trẻ em"
       />
 
       <main className="mx-auto max-w-6xl px-6 py-8">
@@ -79,7 +79,9 @@ export default function NewQuestionPage() {
           passages={passages}
           tags={tags}
           token={token}
-          onSaved={() => router.push("/teacher/questions")}
+          allowedTypes={["MATCHING", "DRAG_DROP_TEXT"]}
+          lockAudience="KIDS"
+          onSaved={() => router.push("/teacher/kids-questions")}
           onCategoriesChanged={refreshCategories}
         />
       </main>

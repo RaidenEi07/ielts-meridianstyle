@@ -6,6 +6,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { ApiError, questionBankApi } from "@/lib/api";
 import { TYPE_META } from "@/lib/questionTypes";
 import type {
+  Audience,
   PassageSummary,
   QuestionCategoryNode,
   QuestionClozeSubAnswer,
@@ -53,6 +54,8 @@ export function QuestionForm({
   token,
   onSaved,
   onCategoriesChanged,
+  allowedTypes,
+  lockAudience,
 }: {
   mode: "create" | "edit";
   initial?: QuestionDetail;
@@ -62,6 +65,8 @@ export function QuestionForm({
   token: string;
   onSaved: (q: QuestionDetail) => void;
   onCategoriesChanged: () => void;
+  allowedTypes?: string[];
+  lockAudience?: Audience;
 }) {
   const [step, setStep] = useState<"pick" | "form">(mode === "edit" ? "form" : "pick");
   const [name, setName] = useState(initial?.name ?? "");
@@ -183,6 +188,7 @@ export function QuestionForm({
   if (step === "pick") {
     return (
       <QuestionTypePicker
+        allowedTypes={allowedTypes}
         onSelect={(t) => {
           setType(t);
           setStep("form");
@@ -249,6 +255,7 @@ export function QuestionForm({
                   <CategoryForm
                     token={token}
                     categories={categories}
+                    lockAudience={lockAudience}
                     onCancel={() => setCreatingCategory(false)}
                     onSaved={(c) => {
                       setCategoryId(c.id);
@@ -357,7 +364,14 @@ export function QuestionForm({
           {(type === "MULTIPLE_CHOICE" || type === "TRUE_FALSE_NOT_GIVEN") && (
             <OptionListForm value={options} onChange={setOptions} />
           )}
-          {type === "MATCHING" && <MatchingForm value={matchingPairs} onChange={setMatchingPairs} />}
+          {type === "MATCHING" && (
+            <MatchingForm
+              value={matchingPairs}
+              onChange={setMatchingPairs}
+              showImages={lockAudience === "KIDS"}
+              token={token}
+            />
+          )}
           {type === "SHORT_ANSWER" && (
             <ShortAnswerForm
               acceptedAnswers={shortAnswerAccepted}

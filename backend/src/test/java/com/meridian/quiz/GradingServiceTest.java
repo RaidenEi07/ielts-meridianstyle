@@ -39,7 +39,8 @@ class GradingServiceTest {
             List<QuestionParts.Option> options, List<QuestionParts.MatchingPair> pairs,
             List<QuestionParts.DragItem> items, List<QuestionParts.ClozeSubAnswer> cloze) {
         return new QuestionDetailDto(QID, type, "Q", "stem", 1L, "cat", null, null, null, null,
-                null, BigDecimal.ONE, settings, List.of(), options, pairs, items, List.of(), cloze);
+                null, BigDecimal.ONE, settings, List.of(), options, pairs, items, List.of(), cloze,
+                null);
     }
 
     @Test
@@ -88,8 +89,8 @@ class GradingServiceTest {
     @Test
     void matchingRequiresAllPairsCorrect() {
         var pairs = List.of(
-                new QuestionParts.MatchingPair(1L, "Japan", "Green tea", 0),
-                new QuestionParts.MatchingPair(2L, "England", "Black tea", 1));
+                new QuestionParts.MatchingPair(1L, "Japan", "Green tea", 0, null, null),
+                new QuestionParts.MatchingPair(2L, "England", "Black tea", 1, null, null));
         stub(dto("MATCHING", null, null, pairs, null, null));
 
         var allCorrect = gradingService.grade(QID,

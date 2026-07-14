@@ -1,5 +1,6 @@
 package com.meridian.quiz.dto;
 
+import com.meridian.question.Audience;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
@@ -18,7 +19,11 @@ public final class AttemptDtos {
     }
 
     /** Cặp Matching hiển thị cho thí sinh — chỉ có vế trái, không kèm vế phải đúng. */
-    public record PlayerMatchingPair(Long id, String leftItem) {
+    public record PlayerMatchingPair(Long id, String leftItem, String leftImageUrl) {
+    }
+
+    /** Một lựa chọn trong pool vế phải (đã xáo trộn) — value dùng để so khớp khi chấm. */
+    public record PlayerMatchingOption(String value, String imageUrl) {
     }
 
     /** Item kéo-thả hiển thị cho thí sinh — KHÔNG kèm target đúng. */
@@ -45,10 +50,11 @@ public final class AttemptDtos {
             JsonNode settings,
             List<PlayerOption> options,
             List<PlayerMatchingPair> matchingPairs,
-            List<String> matchingRightPool,
+            List<PlayerMatchingOption> matchingRightPool,
             List<PlayerDragItem> dragItems,
             List<PlayerDragZone> dragZones,
-            List<PlayerClozeSubAnswer> clozeSubAnswers) {
+            List<PlayerClozeSubAnswer> clozeSubAnswers,
+            Audience audience) {
     }
 
     /** Một trang thi (Part) kèm passage/audio để render split-pane / listening. */

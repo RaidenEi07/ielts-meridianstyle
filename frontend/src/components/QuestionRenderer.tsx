@@ -101,8 +101,8 @@ export function QuestionRenderer({
               >
                 <option value="">— Chọn —</option>
                 {question.matchingRightPool.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
+                  <option key={r.value} value={r.value}>
+                    {r.value}
                   </option>
                 ))}
               </select>

@@ -16,6 +16,7 @@ import com.meridian.quiz.dto.AttemptDtos.LogDto;
 import com.meridian.quiz.dto.AttemptDtos.PlayerClozeSubAnswer;
 import com.meridian.quiz.dto.AttemptDtos.PlayerDragItem;
 import com.meridian.quiz.dto.AttemptDtos.PlayerDragZone;
+import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingOption;
 import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingPair;
 import com.meridian.quiz.dto.AttemptDtos.PlayerOption;
 import com.meridian.quiz.dto.AttemptDtos.PlayerQuestion;
@@ -381,7 +382,7 @@ public class AttemptService {
                             QuestionDetailDto q = questionService.getQuestion(qq.getQuestionId());
                             List<PlayerOption> options = List.of();
                             List<PlayerMatchingPair> matchingPairs = List.of();
-                            List<String> matchingRightPool = List.of();
+                            List<PlayerMatchingOption> matchingRightPool = List.of();
                             List<PlayerDragItem> dragItems = List.of();
                             List<PlayerDragZone> dragZones = List.of();
                             List<PlayerClozeSubAnswer> clozeSubAnswers = List.of();
@@ -393,11 +394,14 @@ public class AttemptService {
                                                 .toList();
                                 case "MATCHING" -> {
                                     matchingPairs = q.matchingPairs().stream()
-                                            .map(p -> new PlayerMatchingPair(p.id(), p.leftItem()))
+                                            .map(p -> new PlayerMatchingPair(
+                                                    p.id(), p.leftItem(), p.leftImageUrl()))
                                             .toList();
-                                    List<String> pool = new ArrayList<>(q.matchingPairs().stream()
-                                            .map(QuestionParts.MatchingPair::rightItem)
-                                            .toList());
+                                    List<PlayerMatchingOption> pool = new ArrayList<>(
+                                            q.matchingPairs().stream()
+                                                    .map(p -> new PlayerMatchingOption(
+                                                            p.rightItem(), p.rightImageUrl()))
+                                                    .toList());
                                     Collections.shuffle(pool);
                                     matchingRightPool = pool;
                                 }
@@ -421,7 +425,7 @@ public class AttemptService {
                             return new PlayerQuestion(qq.getId(), qq.getQuestionId(), q.type(),
                                     q.name(), q.stem(), qq.getMark(), qq.getPageId(), settings,
                                     options, matchingPairs, matchingRightPool, dragItems,
-                                    dragZones, clozeSubAnswers);
+                                    dragZones, clozeSubAnswers, q.audience());
                         }).toList();
 
         List<PagePlayer> pages = pageRepository.findByQuizIdOrderByPageNumberAsc(quiz.getId())

@@ -30,6 +30,12 @@ public class QuestionMatchingPair {
     @Column(name = "right_item", nullable = false, length = 500)
     private String rightItem;
 
+    @Column(name = "left_image_url", length = 500)
+    private String leftImageUrl;
+
+    @Column(name = "right_image_url", length = 500)
+    private String rightImageUrl;
+
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 }

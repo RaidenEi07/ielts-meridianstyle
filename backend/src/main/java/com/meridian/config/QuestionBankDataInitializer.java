@@ -162,7 +162,7 @@ public class QuestionBankDataInitializer implements CommandLineRunner {
     }
 
     private QuestionParts.MatchingPair pair(String left, String right) {
-        return new QuestionParts.MatchingPair(null, left, right, 0);
+        return new QuestionParts.MatchingPair(null, left, right, 0, null, null);
     }
 
     private QuestionParts.DragItem dragItem(String content, String target) {

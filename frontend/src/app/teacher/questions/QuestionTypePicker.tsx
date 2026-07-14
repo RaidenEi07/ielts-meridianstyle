@@ -24,13 +24,22 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   CLOZE: TextCursorInput,
 };
 
-export function QuestionTypePicker({ onSelect }: { onSelect: (type: string) => void }) {
+export function QuestionTypePicker({
+  onSelect,
+  allowedTypes,
+}: {
+  onSelect: (type: string) => void;
+  allowedTypes?: string[];
+}) {
+  const types = allowedTypes
+    ? QUESTION_TYPES.filter((t) => allowedTypes.includes(t.value))
+    : QUESTION_TYPES;
   return (
     <div className="animate-fade-slide-in">
       <h2 className="mb-1 text-lg font-semibold">Chọn loại câu hỏi</h2>
       <p className="mb-4 text-sm text-muted">Bấm vào một loại để bắt đầu điền nội dung.</p>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        {QUESTION_TYPES.map((t) => {
+        {types.map((t) => {
           const Icon = TYPE_ICONS[t.value];
           return (
             <button

@@ -155,6 +155,16 @@ button:not(:disabled):active {
   animation: bubblePop 0.2s ease-out both;
 }
 
+@keyframes kidsShake {
+  10%, 90% { transform: translateX(-1px); }
+  20%, 80% { transform: translateX(2px); }
+  30%, 50%, 70% { transform: translateX(-4px); }
+  40%, 60% { transform: translateX(4px); }
+}
+.animate-kids-shake {
+  animation: kidsShake 0.4s ease-in-out both;
+}
+
 /* Bảng trong nội dung rich-text (RichTextEditor + mọi nơi hiển thị lại HTML) */
 .prose table {
   border-collapse: collapse;

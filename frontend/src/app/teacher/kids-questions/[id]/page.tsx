@@ -1,15 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
-import { questionBankApi } from "@/lib/api";
-import type { PassageSummary, QuestionCategoryNode, QuestionTag } from "@/lib/types";
+import { ApiError, questionBankApi } from "@/lib/api";
+import type { PassageSummary, QuestionCategoryNode, QuestionDetail, QuestionTag } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
-import { QuestionForm } from "../QuestionForm";
+import { QuestionForm } from "../../questions/QuestionForm";
 
-export default function NewQuestionPage() {
+export default function EditKidsQuestionPage() {
+  const params = useParams<{ id: string }>();
+  const questionId = Number(params.id);
   const router = useRouter();
   const { accessToken, hydrated, loadMe } = useAuthStore();
   const [ready, setReady] = useState(false);
@@ -19,6 +21,8 @@ export default function NewQuestionPage() {
   const [categories, setCategories] = useState<QuestionCategoryNode[]>([]);
   const [passages, setPassages] = useState<PassageSummary[]>([]);
   const [tags, setTags] = useState<QuestionTag[]>([]);
+  const [detail, setDetail] = useState<QuestionDetail | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -34,15 +38,19 @@ export default function NewQuestionPage() {
   }, [hydrated, accessToken]);
 
   const refreshCategories = () =>
-    questionBankApi.categories(token, "IELTS").then(setCategories).catch(() => {});
+    questionBankApi.categories(token, "KIDS").then(setCategories).catch(() => {});
 
   useEffect(() => {
     if (!allowed) return;
     refreshCategories();
     questionBankApi.passages(token).then(setPassages).catch(() => {});
     questionBankApi.tags(token).then(setTags).catch(() => {});
+    questionBankApi
+      .question(token, questionId)
+      .then(setDetail)
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Không tải được câu hỏi"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allowed]);
+  }, [allowed, questionId]);
 
   if (!hydrated || !ready) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
@@ -67,21 +75,29 @@ export default function NewQuestionPage() {
   return (
     <div className="min-h-screen bg-bg">
       <PageHeader
-        title="Tạo câu hỏi mới"
-        backHref="/teacher/questions"
-        backLabel="Ngân hàng câu hỏi"
+        title="Sửa câu hỏi — Trẻ em"
+        backHref="/teacher/kids-questions"
+        backLabel="Ngân hàng câu hỏi Trẻ em"
       />
 
       <main className="mx-auto max-w-6xl px-6 py-8">
-        <QuestionForm
-          mode="create"
-          categories={categories}
-          passages={passages}
-          tags={tags}
-          token={token}
-          onSaved={() => router.push("/teacher/questions")}
-          onCategoriesChanged={refreshCategories}
-        />
+        {error && <p className="text-sm text-red">{error}</p>}
+        {!detail ? (
+          !error && <p className="text-muted">Đang tải…</p>
+        ) : (
+          <QuestionForm
+            mode="edit"
+            initial={detail}
+            categories={categories}
+            passages={passages}
+            tags={tags}
+            token={token}
+            allowedTypes={["MATCHING", "DRAG_DROP_TEXT"]}
+            lockAudience="KIDS"
+            onSaved={() => router.push("/teacher/kids-questions")}
+            onCategoriesChanged={refreshCategories}
+          />
+        )}
       </main>
     </div>
   );

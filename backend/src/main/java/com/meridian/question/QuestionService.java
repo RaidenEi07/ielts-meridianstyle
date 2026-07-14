@@ -53,7 +53,7 @@ public class QuestionService {
     // ================= Queries =================
 
     @Transactional(readOnly = true)
-    public List<QuestionSummaryDto> listQuestions(Long categoryId, String type) {
+    public List<QuestionSummaryDto> listQuestions(Long categoryId, String type, Audience audience) {
         QuestionType qt = type == null || type.isBlank() ? null : parseType(type);
         List<Question> questions;
         if (categoryId != null && qt != null) {
@@ -61,6 +61,11 @@ public class QuestionService {
                     .findByCategoryIdAndTypeOrderByCreatedAtDesc(categoryId, qt);
         } else if (categoryId != null) {
             questions = questionRepository.findByCategoryIdOrderByCreatedAtDesc(categoryId);
+        } else if (audience != null && qt != null) {
+            questions = questionRepository
+                    .findByCategory_AudienceAndTypeOrderByCreatedAtDesc(audience, qt);
+        } else if (audience != null) {
+            questions = questionRepository.findByCategory_AudienceOrderByCreatedAtDesc(audience);
         } else if (qt != null) {
             questions = questionRepository.findByTypeOrderByCreatedAtDesc(qt);
         } else {
@@ -185,6 +190,8 @@ public class QuestionService {
                     e.setQuestionId(qid);
                     e.setLeftItem(p.leftItem());
                     e.setRightItem(p.rightItem());
+                    e.setLeftImageUrl(p.leftImageUrl());
+                    e.setRightImageUrl(p.rightImageUrl());
                     e.setSortOrder(p.sortOrder() != 0 ? p.sortOrder() : i++);
                     matchingRepository.save(e);
                 }
@@ -307,7 +314,8 @@ public class QuestionService {
         List<QuestionParts.MatchingPair> pairs = matchingRepository
                 .findByQuestionIdOrderBySortOrderAsc(id).stream()
                 .map(e -> new QuestionParts.MatchingPair(e.getId(), e.getLeftItem(),
-                        e.getRightItem(), e.getSortOrder()))
+                        e.getRightItem(), e.getSortOrder(),
+                        e.getLeftImageUrl(), e.getRightImageUrl()))
                 .toList();
         List<QuestionParts.DragItem> items = dragItemRepository
                 .findByQuestionIdOrderBySortOrderAsc(id).stream()
@@ -334,7 +342,7 @@ public class QuestionService {
                 q.getPassage() != null ? q.getPassage().getContent() : null,
                 q.getAnswerParagraphIndex(), q.getExplanation(),
                 q.getDefaultMark(), parseJson(q.getSettings()), tagNames(q),
-                options, pairs, items, zones, cloze);
+                options, pairs, items, zones, cloze, q.getCategory().getAudience());
     }
 
     private List<String> tagNames(Question q) {

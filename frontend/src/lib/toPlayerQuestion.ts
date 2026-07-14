@@ -22,6 +22,7 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
     dragItems: [],
     dragZones: [],
     clozeSubAnswers: [],
+    audience: q.audience,
   };
 
   switch (q.type) {
@@ -30,8 +31,15 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
       base.options = q.options.map((o) => ({ id: o.id ?? 0, content: o.content }));
       break;
     case "MATCHING": {
-      base.matchingPairs = q.matchingPairs.map((p) => ({ id: p.id ?? 0, leftItem: p.leftItem }));
-      const pool = q.matchingPairs.map((p) => p.rightItem);
+      base.matchingPairs = q.matchingPairs.map((p) => ({
+        id: p.id ?? 0,
+        leftItem: p.leftItem,
+        leftImageUrl: p.leftImageUrl ?? null,
+      }));
+      const pool = q.matchingPairs.map((p) => ({
+        value: p.rightItem,
+        imageUrl: p.rightImageUrl ?? null,
+      }));
       for (let i = pool.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [pool[i], pool[j]] = [pool[j], pool[i]];

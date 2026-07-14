@@ -15,5 +15,10 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     List<Question> findByCategoryIdAndTypeOrderByCreatedAtDesc(
             Long categoryId, QuestionType type);
 
+    List<Question> findByCategory_AudienceOrderByCreatedAtDesc(Audience audience);
+
+    List<Question> findByCategory_AudienceAndTypeOrderByCreatedAtDesc(
+            Audience audience, QuestionType type);
+
     Optional<Question> findByCategoryIdAndNameIgnoreCase(Long categoryId, String name);
 }

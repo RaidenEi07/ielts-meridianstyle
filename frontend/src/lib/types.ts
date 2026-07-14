@@ -121,6 +121,8 @@ export interface QuestionMatchingPair {
   leftItem: string;
   rightItem: string;
   sortOrder: number;
+  leftImageUrl?: string | null;
+  rightImageUrl?: string | null;
 }
 
 export interface QuestionDragItem {
@@ -172,6 +174,7 @@ export interface QuestionDetail {
   dragItems: QuestionDragItem[];
   dragZones: QuestionDragZone[];
   clozeSubAnswers: QuestionClozeSubAnswer[];
+  audience: Audience | null;
 }
 
 export interface QuestionUpsertRequest {
@@ -259,6 +262,12 @@ export interface PlayerOption {
 export interface PlayerMatchingPair {
   id: number;
   leftItem: string;
+  leftImageUrl: string | null;
+}
+
+export interface PlayerMatchingOption {
+  value: string;
+  imageUrl: string | null;
 }
 
 export interface PlayerDragItem {
@@ -295,10 +304,11 @@ export interface PlayerQuestion {
   settings: any;
   options: PlayerOption[];
   matchingPairs: PlayerMatchingPair[];
-  matchingRightPool: string[];
+  matchingRightPool: PlayerMatchingOption[];
   dragItems: PlayerDragItem[];
   dragZones: PlayerDragZone[];
   clozeSubAnswers: PlayerClozeSubAnswer[];
+  audience: Audience | null;
 }
 
 export interface ExamPage {

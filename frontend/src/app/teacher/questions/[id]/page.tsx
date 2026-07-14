@@ -37,7 +37,8 @@ export default function EditQuestionPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, accessToken]);
 
-  const refreshCategories = () => questionBankApi.categories(token).then(setCategories).catch(() => {});
+  const refreshCategories = () =>
+    questionBankApi.categories(token, "IELTS").then(setCategories).catch(() => {});
 
   useEffect(() => {
     if (!allowed) return;

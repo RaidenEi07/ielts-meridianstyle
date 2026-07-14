@@ -24,8 +24,11 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
+import { KidsDragDropSentence } from "@/components/kids/KidsDragDropSentence";
+import { KidsMatchingGame } from "@/components/kids/KidsMatchingGame";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
 import { quizApi } from "@/lib/api";
+import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
 import type {
   AttemptPlayer,
   AttemptResult,
@@ -164,6 +167,7 @@ export default function QuizPlayerPage() {
 
   const [attempt, setAttempt] = useState<AttemptPlayer | null>(null);
   const [result, setResult] = useState<AttemptResult | null>(null);
+  const [resultQuestions, setResultQuestions] = useState<PlayerQuestion[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
@@ -216,12 +220,13 @@ export default function QuizPlayerPage() {
     submittingRef.current = true;
     try {
       const r = await quizApi.submit(attemptId, token);
+      setResultQuestions(attempt?.questions ?? []);
       setResult(r);
       setAttempt(null);
     } catch {
       submittingRef.current = false;
     }
-  }, [attemptId, token]);
+  }, [attemptId, token, attempt]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -233,6 +238,7 @@ export default function QuizPlayerPage() {
       .getAttempt(attemptId, token)
       .then((a) => {
         if (a.status !== "IN_PROGRESS") {
+          setResultQuestions(a.questions ?? []);
           return quizApi.result(attemptId, token).then(setResult);
         }
         setAttempt(a);
@@ -462,7 +468,7 @@ export default function QuizPlayerPage() {
   if (loading || !hydrated) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
   }
-  if (result) return <ResultView result={result} />;
+  if (result) return <ResultView result={result} questions={resultQuestions} />;
   if (!attempt) {
     return (
       <div className="grid min-h-screen place-items-center text-muted">
@@ -1247,13 +1253,35 @@ function QuestionCard({
       </div>
 
       <div className="pl-10">
-        <QuestionRenderer question={question} answer={answer} onChange={onChange} blankOrder={order} />
+        {question.audience === "KIDS" && question.type === "MATCHING" ? (
+          <KidsMatchingGame
+            pairs={question.matchingPairs}
+            pool={question.matchingRightPool}
+            answer={answer}
+            onChange={onChange}
+          />
+        ) : question.audience === "KIDS" && question.type === "DRAG_DROP_TEXT" ? (
+          <KidsDragDropSentence
+            template={(question.settings as { template?: string } | null)?.template ?? ""}
+            dragItems={question.dragItems}
+            answer={answer}
+            onChange={onChange}
+          />
+        ) : (
+          <QuestionRenderer question={question} answer={answer} onChange={onChange} blankOrder={order} />
+        )}
       </div>
     </div>
   );
 }
 
-function ResultView({ result }: { result: AttemptResult }) {
+function ResultView({
+  result,
+  questions,
+}: {
+  result: AttemptResult;
+  questions: PlayerQuestion[];
+}) {
   const pct =
     result.maxScore && result.maxScore > 0
       ? Math.round(((result.rawScore ?? 0) / result.maxScore) * 100)
@@ -1267,6 +1295,25 @@ function ResultView({ result }: { result: AttemptResult }) {
       return next;
     });
   }
+
+  const kidsQuestionIds = useMemo(
+    () =>
+      new Set(
+        questions.filter((q) => q.audience === "KIDS").map((q) => q.quizQuestionId),
+      ),
+    [questions],
+  );
+
+  // Phản hồi âm thanh ngay khi có kết quả chấm, chỉ áp dụng cho câu hỏi trẻ em.
+  useEffect(() => {
+    const kidsItems = result.breakdown.filter((b) => kidsQuestionIds.has(b.quizQuestionId));
+    kidsItems.forEach((b, i) => {
+      const play = b.correct ? playCorrectSound : playIncorrectSound;
+      setTimeout(play, i * 250);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
     <div className="grid min-h-screen place-items-center bg-bg px-6 py-10">
       <div className="w-full max-w-xl rounded-[18px] border border-border bg-surface p-8 text-center">
@@ -1285,8 +1332,13 @@ function ResultView({ result }: { result: AttemptResult }) {
           {result.breakdown.map((b, i) => {
             const hasDetail = Boolean(b.explanation || b.answerParagraphHtml);
             const isOpen = expanded.has(b.quizQuestionId);
+            const isKids = kidsQuestionIds.has(b.quizQuestionId);
+            const kidsAnim = isKids ? (b.correct ? "animate-bubble-pop" : "animate-kids-shake") : "";
             return (
-              <div key={b.quizQuestionId} className="rounded-lg border border-border text-sm">
+              <div
+                key={b.quizQuestionId}
+                className={`rounded-lg border border-border text-sm ${kidsAnim}`}
+              >
                 <div className="flex items-center justify-between px-3 py-2">
                   <span className="text-muted">Câu {i + 1}</span>
                   <span className="flex-1 truncate px-2">{b.name}</span>

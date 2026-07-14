@@ -1,5 +1,6 @@
 package com.meridian.question.dto;
 
+import com.meridian.question.Audience;
 import java.math.BigDecimal;
 import java.util.List;
 import tools.jackson.databind.JsonNode;
@@ -23,5 +24,6 @@ public record QuestionDetailDto(
         List<QuestionParts.MatchingPair> matchingPairs,
         List<QuestionParts.DragItem> dragItems,
         List<QuestionParts.DragZone> dragZones,
-        List<QuestionParts.ClozeSubAnswer> clozeSubAnswers) {
+        List<QuestionParts.ClozeSubAnswer> clozeSubAnswers,
+        Audience audience) {
 }

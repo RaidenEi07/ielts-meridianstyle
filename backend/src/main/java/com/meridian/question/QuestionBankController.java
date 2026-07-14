@@ -133,9 +133,10 @@ public class QuestionBankController {
     @GetMapping("/questions")
     public List<QuestionSummaryDto> questions(
             @RequestParam(required = false) Long categoryId,
-            @RequestParam(required = false) String type) {
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) Audience audience) {
         guard();
-        return questionService.listQuestions(categoryId, type);
+        return questionService.listQuestions(categoryId, type, audience);
     }
 
     @GetMapping("/questions/{id}")

@@ -412,13 +412,16 @@ export const questionBankApi = {
       { token },
     ),
 
-  questions: (token: string, categoryId?: number) =>
-    apiFetch<QuestionSummary[]>(
-      categoryId
-        ? `/api/admin/question-bank/questions?categoryId=${categoryId}`
-        : "/api/admin/question-bank/questions",
+  questions: (token: string, categoryId?: number, audience?: Audience) => {
+    const q = new URLSearchParams();
+    if (categoryId) q.set("categoryId", String(categoryId));
+    if (audience) q.set("audience", audience);
+    const qs = q.toString();
+    return apiFetch<QuestionSummary[]>(
+      `/api/admin/question-bank/questions${qs ? `?${qs}` : ""}`,
       { token },
-    ),
+    );
+  },
 
   passages: (token: string) =>
     apiFetch<PassageSummary[]>("/api/admin/question-bank/passages", { token }),
