@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { Check } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ApiError, catalogApi, quizApi } from "@/lib/api";
+import { ApiError, catalogApi, progressApi, quizApi } from "@/lib/api";
 import type { CourseDetail, QuizSummary, Section } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
@@ -17,7 +18,10 @@ export default function VaoHocLessonPage() {
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
+  const [completedSectionIds, setCompletedSectionIds] = useState<Set<number>>(new Set());
+  const [progressLoaded, setProgressLoaded] = useState(false);
   const [starting, setStarting] = useState<number | null>(null);
+  const [completing, setCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -32,6 +36,49 @@ export default function VaoHocLessonPage() {
       .then((all) => setQuizzes(all.filter((q) => q.sectionId === sectionId)))
       .catch(() => {});
   }, [hydrated, accessToken, courseId, sectionId]);
+
+  function loadProgress() {
+    if (!accessToken || !Number.isFinite(courseId)) return;
+    progressApi
+      .courseProgress(courseId, accessToken)
+      .then((p) => setCompletedSectionIds(new Set(p.completedSectionIds)))
+      .finally(() => setProgressLoaded(true));
+  }
+
+  useEffect(() => {
+    if (!hydrated) return;
+    loadProgress();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, accessToken, courseId]);
+
+  const sortedSections = useMemo(
+    () => (course?.sections ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder),
+    [course],
+  );
+
+  // Chặn ở giao diện: nếu vào thẳng URL của buổi chưa mở khóa, quay lại trang khóa học.
+  // Đợi progress tải xong (progressLoaded) mới kiểm tra — nếu không, completedSectionIds
+  // rỗng lúc mới vào trang sẽ khiến buổi đã mở khóa bị coi nhầm là khóa.
+  useEffect(() => {
+    if (!course || !progressLoaded || sortedSections.length === 0) return;
+    const index = sortedSections.findIndex((s) => s.id === sectionId);
+    if (index <= 0) return;
+    const completed = completedSectionIds.has(sectionId);
+    if (completed) return;
+    const prev = sortedSections[index - 1];
+    if (prev && !completedSectionIds.has(prev.id)) {
+      router.replace(`/vao-hoc/${params.group}/${courseId}`);
+    }
+  }, [
+    course,
+    progressLoaded,
+    sortedSections,
+    completedSectionIds,
+    sectionId,
+    courseId,
+    params.group,
+    router,
+  ]);
 
   async function startQuiz(quizId: number) {
     if (!accessToken) {
@@ -49,7 +96,22 @@ export default function VaoHocLessonPage() {
     }
   }
 
+  async function markComplete() {
+    if (!accessToken) return;
+    setCompleting(true);
+    setError(null);
+    try {
+      await progressApi.markComplete(sectionId, accessToken);
+      loadProgress();
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : "Không đánh dấu hoàn thành được");
+    } finally {
+      setCompleting(false);
+    }
+  }
+
   const section: Section | undefined = course?.sections.find((s) => s.id === sectionId);
+  const isCompleted = completedSectionIds.has(sectionId);
 
   if (!course) {
     return (
@@ -68,7 +130,14 @@ export default function VaoHocLessonPage() {
         <Link href={`/vao-hoc/${params.group}/${courseId}`} className="text-sm text-accent">
           ← {course.title}
         </Link>
-        <h1 className="mt-2 text-2xl font-bold">{section?.title ?? "Bài học"}</h1>
+        <div className="mt-2 flex items-center gap-3">
+          <h1 className="text-2xl font-bold">{section?.title ?? "Bài học"}</h1>
+          {isCompleted && (
+            <span className="flex items-center gap-1 rounded-full bg-green-soft px-3 py-1 text-xs font-semibold text-green">
+              <Check className="h-3.5 w-3.5" /> Đã hoàn thành
+            </span>
+          )}
+        </div>
 
         {section?.videoUrl ? (
           <video
@@ -104,6 +173,17 @@ export default function VaoHocLessonPage() {
               </div>
             ))}
           </div>
+        )}
+
+        {quizzes.length === 0 && !isCompleted && (
+          <button
+            type="button"
+            onClick={markComplete}
+            disabled={completing}
+            className="mt-6 w-full rounded-lg bg-primary py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+          >
+            {completing ? "Đang lưu…" : "Đánh dấu đã hoàn thành"}
+          </button>
         )}
       </div>
     </div>

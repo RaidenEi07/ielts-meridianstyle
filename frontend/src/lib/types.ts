@@ -477,3 +477,9 @@ export interface ChildProfile {
   username: string;
   fullName: string;
 }
+
+// ---- Tiến độ học (Phase 12) ----
+
+export interface CourseProgress {
+  completedSectionIds: number[];
+}

@@ -36,7 +36,7 @@ export default function VaoHocPage() {
           ))}
 
           <Link
-            href="/courses"
+            href="/vao-hoc/ielts"
             className="group flex flex-col items-center gap-3 rounded-[18px] border border-border bg-surface p-8 transition-shadow hover:shadow-[0_12px_36px_-14px_rgba(38,33,27,.13)]"
           >
             <span className="text-5xl">🎓</span>

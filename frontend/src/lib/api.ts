@@ -11,6 +11,7 @@ import type {
   ChildProfile,
   CourseAudienceGroup,
   CourseDetail,
+  CourseProgress,
   CourseSummary,
   Enrollment,
   MeResponse,
@@ -838,6 +839,19 @@ export const familyApi = {
 
   switchToChild: (token: string, childId: string) =>
     apiFetch<AuthResponse>(`/api/family/children/${childId}/switch`, {
+      method: "POST",
+      token,
+    }),
+};
+
+// ---- Tiến độ học ----
+
+export const progressApi = {
+  courseProgress: (courseId: number, token: string) =>
+    apiFetch<CourseProgress>(`/api/progress/courses/${courseId}`, { token }),
+
+  markComplete: (sectionId: number, token: string) =>
+    apiFetch<void>(`/api/progress/sections/${sectionId}/complete`, {
       method: "POST",
       token,
     }),

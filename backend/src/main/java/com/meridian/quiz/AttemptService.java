@@ -21,6 +21,7 @@ import com.meridian.quiz.dto.AttemptDtos.PlayerOption;
 import com.meridian.quiz.dto.AttemptDtos.PlayerQuestion;
 import com.meridian.quiz.dto.AttemptDtos.ViolationResult;
 import com.meridian.quiz.dto.AttemptRequests;
+import com.meridian.progress.LessonProgressService;
 import com.meridian.rbac.Context;
 import com.meridian.rbac.ContextService;
 import com.meridian.rbac.PermissionService;
@@ -56,6 +57,7 @@ public class AttemptService {
     private final PermissionService permissionService;
     private final ContextService contextService;
     private final EnrollmentRepository enrollmentRepository;
+    private final LessonProgressService lessonProgressService;
     private final ObjectMapper json;
 
     public AttemptService(QuizRepository quizRepository,
@@ -66,6 +68,7 @@ public class AttemptService {
             PassageRepository passageRepository, QuestionService questionService,
             GradingService gradingService, PermissionService permissionService,
             ContextService contextService, EnrollmentRepository enrollmentRepository,
+            LessonProgressService lessonProgressService,
             ObjectMapper json) {
         this.quizRepository = quizRepository;
         this.quizQuestionRepository = quizQuestionRepository;
@@ -79,6 +82,7 @@ public class AttemptService {
         this.permissionService = permissionService;
         this.contextService = contextService;
         this.enrollmentRepository = enrollmentRepository;
+        this.lessonProgressService = lessonProgressService;
         this.json = json;
     }
 
@@ -317,6 +321,8 @@ public class AttemptService {
             attempt.setSubmittedAt(Instant.now());
         }
         attemptRepository.save(attempt);
+
+        lessonProgressService.markComplete(attempt.getUserId(), attempt.getQuiz().getSection().getId());
     }
 
     private BigDecimal computeBand(Quiz quiz, BigDecimal raw) {
