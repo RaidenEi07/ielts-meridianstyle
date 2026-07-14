@@ -36,6 +36,13 @@ public class AuthController {
                 .body(authService.register(request));
     }
 
+    @PostMapping("/register-parent")
+    public ResponseEntity<AuthResponse> registerParent(
+            @Valid @RequestBody RegisterRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(authService.registerParent(request));
+    }
+
     @PostMapping("/login")
     public AuthResponse login(@Valid @RequestBody LoginRequest request) {
         return authService.login(request);

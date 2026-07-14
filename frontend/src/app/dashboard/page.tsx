@@ -208,6 +208,14 @@ export default function DashboardPage() {
                 <LineChart className="h-4 w-4" /> Theo dõi học sinh →
               </Link>
             )}
+            {roleAssignments.some((ra) => ra.roleShortname === "parent") && (
+              <Link
+                href="/parent/children"
+                className="flex items-center gap-2 rounded-lg border border-border px-4 py-3 text-sm font-medium transition-transform hover:-translate-y-0.5 hover:bg-soft"
+              >
+                <Users className="h-4 w-4" /> Hồ sơ con →
+              </Link>
+            )}
           </div>
         </section>
 

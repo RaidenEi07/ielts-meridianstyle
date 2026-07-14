@@ -212,6 +212,10 @@ export default function AuthPage() {
             <Link href="/" className="hover:text-text">
               ← Về trang chủ
             </Link>
+            {" · "}
+            <Link href="/parent/register" className="text-accent hover:underline">
+              Đăng ký tài khoản phụ huynh
+            </Link>
           </p>
         </div>
       </main>

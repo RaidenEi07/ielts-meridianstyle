@@ -2,7 +2,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { authApi, configureTokenRefresher } from "@/lib/api";
+import { authApi, configureTokenRefresher, familyApi } from "@/lib/api";
 import type { MeResponse, RoleAssignment, User } from "@/lib/types";
 
 interface AuthState {
@@ -14,8 +14,19 @@ interface AuthState {
   /** Đã hydrate xong từ localStorage chưa (tránh nháy khi load lại). */
   hydrated: boolean;
 
+  /** Token của phụ huynh, giữ lại khi đang "học cùng con" để quay lại không cần đăng nhập lại. */
+  parentAccessToken: string | null;
+  parentRefreshToken: string | null;
+  activeChildId: string | null;
+
   login: (username: string, password: string) => Promise<void>;
   register: (
+    username: string,
+    email: string,
+    password: string,
+    fullName: string,
+  ) => Promise<void>;
+  registerParent: (
     username: string,
     email: string,
     password: string,
@@ -24,6 +35,8 @@ interface AuthState {
   loadMe: () => Promise<void>;
   logout: () => void;
   hasCapability: (capability: string) => boolean;
+  switchToChild: (childId: string) => Promise<void>;
+  switchBackToParent: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -35,6 +48,9 @@ export const useAuthStore = create<AuthState>()(
       roleAssignments: [],
       systemCapabilities: [],
       hydrated: false,
+      parentAccessToken: null,
+      parentRefreshToken: null,
+      activeChildId: null,
 
       login: async (username, password) => {
         const res = await authApi.login(username, password);
@@ -48,6 +64,16 @@ export const useAuthStore = create<AuthState>()(
 
       register: async (username, email, password, fullName) => {
         const res = await authApi.register(username, email, password, fullName);
+        set({
+          user: res.user,
+          accessToken: res.accessToken,
+          refreshToken: res.refreshToken,
+        });
+        await get().loadMe();
+      },
+
+      registerParent: async (username, email, password, fullName) => {
+        const res = await authApi.registerParent(username, email, password, fullName);
         set({
           user: res.user,
           accessToken: res.accessToken,
@@ -74,10 +100,42 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: null,
           roleAssignments: [],
           systemCapabilities: [],
+          parentAccessToken: null,
+          parentRefreshToken: null,
+          activeChildId: null,
         }),
 
       hasCapability: (capability) =>
         get().systemCapabilities.includes(capability),
+
+      switchToChild: async (childId) => {
+        const token = get().accessToken;
+        if (!token) return;
+        const res = await familyApi.switchToChild(token, childId);
+        set({
+          parentAccessToken: get().accessToken,
+          parentRefreshToken: get().refreshToken,
+          activeChildId: childId,
+          user: res.user,
+          accessToken: res.accessToken,
+          refreshToken: res.refreshToken,
+        });
+        await get().loadMe();
+      },
+
+      switchBackToParent: async () => {
+        const parentAccessToken = get().parentAccessToken;
+        const parentRefreshToken = get().parentRefreshToken;
+        if (!parentAccessToken || !parentRefreshToken) return;
+        set({
+          accessToken: parentAccessToken,
+          refreshToken: parentRefreshToken,
+          parentAccessToken: null,
+          parentRefreshToken: null,
+          activeChildId: null,
+        });
+        await get().loadMe();
+      },
     }),
     {
       name: "meridian-auth",
@@ -85,6 +143,9 @@ export const useAuthStore = create<AuthState>()(
         user: s.user,
         accessToken: s.accessToken,
         refreshToken: s.refreshToken,
+        parentAccessToken: s.parentAccessToken,
+        parentRefreshToken: s.parentRefreshToken,
+        activeChildId: s.activeChildId,
       }),
       onRehydrateStorage: () => (state) => {
         if (state) state.hydrated = true;

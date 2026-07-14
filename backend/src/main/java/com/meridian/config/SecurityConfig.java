@@ -39,7 +39,8 @@ public class SecurityConfig {
                     sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.POST,
-                            "/api/auth/register", "/api/auth/login", "/api/auth/refresh")
+                            "/api/auth/register", "/api/auth/register-parent",
+                            "/api/auth/login", "/api/auth/refresh")
                     .permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/catalog/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/config/public").permitAll()

@@ -469,3 +469,11 @@ export interface StudentSummary {
   email: string;
   fullName: string;
 }
+
+// ---- Phụ huynh & hồ sơ con (Giai đoạn v2, Phase 11) ----
+
+export interface ChildProfile {
+  id: string;
+  username: string;
+  fullName: string;
+}

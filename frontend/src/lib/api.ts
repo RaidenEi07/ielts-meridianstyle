@@ -8,6 +8,7 @@ import type {
   AuthResponse,
   BulkImportResult,
   Category,
+  ChildProfile,
   CourseAudienceGroup,
   CourseDetail,
   CourseSummary,
@@ -123,6 +124,12 @@ export const authApi = {
     }),
 
   me: (token: string) => apiFetch<MeResponse>("/api/auth/me", { token }),
+
+  registerParent: (username: string, email: string, password: string, fullName: string) =>
+    apiFetch<AuthResponse>("/api/auth/register-parent", {
+      method: "POST",
+      body: { username, email, password, fullName },
+    }),
 };
 
 // ---- Catalog endpoints (public reads) ----
@@ -812,4 +819,26 @@ export const mediaApi = {
     uploadMedia("/api/admin/media/audio", "Tải audio thất bại", token, file),
   uploadVideo: (token: string, file: File) =>
     uploadMedia("/api/admin/media/videos", "Tải video thất bại", token, file),
+};
+
+// ---- Phụ huynh & hồ sơ con ----
+
+export const familyApi = {
+  children: (token: string) => apiFetch<ChildProfile[]>("/api/family/children", { token }),
+
+  createChild: (token: string, fullName: string) =>
+    apiFetch<ChildProfile>("/api/family/children", {
+      method: "POST",
+      body: { fullName },
+      token,
+    }),
+
+  deleteChild: (token: string, childId: string) =>
+    apiFetch<void>(`/api/family/children/${childId}`, { method: "DELETE", token }),
+
+  switchToChild: (token: string, childId: string) =>
+    apiFetch<AuthResponse>(`/api/family/children/${childId}/switch`, {
+      method: "POST",
+      token,
+    }),
 };

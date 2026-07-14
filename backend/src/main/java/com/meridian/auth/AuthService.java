@@ -55,31 +55,56 @@ public class AuthService {
 
     @Transactional
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByUsernameIgnoreCase(request.username())) {
+        User user = createUserAccount(
+                request.username(), request.email(), request.password(), request.fullName());
+        assignRole(user, DEFAULT_ROLE);
+        return issueTokens(user);
+    }
+
+    @Transactional
+    public AuthResponse registerParent(RegisterRequest request) {
+        User user = createUserAccount(
+                request.username(), request.email(), request.password(), request.fullName());
+        assignRole(user, "parent");
+        return issueTokens(user);
+    }
+
+    /** Tạo tài khoản (chưa gán role) — dùng chung cho đăng ký và tạo hồ sơ con. */
+    @Transactional
+    public User createUserAccount(String username, String email, String rawPassword,
+            String fullName) {
+        if (userRepository.existsByUsernameIgnoreCase(username)) {
             throw ApiException.conflict("Tên đăng nhập đã được sử dụng");
         }
-        if (userRepository.existsByEmailIgnoreCase(request.email())) {
+        if (userRepository.existsByEmailIgnoreCase(email)) {
             throw ApiException.conflict("Email đã được sử dụng");
         }
 
         User user = new User();
-        user.setUsername(request.username());
-        user.setEmail(request.email());
-        user.setPasswordHash(passwordEncoder.encode(request.password()));
-        user.setFullName(request.fullName());
+        user.setUsername(username);
+        user.setEmail(email);
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        user.setFullName(fullName);
         user.setStatus(UserStatus.ACTIVE);
-        user = userRepository.save(user);
+        return userRepository.save(user);
+    }
 
-        // Gán role mặc định STUDENT tại SYSTEM context.
-        Role studentRole = roleRepository.findByShortname(DEFAULT_ROLE)
-                .orElseThrow(() -> ApiException.notFound("Chưa seed role 'student'"));
+    /** Gán role tại SYSTEM context (mô hình RBAC hiện tại chưa có role mặc định ngoài SYSTEM). */
+    @Transactional
+    public void assignRole(User user, String roleShortname) {
+        Role role = roleRepository.findByShortname(roleShortname)
+                .orElseThrow(() -> ApiException.notFound("Chưa seed role '" + roleShortname + "'"));
         Context systemContext = contextService.requireSystemContext();
         RoleAssignment assignment = new RoleAssignment();
         assignment.setUser(user);
-        assignment.setRole(studentRole);
+        assignment.setRole(role);
         assignment.setContext(systemContext);
         roleAssignmentRepository.save(assignment);
+    }
 
+    /** Phát hành token cho một user đã xác định danh tính bằng đường khác (vd. phụ huynh chuyển sang con). */
+    @Transactional(readOnly = true)
+    public AuthResponse issueTokensForUser(User user) {
         return issueTokens(user);
     }
 
