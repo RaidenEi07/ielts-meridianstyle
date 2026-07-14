@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { PageHeader } from "@/components/PageHeader";
 import { SortableRow } from "@/components/SortableRow";
+import { SubtitleUploadField } from "@/components/SubtitleUploadField";
 import { VideoUploadField } from "@/components/VideoUploadField";
 import { ApiError, catalogAdminApi, catalogApi, quizAdminApi } from "@/lib/api";
 import type { CourseDetail, QuizSummary, Section } from "@/lib/types";
@@ -386,6 +387,15 @@ function SectionCard({
     }
   }
 
+  async function handleSubtitleChange(url: string | null) {
+    try {
+      await catalogAdminApi.updateSection(token, section.id, { subtitleUrl: url ?? "" });
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Cập nhật phụ đề thất bại");
+    }
+  }
+
   async function handleQuizDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!quizzes || !over || active.id === over.id) return;
@@ -422,6 +432,14 @@ function SectionCard({
 
       <div className="mb-3">
         <VideoUploadField token={token} value={section.videoUrl} onChange={handleVideoChange} />
+      </div>
+
+      <div className="mb-3">
+        <SubtitleUploadField
+          token={token}
+          value={section.subtitleUrl}
+          onChange={handleSubtitleChange}
+        />
       </div>
 
       {creating && (

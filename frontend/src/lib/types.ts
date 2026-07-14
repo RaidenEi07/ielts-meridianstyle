@@ -69,6 +69,7 @@ export interface Section {
   title: string;
   sortOrder: number;
   videoUrl: string | null;
+  subtitleUrl: string | null;
 }
 
 export interface CourseDetail extends CourseSummary {

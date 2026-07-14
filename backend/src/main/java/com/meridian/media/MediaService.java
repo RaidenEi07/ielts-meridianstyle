@@ -23,6 +23,8 @@ public class MediaService {
 
     private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of("video/mp4");
 
+    private static final Set<String> ALLOWED_SUBTITLE_TYPES = Set.of("text/vtt");
+
     private final MeridianProperties properties;
 
     public MediaService(MeridianProperties properties) {
@@ -78,6 +80,21 @@ public class MediaService {
             throw ApiException.badRequest("Chỉ chấp nhận video MP4");
         }
         return store(file, "videos", ".mp4");
+    }
+
+    public String storeSubtitle(MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            throw ApiException.badRequest("Chưa chọn file phụ đề");
+        }
+        String contentType = file.getContentType();
+        // Trình duyệt thường gửi content-type rỗng/octet-stream cho .vtt — chấp nhận thêm theo đuôi file.
+        boolean validType = contentType != null && ALLOWED_SUBTITLE_TYPES.contains(contentType);
+        boolean validExtension = file.getOriginalFilename() != null
+                && file.getOriginalFilename().toLowerCase().endsWith(".vtt");
+        if (!validType && !validExtension) {
+            throw ApiException.badRequest("Chỉ chấp nhận file phụ đề WebVTT (.vtt)");
+        }
+        return store(file, "subtitles", ".vtt");
     }
 
     private String store(MultipartFile file, String subDir, String extension) {

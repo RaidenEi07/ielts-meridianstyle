@@ -78,11 +78,11 @@ public class CatalogDataInitializer implements CommandLineRunner {
                         "PUBLISHED"));
 
         catalogService.createSection(uid, course.id(),
-                new CourseRequests.CreateSection("Tuần 1-4: Nền tảng & Listening", 1, null));
+                new CourseRequests.CreateSection("Tuần 1-4: Nền tảng & Listening", 1, null, null));
         catalogService.createSection(uid, course.id(),
-                new CourseRequests.CreateSection("Tuần 5-8: Reading & Writing Task 1", 2, null));
+                new CourseRequests.CreateSection("Tuần 5-8: Reading & Writing Task 1", 2, null, null));
         catalogService.createSection(uid, course.id(),
-                new CourseRequests.CreateSection("Tuần 9-12: Luyện đề & thi thử", 3, null));
+                new CourseRequests.CreateSection("Tuần 9-12: Luyện đề & thi thử", 3, null, null));
 
         log.info("Đã seed {} danh mục và khóa học mẫu", categoryRepository.count());
     }

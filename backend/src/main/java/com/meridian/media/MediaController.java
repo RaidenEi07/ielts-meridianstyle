@@ -67,4 +67,16 @@ public class MediaController {
         String url = mediaService.storeVideo(file);
         return Map.of("url", url);
     }
+
+    @PostMapping("/subtitles")
+    public Map<String, String> uploadSubtitle(@RequestParam("file") MultipartFile file) {
+        UUID uid = currentUser.require().id();
+        boolean allowed = permissionService.hasSystemCapability(uid, "question:manage")
+                || permissionService.hasSystemCapability(uid, "course:manage");
+        if (!allowed) {
+            throw ApiException.forbidden("Thiếu quyền tải phụ đề lên");
+        }
+        String url = mediaService.storeSubtitle(file);
+        return Map.of("url", url);
+    }
 }

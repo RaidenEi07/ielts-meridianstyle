@@ -255,7 +255,7 @@ export const catalogAdminApi = {
   createSection: (
     token: string,
     courseId: number,
-    req: { title: string; sortOrder?: number; videoUrl?: string },
+    req: { title: string; sortOrder?: number; videoUrl?: string; subtitleUrl?: string },
   ) =>
     apiFetch<Section>(`/api/admin/catalog/courses/${courseId}/sections`, {
       method: "POST",
@@ -266,7 +266,7 @@ export const catalogAdminApi = {
   updateSection: (
     token: string,
     id: number,
-    req: { title?: string; sortOrder?: number; videoUrl?: string },
+    req: { title?: string; sortOrder?: number; videoUrl?: string; subtitleUrl?: string },
   ) =>
     apiFetch<Section>(`/api/admin/catalog/sections/${id}`, {
       method: "PUT",
@@ -820,6 +820,8 @@ export const mediaApi = {
     uploadMedia("/api/admin/media/audio", "Tải audio thất bại", token, file),
   uploadVideo: (token: string, file: File) =>
     uploadMedia("/api/admin/media/videos", "Tải video thất bại", token, file),
+  uploadSubtitle: (token: string, file: File) =>
+    uploadMedia("/api/admin/media/subtitles", "Tải phụ đề thất bại", token, file),
 };
 
 // ---- Phụ huynh & hồ sơ con ----

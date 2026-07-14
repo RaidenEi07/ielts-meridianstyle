@@ -34,10 +34,11 @@ public final class CourseRequests {
     public record CreateSection(
             @NotBlank(message = "Tiêu đề section là bắt buộc") String title,
             Integer sortOrder,
-            String videoUrl) {
+            String videoUrl,
+            String subtitleUrl) {
     }
 
-    public record UpdateSection(String title, Integer sortOrder, String videoUrl) {
+    public record UpdateSection(String title, Integer sortOrder, String videoUrl, String subtitleUrl) {
     }
 
     public record ReorderSections(@NotEmpty(message = "sectionIds không được rỗng") List<Long> sectionIds) {

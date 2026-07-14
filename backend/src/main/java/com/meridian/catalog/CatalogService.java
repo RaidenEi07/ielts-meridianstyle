@@ -295,6 +295,7 @@ public class CatalogService {
         section.setTitle(req.title());
         section.setSortOrder(req.sortOrder() != null ? req.sortOrder() : 0);
         section.setVideoUrl(req.videoUrl());
+        section.setSubtitleUrl(req.subtitleUrl());
         return SectionDto.from(sectionRepository.save(section));
     }
 
@@ -312,6 +313,9 @@ public class CatalogService {
         }
         if (req.videoUrl() != null) {
             section.setVideoUrl(req.videoUrl().isBlank() ? null : req.videoUrl());
+        }
+        if (req.subtitleUrl() != null) {
+            section.setSubtitleUrl(req.subtitleUrl().isBlank() ? null : req.subtitleUrl());
         }
         return SectionDto.from(sectionRepository.save(section));
     }

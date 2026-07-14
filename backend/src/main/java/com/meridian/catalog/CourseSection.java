@@ -42,6 +42,9 @@ public class CourseSection {
     @Column(name = "video_url", length = 500)
     private String videoUrl;
 
+    @Column(name = "subtitle_url", length = 500)
+    private String subtitleUrl;
+
     @Column(name = "deleted_at")
     private Instant deletedAt;
 

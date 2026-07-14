@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
+import { LessonVideoPlayer } from "@/components/LessonVideoPlayer";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ApiError, catalogApi, progressApi, quizApi } from "@/lib/api";
 import type { CourseDetail, QuizSummary, Section } from "@/lib/types";
@@ -140,11 +141,9 @@ export default function VaoHocLessonPage() {
         </div>
 
         {section?.videoUrl ? (
-          <video
-            controls
-            src={section.videoUrl}
-            className="mt-6 w-full rounded-xl border border-border bg-black"
-          />
+          <div className="mt-6">
+            <LessonVideoPlayer videoUrl={section.videoUrl} subtitleUrl={section.subtitleUrl} />
+          </div>
         ) : (
           <p className="mt-6 rounded-lg border border-border bg-surface p-6 text-center text-muted">
             Bài này chưa có video.
