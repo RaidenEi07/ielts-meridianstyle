@@ -1,43 +1,54 @@
 package com.meridian.game;
 
 import com.meridian.common.ApiException;
+import com.meridian.game.dto.GameDtos.CheckAnswerResult;
 import com.meridian.game.dto.GameDtos.LeaderboardEntryDto;
 import com.meridian.game.dto.GameDtos.MemoryPairDto;
+import com.meridian.game.dto.GameDtos.RaceOptionDto;
+import com.meridian.game.dto.GameDtos.RaceQuestionDto;
 import com.meridian.question.Audience;
 import com.meridian.question.Question;
 import com.meridian.question.QuestionMatchingPair;
 import com.meridian.question.QuestionMatchingPairRepository;
+import com.meridian.question.QuestionOption;
+import com.meridian.question.QuestionOptionRepository;
 import com.meridian.question.QuestionRepository;
 import com.meridian.question.QuestionType;
 import com.meridian.user.User;
 import com.meridian.user.UserRepository;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** Game hóa (Phase 19, lát 1: Lật thẻ ghi nhớ) — điểm thưởng + bảng xếp hạng. */
+/** Game hóa (Phase 19: Lật thẻ ghi nhớ + Đua trả lời nhanh) — điểm thưởng + bảng xếp hạng. */
 @Service
 public class GameService {
 
     private static final int DEFAULT_PAIR_COUNT = 6;
-    private static final Set<String> ALLOWED_GAME_MODES = Set.of("memory_match");
+    private static final int DEFAULT_QUESTION_COUNT = 8;
+    private static final Set<String> ALLOWED_GAME_MODES = Set.of("memory_match", "quick_race");
 
     private final QuestionRepository questionRepository;
     private final QuestionMatchingPairRepository matchingPairRepository;
+    private final QuestionOptionRepository questionOptionRepository;
     private final PointsLedgerRepository pointsLedgerRepository;
     private final UserRepository userRepository;
 
     public GameService(QuestionRepository questionRepository,
             QuestionMatchingPairRepository matchingPairRepository,
+            QuestionOptionRepository questionOptionRepository,
             PointsLedgerRepository pointsLedgerRepository, UserRepository userRepository) {
         this.questionRepository = questionRepository;
         this.matchingPairRepository = matchingPairRepository;
+        this.questionOptionRepository = questionOptionRepository;
         this.pointsLedgerRepository = pointsLedgerRepository;
         this.userRepository = userRepository;
     }
@@ -67,6 +78,53 @@ public class GameService {
                 .map(p -> new MemoryPairDto(p.getId(), p.getLeftItem(), p.getLeftImageUrl() != null
                         ? p.getLeftImageUrl() : p.getRightImageUrl()))
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<RaceQuestionDto> startRaceRound(Long categoryId, Integer questionCount) {
+        int requested = questionCount != null && questionCount > 0 ? questionCount : DEFAULT_QUESTION_COUNT;
+
+        List<Question> questions = questionRepository
+                .findByCategory_AudienceAndTypeOrderByCreatedAtDesc(Audience.KIDS, QuestionType.MULTIPLE_CHOICE);
+        if (categoryId != null) {
+            questions = questions.stream()
+                    .filter(q -> q.getCategory().getId().equals(categoryId))
+                    .toList();
+        }
+        if (questions.isEmpty()) {
+            return List.of();
+        }
+
+        List<Question> shuffledQuestions = new ArrayList<>(questions);
+        Collections.shuffle(shuffledQuestions);
+        List<Question> selected = shuffledQuestions.stream()
+                .limit(Math.min(requested, shuffledQuestions.size()))
+                .toList();
+
+        List<Long> questionIds = selected.stream().map(Question::getId).toList();
+        Map<Long, List<QuestionOption>> optionsByQuestion = questionOptionRepository
+                .findByQuestionIdIn(questionIds).stream()
+                .collect(Collectors.groupingBy(QuestionOption::getQuestionId));
+
+        return selected.stream()
+                .map(q -> {
+                    List<QuestionOption> options = new ArrayList<>(
+                            optionsByQuestion.getOrDefault(q.getId(), List.of()));
+                    Collections.shuffle(options);
+                    List<RaceOptionDto> optionDtos = options.stream()
+                            .map(o -> new RaceOptionDto(o.getId(), o.getContent()))
+                            .toList();
+                    return new RaceQuestionDto(q.getId(), q.getStem(), optionDtos);
+                })
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public CheckAnswerResult checkRaceAnswer(Long questionId, Long selectedOptionId) {
+        boolean correct = selectedOptionId != null && questionOptionRepository
+                .findByQuestionIdOrderBySortOrderAsc(questionId).stream()
+                .anyMatch(o -> o.isCorrect() && o.getId().equals(selectedOptionId));
+        return new CheckAnswerResult(correct);
     }
 
     @Transactional

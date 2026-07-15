@@ -517,6 +517,12 @@ export interface LeaderboardEntry {
   totalPoints: number;
 }
 
+export interface RaceQuestion {
+  questionId: number;
+  stem: string;
+  options: { id: number; content: string }[];
+}
+
 // ---- Ghi âm luyện nói (Phase 15) ----
 
 export interface LessonRecording {

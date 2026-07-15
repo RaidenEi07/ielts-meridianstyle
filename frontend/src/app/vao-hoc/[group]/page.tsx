@@ -43,16 +43,28 @@ export default function VaoHocGroupPage() {
         <p className="mt-1 text-muted">Chọn khóa học để bắt đầu.</p>
 
         {params.group === "tieu-hoc" && (
-          <Link
-            href="/game/lat-the"
-            className="mt-6 flex items-center justify-between rounded-[18px] border border-border bg-surface p-6 transition-shadow hover:shadow-[0_12px_36px_-14px_rgba(38,33,27,.13)]"
-          >
-            <div>
-              <p className="text-lg font-semibold">🎮 Chơi Lật thẻ ghi nhớ</p>
-              <p className="mt-1 text-sm text-muted">Ghép từ với hình, ghi điểm, leo bảng xếp hạng!</p>
-            </div>
-            <span className="text-2xl">→</span>
-          </Link>
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <Link
+              href="/game/lat-the"
+              className="flex items-center justify-between rounded-[18px] border border-border bg-surface p-6 transition-shadow hover:shadow-[0_12px_36px_-14px_rgba(38,33,27,.13)]"
+            >
+              <div>
+                <p className="text-lg font-semibold">🎮 Lật thẻ ghi nhớ</p>
+                <p className="mt-1 text-sm text-muted">Ghép từ với hình, ghi điểm, leo bảng xếp hạng!</p>
+              </div>
+              <span className="text-2xl">→</span>
+            </Link>
+            <Link
+              href="/game/dua-tra-loi-nhanh"
+              className="flex items-center justify-between rounded-[18px] border border-border bg-surface p-6 transition-shadow hover:shadow-[0_12px_36px_-14px_rgba(38,33,27,.13)]"
+            >
+              <div>
+                <p className="text-lg font-semibold">🏁 Đua trả lời nhanh</p>
+                <p className="mt-1 text-sm text-muted">Trắc nghiệm có tính giờ, trả lời đúng để ghi điểm!</p>
+              </div>
+              <span className="text-2xl">→</span>
+            </Link>
+          </div>
         )}
 
         <div className="mt-8">

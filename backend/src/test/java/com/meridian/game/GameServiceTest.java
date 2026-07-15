@@ -14,6 +14,8 @@ import com.meridian.question.Question;
 import com.meridian.question.QuestionCategory;
 import com.meridian.question.QuestionMatchingPair;
 import com.meridian.question.QuestionMatchingPairRepository;
+import com.meridian.question.QuestionOption;
+import com.meridian.question.QuestionOptionRepository;
 import com.meridian.question.QuestionRepository;
 import com.meridian.question.QuestionType;
 import com.meridian.user.User;
@@ -31,6 +33,7 @@ class GameServiceTest {
 
     @Mock private QuestionRepository questionRepository;
     @Mock private QuestionMatchingPairRepository matchingPairRepository;
+    @Mock private QuestionOptionRepository questionOptionRepository;
     @Mock private PointsLedgerRepository pointsLedgerRepository;
     @Mock private UserRepository userRepository;
 
@@ -39,17 +42,18 @@ class GameServiceTest {
     @BeforeEach
     void setUp() {
         gameService = new GameService(questionRepository, matchingPairRepository,
-                pointsLedgerRepository, userRepository);
+                questionOptionRepository, pointsLedgerRepository, userRepository);
     }
 
-    private Question kidsMatchingQuestion(Long id, Long categoryId) {
+    private Question kidsQuestion(Long id, Long categoryId, QuestionType type) {
         QuestionCategory category = new QuestionCategory();
         category.setId(categoryId);
         category.setAudience(Audience.KIDS);
         Question q = new Question();
         q.setId(id);
         q.setCategory(category);
-        q.setType(QuestionType.MATCHING);
+        q.setType(type);
+        q.setStem("What color is the sky?");
         return q;
     }
 
@@ -61,9 +65,18 @@ class GameServiceTest {
         return p;
     }
 
+    private QuestionOption option(Long id, Long questionId, String content, boolean correct) {
+        QuestionOption o = new QuestionOption();
+        o.setId(id);
+        o.setQuestionId(questionId);
+        o.setContent(content);
+        o.setCorrect(correct);
+        return o;
+    }
+
     @Test
     void startMemoryRoundCapsAtAvailablePairsWhenFewerThanRequested() {
-        Question q = kidsMatchingQuestion(1L, 5L);
+        Question q = kidsQuestion(1L, 5L, QuestionType.MATCHING);
         when(questionRepository.findByCategory_AudienceAndTypeOrderByCreatedAtDesc(
                 Audience.KIDS, QuestionType.MATCHING)).thenReturn(List.of(q));
         when(matchingPairRepository.findByQuestionIdIn(List.of(1L)))
@@ -76,8 +89,8 @@ class GameServiceTest {
 
     @Test
     void startMemoryRoundFiltersByCategoryWhenProvided() {
-        Question inCategory = kidsMatchingQuestion(1L, 5L);
-        Question otherCategory = kidsMatchingQuestion(2L, 6L);
+        Question inCategory = kidsQuestion(1L, 5L, QuestionType.MATCHING);
+        Question otherCategory = kidsQuestion(2L, 6L, QuestionType.MATCHING);
         when(questionRepository.findByCategory_AudienceAndTypeOrderByCreatedAtDesc(
                 Audience.KIDS, QuestionType.MATCHING)).thenReturn(List.of(inCategory, otherCategory));
         when(matchingPairRepository.findByQuestionIdIn(List.of(1L)))
@@ -87,6 +100,76 @@ class GameServiceTest {
 
         assertThat(result).hasSize(1);
         verify(matchingPairRepository).findByQuestionIdIn(List.of(1L));
+    }
+
+    @Test
+    void startRaceRoundCapsAtAvailableQuestionsWhenFewerThanRequested() {
+        Question q1 = kidsQuestion(1L, 5L, QuestionType.MULTIPLE_CHOICE);
+        Question q2 = kidsQuestion(2L, 5L, QuestionType.MULTIPLE_CHOICE);
+        when(questionRepository.findByCategory_AudienceAndTypeOrderByCreatedAtDesc(
+                Audience.KIDS, QuestionType.MULTIPLE_CHOICE)).thenReturn(List.of(q1, q2));
+        when(questionOptionRepository.findByQuestionIdIn(any())).thenReturn(List.of(
+                option(10L, 1L, "Blue", true), option(11L, 1L, "Red", false),
+                option(20L, 2L, "Sun", true), option(21L, 2L, "Moon", false)));
+
+        var result = gameService.startRaceRound(null, 8);
+
+        assertThat(result).hasSize(2);
+        assertThat(result).allSatisfy(rq -> assertThat(rq.options()).hasSize(2));
+    }
+
+    @Test
+    void startRaceRoundNeverLeaksCorrectFlag() {
+        Question q1 = kidsQuestion(1L, 5L, QuestionType.MULTIPLE_CHOICE);
+        when(questionRepository.findByCategory_AudienceAndTypeOrderByCreatedAtDesc(
+                Audience.KIDS, QuestionType.MULTIPLE_CHOICE)).thenReturn(List.of(q1));
+        when(questionOptionRepository.findByQuestionIdIn(any()))
+                .thenReturn(List.of(option(10L, 1L, "Blue", true), option(11L, 1L, "Red", false)));
+
+        var result = gameService.startRaceRound(null, 8);
+
+        // RaceOptionDto chỉ có (id, content) — không có accessor nào lộ đáp án đúng.
+        assertThat(result.get(0).options()).extracting("id", "content")
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple(10L, "Blue"),
+                        org.assertj.core.groups.Tuple.tuple(11L, "Red"));
+    }
+
+    @Test
+    void checkRaceAnswerReturnsTrueForCorrectOption() {
+        when(questionOptionRepository.findByQuestionIdOrderBySortOrderAsc(1L))
+                .thenReturn(List.of(option(10L, 1L, "Blue", true), option(11L, 1L, "Red", false)));
+
+        var result = gameService.checkRaceAnswer(1L, 10L);
+
+        assertThat(result.correct()).isTrue();
+    }
+
+    @Test
+    void checkRaceAnswerReturnsFalseForIncorrectOption() {
+        when(questionOptionRepository.findByQuestionIdOrderBySortOrderAsc(1L))
+                .thenReturn(List.of(option(10L, 1L, "Blue", true), option(11L, 1L, "Red", false)));
+
+        var result = gameService.checkRaceAnswer(1L, 11L);
+
+        assertThat(result.correct()).isFalse();
+    }
+
+    @Test
+    void checkRaceAnswerReturnsFalseWhenTimedOutWithNoSelection() {
+        var result = gameService.checkRaceAnswer(1L, null);
+
+        assertThat(result.correct()).isFalse();
+        verify(questionOptionRepository, never()).findByQuestionIdOrderBySortOrderAsc(any());
+    }
+
+    @Test
+    void awardPointsAcceptsQuickRaceMode() {
+        UUID userId = UUID.randomUUID();
+
+        gameService.awardPoints(userId, 80, "Hoàn thành lượt đua", "quick_race");
+
+        verify(pointsLedgerRepository).save(any(PointsLedger.class));
     }
 
     @Test

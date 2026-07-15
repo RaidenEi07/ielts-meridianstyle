@@ -7,5 +7,7 @@ public interface QuestionOptionRepository extends JpaRepository<QuestionOption, 
 
     List<QuestionOption> findByQuestionIdOrderBySortOrderAsc(Long questionId);
 
+    List<QuestionOption> findByQuestionIdIn(List<Long> questionIds);
+
     void deleteByQuestionId(Long questionId);
 }

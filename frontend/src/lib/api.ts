@@ -32,6 +32,7 @@ import type {
   QuizPageAdmin,
   QuizQuestionAdmin,
   QuizSummary,
+  RaceQuestion,
   RoleAssignment,
   RoleOption,
   Section,
@@ -900,6 +901,21 @@ export const gameApi = {
     const qs = params.toString();
     return apiFetch<MemoryPair[]>(`/api/game/memory/round${qs ? `?${qs}` : ""}`, { token });
   },
+
+  raceRound: (token: string, categoryId?: number, questionCount?: number) => {
+    const params = new URLSearchParams();
+    if (categoryId !== undefined) params.set("categoryId", String(categoryId));
+    if (questionCount !== undefined) params.set("questionCount", String(questionCount));
+    const qs = params.toString();
+    return apiFetch<RaceQuestion[]>(`/api/game/race/round${qs ? `?${qs}` : ""}`, { token });
+  },
+
+  checkRaceAnswer: (token: string, questionId: number, selectedOptionId: number | null) =>
+    apiFetch<{ correct: boolean }>("/api/game/race/check", {
+      method: "POST",
+      body: { questionId, selectedOptionId },
+      token,
+    }),
 
   awardPoints: (token: string, points: number, reason: string, gameMode: string) =>
     apiFetch<void>("/api/game/points", {

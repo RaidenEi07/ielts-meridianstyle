@@ -1,8 +1,11 @@
 package com.meridian.game;
 
 import com.meridian.game.dto.GameDtos.AwardPointsRequest;
+import com.meridian.game.dto.GameDtos.CheckAnswerRequest;
+import com.meridian.game.dto.GameDtos.CheckAnswerResult;
 import com.meridian.game.dto.GameDtos.LeaderboardEntryDto;
 import com.meridian.game.dto.GameDtos.MemoryPairDto;
+import com.meridian.game.dto.GameDtos.RaceQuestionDto;
 import com.meridian.question.Audience;
 import com.meridian.question.QuestionTaxonomyService;
 import com.meridian.question.dto.QuestionCategoryDto;
@@ -49,6 +52,20 @@ public class GameController {
             @RequestParam(required = false) Integer pairCount) {
         currentUser.require();
         return gameService.startMemoryRound(categoryId, pairCount);
+    }
+
+    @GetMapping("/race/round")
+    public List<RaceQuestionDto> raceRound(
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Integer questionCount) {
+        currentUser.require();
+        return gameService.startRaceRound(categoryId, questionCount);
+    }
+
+    @PostMapping("/race/check")
+    public CheckAnswerResult checkRaceAnswer(@RequestBody CheckAnswerRequest request) {
+        currentUser.require();
+        return gameService.checkRaceAnswer(request.questionId(), request.selectedOptionId());
     }
 
     @PostMapping("/points")
