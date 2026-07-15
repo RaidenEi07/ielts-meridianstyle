@@ -8,5 +8,7 @@ public interface QuestionMatchingPairRepository
 
     List<QuestionMatchingPair> findByQuestionIdOrderBySortOrderAsc(Long questionId);
 
+    List<QuestionMatchingPair> findByQuestionIdIn(List<Long> questionIds);
+
     void deleteByQuestionId(Long questionId);
 }

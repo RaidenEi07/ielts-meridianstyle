@@ -18,7 +18,9 @@ import type {
   MeResponse,
   GradebookRow,
   ImportSummary,
+  LeaderboardEntry,
   LessonRecording,
+  MemoryPair,
   PassageSummary,
   PublicStats,
   QuestionCategoryNode,
@@ -884,4 +886,28 @@ export const recordingApi = {
 
   remove: (recordingId: number, token: string) =>
     apiFetch<void>(`/api/recordings/${recordingId}`, { method: "DELETE", token }),
+};
+
+// ---- Game hóa (Phase 19) ----
+
+export const gameApi = {
+  categories: (token: string) => apiFetch<QuestionCategoryNode[]>("/api/game/categories", { token }),
+
+  memoryRound: (token: string, categoryId?: number, pairCount?: number) => {
+    const params = new URLSearchParams();
+    if (categoryId !== undefined) params.set("categoryId", String(categoryId));
+    if (pairCount !== undefined) params.set("pairCount", String(pairCount));
+    const qs = params.toString();
+    return apiFetch<MemoryPair[]>(`/api/game/memory/round${qs ? `?${qs}` : ""}`, { token });
+  },
+
+  awardPoints: (token: string, points: number, reason: string, gameMode: string) =>
+    apiFetch<void>("/api/game/points", {
+      method: "POST",
+      body: { points, reason, gameMode },
+      token,
+    }),
+
+  leaderboard: (token: string, limit = 10) =>
+    apiFetch<LeaderboardEntry[]>(`/api/game/leaderboard?limit=${limit}`, { token }),
 };

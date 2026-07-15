@@ -504,6 +504,19 @@ export interface CourseProgress {
   completedSectionIds: number[];
 }
 
+// ---- Game hóa (Phase 19) ----
+
+export interface MemoryPair {
+  pairId: number;
+  word: string;
+  imageUrl: string | null;
+}
+
+export interface LeaderboardEntry {
+  fullName: string;
+  totalPoints: number;
+}
+
 // ---- Ghi âm luyện nói (Phase 15) ----
 
 export interface LessonRecording {

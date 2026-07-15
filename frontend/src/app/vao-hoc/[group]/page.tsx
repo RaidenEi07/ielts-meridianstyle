@@ -42,6 +42,19 @@ export default function VaoHocGroupPage() {
         <h1 className="mt-2 text-3xl font-bold">{groupLabel(params.group)}</h1>
         <p className="mt-1 text-muted">Chọn khóa học để bắt đầu.</p>
 
+        {params.group === "tieu-hoc" && (
+          <Link
+            href="/game/lat-the"
+            className="mt-6 flex items-center justify-between rounded-[18px] border border-border bg-surface p-6 transition-shadow hover:shadow-[0_12px_36px_-14px_rgba(38,33,27,.13)]"
+          >
+            <div>
+              <p className="text-lg font-semibold">🎮 Chơi Lật thẻ ghi nhớ</p>
+              <p className="mt-1 text-sm text-muted">Ghép từ với hình, ghi điểm, leo bảng xếp hạng!</p>
+            </div>
+            <span className="text-2xl">→</span>
+          </Link>
+        )}
+
         <div className="mt-8">
           {loading ? (
             <p className="text-muted">Đang tải…</p>
