@@ -36,13 +36,16 @@ class GameServiceTest {
     @Mock private QuestionOptionRepository questionOptionRepository;
     @Mock private PointsLedgerRepository pointsLedgerRepository;
     @Mock private UserRepository userRepository;
+    @Mock private BadgeRepository badgeRepository;
+    @Mock private UserBadgeRepository userBadgeRepository;
 
     private GameService gameService;
 
     @BeforeEach
     void setUp() {
         gameService = new GameService(questionRepository, matchingPairRepository,
-                questionOptionRepository, pointsLedgerRepository, userRepository);
+                questionOptionRepository, pointsLedgerRepository, userRepository,
+                badgeRepository, userBadgeRepository);
     }
 
     private Question kidsQuestion(Long id, Long categoryId, QuestionType type) {
@@ -72,6 +75,30 @@ class GameServiceTest {
         o.setContent(content);
         o.setCorrect(correct);
         return o;
+    }
+
+    private Badge badge(Long id, String code) {
+        Badge b = new Badge();
+        b.setId(id);
+        b.setCode(code);
+        b.setName(code);
+        b.setDescription(code);
+        b.setEmoji("🌟");
+        return b;
+    }
+
+    private PointsLedger ledgerEntry(String gameMode) {
+        PointsLedger p = new PointsLedger();
+        p.setGameMode(gameMode);
+        p.setPoints(10);
+        return p;
+    }
+
+    private UserBadge userBadge(UUID userId, Long badgeId) {
+        UserBadge ub = new UserBadge();
+        ub.setUserId(userId);
+        ub.setBadgeId(badgeId);
+        return ub;
     }
 
     @Test
@@ -201,6 +228,61 @@ class GameServiceTest {
         gameService.awardPoints(userId, 60, "Hoàn thành lượt chơi", "memory_match");
 
         verify(pointsLedgerRepository).save(any(PointsLedger.class));
+    }
+
+    @Test
+    void awardPointsFirstEverEarnsFirstPlayBadge() {
+        UUID userId = UUID.randomUUID();
+        when(pointsLedgerRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of(ledgerEntry("memory_match")));
+        when(badgeRepository.findAll()).thenReturn(List.of(badge(1L, "FIRST_PLAY")));
+        when(userBadgeRepository.findByUserId(userId)).thenReturn(List.of());
+
+        var result = gameService.awardPoints(userId, 10, "test", "memory_match");
+
+        assertThat(result).extracting("code").containsExactly("FIRST_PLAY");
+        verify(userBadgeRepository).save(any(UserBadge.class));
+    }
+
+    @Test
+    void awardPointsDoesNotReawardAlreadyEarnedBadge() {
+        UUID userId = UUID.randomUUID();
+        when(pointsLedgerRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of(ledgerEntry("memory_match")));
+        when(badgeRepository.findAll()).thenReturn(List.of(badge(1L, "FIRST_PLAY")));
+        when(userBadgeRepository.findByUserId(userId)).thenReturn(List.of(userBadge(userId, 1L)));
+
+        var result = gameService.awardPoints(userId, 10, "test", "memory_match");
+
+        assertThat(result).isEmpty();
+        verify(userBadgeRepository, never()).save(any());
+    }
+
+    @Test
+    void awardPointsEarnsBothModesBadgeAfterPlayingBothModes() {
+        UUID userId = UUID.randomUUID();
+        when(pointsLedgerRepository.findByUserIdOrderByCreatedAtDesc(userId))
+                .thenReturn(List.of(ledgerEntry("memory_match"), ledgerEntry("quick_race")));
+        when(badgeRepository.findAll()).thenReturn(List.of(badge(1L, "BOTH_MODES")));
+        when(userBadgeRepository.findByUserId(userId)).thenReturn(List.of());
+
+        var result = gameService.awardPoints(userId, 10, "test", "quick_race");
+
+        assertThat(result).extracting("code").containsExactly("BOTH_MODES");
+    }
+
+    @Test
+    void allBadgesWithStatusMarksEarnedCorrectly() {
+        UUID userId = UUID.randomUUID();
+        when(badgeRepository.findAll()).thenReturn(List.of(badge(1L, "FIRST_PLAY"), badge(2L, "FIVE_ROUNDS")));
+        when(userBadgeRepository.findByUserId(userId)).thenReturn(List.of(userBadge(userId, 1L)));
+
+        var result = gameService.allBadgesWithStatus(userId);
+
+        assertThat(result).extracting("code", "earned")
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("FIRST_PLAY", true),
+                        org.assertj.core.groups.Tuple.tuple("FIVE_ROUNDS", false));
     }
 
     @Test

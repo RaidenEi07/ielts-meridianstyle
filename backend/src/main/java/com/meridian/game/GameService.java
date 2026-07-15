@@ -1,6 +1,7 @@
 package com.meridian.game;
 
 import com.meridian.common.ApiException;
+import com.meridian.game.dto.GameDtos.BadgeDto;
 import com.meridian.game.dto.GameDtos.CheckAnswerResult;
 import com.meridian.game.dto.GameDtos.LeaderboardEntryDto;
 import com.meridian.game.dto.GameDtos.MemoryPairDto;
@@ -41,16 +42,21 @@ public class GameService {
     private final QuestionOptionRepository questionOptionRepository;
     private final PointsLedgerRepository pointsLedgerRepository;
     private final UserRepository userRepository;
+    private final BadgeRepository badgeRepository;
+    private final UserBadgeRepository userBadgeRepository;
 
     public GameService(QuestionRepository questionRepository,
             QuestionMatchingPairRepository matchingPairRepository,
             QuestionOptionRepository questionOptionRepository,
-            PointsLedgerRepository pointsLedgerRepository, UserRepository userRepository) {
+            PointsLedgerRepository pointsLedgerRepository, UserRepository userRepository,
+            BadgeRepository badgeRepository, UserBadgeRepository userBadgeRepository) {
         this.questionRepository = questionRepository;
         this.matchingPairRepository = matchingPairRepository;
         this.questionOptionRepository = questionOptionRepository;
         this.pointsLedgerRepository = pointsLedgerRepository;
         this.userRepository = userRepository;
+        this.badgeRepository = badgeRepository;
+        this.userBadgeRepository = userBadgeRepository;
     }
 
     @Transactional(readOnly = true)
@@ -128,7 +134,7 @@ public class GameService {
     }
 
     @Transactional
-    public void awardPoints(UUID userId, int points, String reason, String gameMode) {
+    public List<BadgeDto> awardPoints(UUID userId, int points, String reason, String gameMode) {
         if (points <= 0) {
             throw ApiException.badRequest("Điểm thưởng phải lớn hơn 0");
         }
@@ -141,6 +147,57 @@ public class GameService {
         entry.setReason(reason == null ? "" : reason);
         entry.setGameMode(gameMode);
         pointsLedgerRepository.save(entry);
+        return checkAndAwardBadges(userId);
+    }
+
+    private List<BadgeDto> checkAndAwardBadges(UUID userId) {
+        List<PointsLedger> history = pointsLedgerRepository.findByUserIdOrderByCreatedAtDesc(userId);
+        int totalRounds = history.size();
+        long totalPoints = history.stream().mapToLong(PointsLedger::getPoints).sum();
+        Map<String, Long> roundsByMode = history.stream()
+                .collect(Collectors.groupingBy(PointsLedger::getGameMode, Collectors.counting()));
+
+        Set<Long> earnedBadgeIds = userBadgeRepository.findByUserId(userId).stream()
+                .map(UserBadge::getBadgeId)
+                .collect(Collectors.toSet());
+
+        List<BadgeDto> newlyEarned = new ArrayList<>();
+        for (Badge badge : badgeRepository.findAll()) {
+            if (earnedBadgeIds.contains(badge.getId())) {
+                continue;
+            }
+            boolean satisfied = switch (badge.getCode()) {
+                case "FIRST_PLAY" -> totalRounds >= 1;
+                case "FIVE_ROUNDS" -> totalRounds >= 5;
+                case "HUNDRED_POINTS" -> totalPoints >= 100;
+                case "MEMORY_MASTER" -> roundsByMode.getOrDefault("memory_match", 0L) >= 5;
+                case "RACE_MASTER" -> roundsByMode.getOrDefault("quick_race", 0L) >= 5;
+                case "BOTH_MODES" -> roundsByMode.containsKey("memory_match")
+                        && roundsByMode.containsKey("quick_race");
+                default -> false;
+            };
+            if (!satisfied) {
+                continue;
+            }
+            UserBadge earned = new UserBadge();
+            earned.setUserId(userId);
+            earned.setBadgeId(badge.getId());
+            userBadgeRepository.save(earned);
+            newlyEarned.add(new BadgeDto(badge.getCode(), badge.getName(), badge.getDescription(),
+                    badge.getEmoji(), true));
+        }
+        return newlyEarned;
+    }
+
+    @Transactional(readOnly = true)
+    public List<BadgeDto> allBadgesWithStatus(UUID userId) {
+        Set<Long> earnedBadgeIds = userBadgeRepository.findByUserId(userId).stream()
+                .map(UserBadge::getBadgeId)
+                .collect(Collectors.toSet());
+        return badgeRepository.findAll().stream()
+                .map(b -> new BadgeDto(b.getCode(), b.getName(), b.getDescription(), b.getEmoji(),
+                        earnedBadgeIds.contains(b.getId())))
+                .toList();
     }
 
     @Transactional(readOnly = true)

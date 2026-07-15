@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, gameApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
+import type { Badge } from "@/lib/types";
 
 const TIME_PER_QUESTION = 15;
 const POINTS_PER_CORRECT = 10;
@@ -16,7 +17,7 @@ export function QuickRaceGame({
 }: {
   categoryId: number | null;
   token: string;
-  onComplete: (pointsEarned: number) => void;
+  onComplete: (pointsEarned: number, newBadges: Badge[]) => void;
 }) {
   const [questions, setQuestions] = useState<
     { questionId: number; stem: string; options: { id: number; content: string }[] }[] | null
@@ -90,8 +91,8 @@ export function QuickRaceGame({
         const points = correctCount * POINTS_PER_CORRECT;
         gameApi
           .awardPoints(token, points, "Hoàn thành lượt Đua trả lời nhanh", "quick_race")
-          .catch(() => {})
-          .finally(() => onComplete(points));
+          .then((newBadges) => onComplete(points, newBadges))
+          .catch(() => onComplete(points, []));
       } else {
         setCurrentIndex(next);
         setSelectedId(null);

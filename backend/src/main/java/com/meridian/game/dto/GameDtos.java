@@ -28,4 +28,7 @@ public final class GameDtos {
 
     public record CheckAnswerResult(boolean correct) {
     }
+
+    public record BadgeDto(String code, String name, String description, String emoji, boolean earned) {
+    }
 }

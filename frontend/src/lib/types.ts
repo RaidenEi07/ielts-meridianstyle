@@ -523,6 +523,14 @@ export interface RaceQuestion {
   options: { id: number; content: string }[];
 }
 
+export interface Badge {
+  code: string;
+  name: string;
+  description: string;
+  emoji: string;
+  earned: boolean;
+}
+
 // ---- Ghi âm luyện nói (Phase 15) ----
 
 export interface LessonRecording {

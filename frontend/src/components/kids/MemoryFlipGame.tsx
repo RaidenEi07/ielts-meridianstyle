@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ApiError, gameApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
+import type { Badge } from "@/lib/types";
 
 const POINTS_PER_PAIR = 10;
 
@@ -29,7 +30,7 @@ export function MemoryFlipGame({
 }: {
   categoryId: number | null;
   token: string;
-  onComplete: (pointsEarned: number) => void;
+  onComplete: (pointsEarned: number, newBadges: Badge[]) => void;
 }) {
   const [cards, setCards] = useState<Card[] | null>(null);
   const [flipped, setFlipped] = useState<string[]>([]);
@@ -89,8 +90,8 @@ export function MemoryFlipGame({
       const points = totalPairs * POINTS_PER_PAIR;
       gameApi
         .awardPoints(token, points, "Hoàn thành lượt Lật thẻ ghi nhớ", "memory_match")
-        .catch(() => {})
-        .finally(() => onComplete(points));
+        .then((newBadges) => onComplete(points, newBadges))
+        .catch(() => onComplete(points, []));
     }
   }, [matchedPairs, totalPairs, token, onComplete]);
 

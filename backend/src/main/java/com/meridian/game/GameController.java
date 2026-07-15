@@ -1,6 +1,7 @@
 package com.meridian.game;
 
 import com.meridian.game.dto.GameDtos.AwardPointsRequest;
+import com.meridian.game.dto.GameDtos.BadgeDto;
 import com.meridian.game.dto.GameDtos.CheckAnswerRequest;
 import com.meridian.game.dto.GameDtos.CheckAnswerResult;
 import com.meridian.game.dto.GameDtos.LeaderboardEntryDto;
@@ -11,7 +12,6 @@ import com.meridian.question.QuestionTaxonomyService;
 import com.meridian.question.dto.QuestionCategoryDto;
 import com.meridian.security.CurrentUserProvider;
 import java.util.List;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -69,15 +69,19 @@ public class GameController {
     }
 
     @PostMapping("/points")
-    public ResponseEntity<Void> awardPoints(@RequestBody AwardPointsRequest request) {
-        gameService.awardPoints(currentUser.require().id(), request.points(), request.reason(),
+    public List<BadgeDto> awardPoints(@RequestBody AwardPointsRequest request) {
+        return gameService.awardPoints(currentUser.require().id(), request.points(), request.reason(),
                 request.gameMode());
-        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/leaderboard")
     public List<LeaderboardEntryDto> leaderboard(@RequestParam(defaultValue = "10") int limit) {
         currentUser.require();
         return gameService.leaderboard(limit);
+    }
+
+    @GetMapping("/badges")
+    public List<BadgeDto> badges() {
+        return gameService.allBadgesWithStatus(currentUser.require().id());
     }
 }

@@ -6,6 +6,7 @@ import type {
   AttemptResult,
   Audience,
   AuthResponse,
+  Badge,
   BulkImportResult,
   Category,
   ChildProfile,
@@ -918,7 +919,7 @@ export const gameApi = {
     }),
 
   awardPoints: (token: string, points: number, reason: string, gameMode: string) =>
-    apiFetch<void>("/api/game/points", {
+    apiFetch<Badge[]>("/api/game/points", {
       method: "POST",
       body: { points, reason, gameMode },
       token,
@@ -926,4 +927,6 @@ export const gameApi = {
 
   leaderboard: (token: string, limit = 10) =>
     apiFetch<LeaderboardEntry[]>(`/api/game/leaderboard?limit=${limit}`, { token }),
+
+  badges: (token: string) => apiFetch<Badge[]>("/api/game/badges", { token }),
 };

@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { QuickRaceGame } from "@/components/kids/QuickRaceGame";
 import { ApiError, gameApi } from "@/lib/api";
-import type { QuestionCategoryNode } from "@/lib/types";
+import type { Badge, QuestionCategoryNode } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
 export default function QuickRaceGamePage() {
@@ -19,6 +19,7 @@ export default function QuickRaceGamePage() {
   const [error, setError] = useState<string | null>(null);
   const [round, setRound] = useState(0);
   const [pointsEarned, setPointsEarned] = useState<number | null>(null);
+  const [newBadges, setNewBadges] = useState<Badge[]>([]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -42,7 +43,13 @@ export default function QuickRaceGamePage() {
 
   function playAgain() {
     setPointsEarned(null);
+    setNewBadges([]);
     setRound((r) => r + 1);
+  }
+
+  function handleComplete(points: number, badges: Badge[]) {
+    setPointsEarned(points);
+    setNewBadges(badges);
   }
 
   if (!hydrated || !ready) {
@@ -92,7 +99,19 @@ export default function QuickRaceGamePage() {
               <div className="rounded-xl border border-primary bg-primary-soft p-8 text-center">
                 <p className="text-2xl font-bold">🎉 Hoàn thành!</p>
                 <p className="mt-2 text-lg">Bạn nhận được {pointsEarned} điểm</p>
-                <div className="mt-5 flex justify-center gap-3">
+                {newBadges.length > 0 && (
+                  <div className="mt-4 rounded-lg border border-primary bg-surface p-3">
+                    <p className="text-sm font-semibold">Bạn vừa đạt huy hiệu mới!</p>
+                    <div className="mt-2 flex flex-wrap justify-center gap-3">
+                      {newBadges.map((b) => (
+                        <span key={b.code} className="text-sm">
+                          {b.emoji} {b.name}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <div className="mt-5 flex flex-wrap justify-center gap-3">
                   <button
                     type="button"
                     onClick={playAgain}
@@ -106,6 +125,12 @@ export default function QuickRaceGamePage() {
                   >
                     Xem bảng xếp hạng
                   </Link>
+                  <Link
+                    href="/game/huy-hieu"
+                    className="rounded-lg border border-border px-5 py-2.5 font-semibold text-muted hover:text-text"
+                  >
+                    Huy hiệu của tôi
+                  </Link>
                 </div>
               </div>
             ) : (
@@ -113,7 +138,7 @@ export default function QuickRaceGamePage() {
                 key={`${categoryId}-${round}`}
                 categoryId={categoryId}
                 token={accessToken}
-                onComplete={setPointsEarned}
+                onComplete={handleComplete}
               />
             )}
           </div>
