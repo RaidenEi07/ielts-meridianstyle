@@ -12,6 +12,7 @@ import {
   School,
   Settings,
   Siren,
+  TrendingUp,
   Users,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
@@ -214,6 +215,14 @@ export default function DashboardPage() {
                 className="flex items-center gap-2 rounded-lg border border-border px-4 py-3 text-sm font-medium transition-transform hover:-translate-y-0.5 hover:bg-soft"
               >
                 <Users className="h-4 w-4" /> Hồ sơ con →
+              </Link>
+            )}
+            {roleAssignments.some((ra) => ra.roleShortname === "parent") && (
+              <Link
+                href="/parent/dashboard"
+                className="flex items-center gap-2 rounded-lg border border-border px-4 py-3 text-sm font-medium transition-transform hover:-translate-y-0.5 hover:bg-soft"
+              >
+                <TrendingUp className="h-4 w-4" /> Tiến độ học của con →
               </Link>
             )}
           </div>

@@ -10,6 +10,8 @@ import com.meridian.auth.dto.AuthResponse;
 import com.meridian.auth.dto.UserDto;
 import com.meridian.common.ApiException;
 import com.meridian.family.dto.CreateChildRequest;
+import com.meridian.gradebook.ReportService;
+import com.meridian.progress.LessonProgressRepository;
 import com.meridian.user.User;
 import com.meridian.user.UserRepository;
 import com.meridian.user.UserStatus;
@@ -28,12 +30,15 @@ class FamilyServiceTest {
     @Mock private ParentChildProfileRepository profileRepository;
     @Mock private UserRepository userRepository;
     @Mock private AuthService authService;
+    @Mock private LessonProgressRepository lessonProgressRepository;
+    @Mock private ReportService reportService;
 
     private FamilyService familyService;
 
     @BeforeEach
     void setUp() {
-        familyService = new FamilyService(profileRepository, userRepository, authService);
+        familyService = new FamilyService(profileRepository, userRepository, authService,
+                lessonProgressRepository, reportService);
     }
 
     private User activeUser(String username) {
@@ -100,6 +105,24 @@ class FamilyServiceTest {
         var response = familyService.switchToChild(parentId, child.getId());
 
         assertThat(response).isSameAs(expected);
+    }
+
+    @Test
+    void childProgressRejectsAnotherParentsChild() {
+        // Phụ huynh A không được xem tiến độ con của phụ huynh B.
+        UUID parentAId = UUID.randomUUID();
+        UUID parentBsChildId = UUID.randomUUID();
+        when(profileRepository.existsByParentIdAndChildId(parentAId, parentBsChildId))
+                .thenReturn(false);
+
+        assertThatThrownBy(() -> familyService.childProgress(parentAId, parentBsChildId))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(403));
+
+        org.mockito.Mockito.verify(lessonProgressRepository, org.mockito.Mockito.never())
+                .findByUserIdAndCompletedAtAfterOrderByCompletedAtDesc(any(), any());
+        org.mockito.Mockito.verify(reportService, org.mockito.Mockito.never())
+                .gradebookForUser(any(), any());
     }
 
     @Test

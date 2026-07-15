@@ -2,6 +2,7 @@ package com.meridian.family;
 
 import com.meridian.auth.dto.AuthResponse;
 import com.meridian.family.dto.ChildProfileDto;
+import com.meridian.family.dto.ChildProgressDto;
 import com.meridian.family.dto.CreateChildRequest;
 import com.meridian.security.CurrentUserProvider;
 import jakarta.validation.Valid;
@@ -54,5 +55,10 @@ public class FamilyController {
     @PostMapping("/children/{childId}/switch")
     public AuthResponse switchToChild(@PathVariable UUID childId) {
         return familyService.switchToChild(currentUser.require().id(), childId);
+    }
+
+    @GetMapping("/children/{childId}/progress")
+    public ChildProgressDto childProgress(@PathVariable UUID childId) {
+        return familyService.childProgress(currentUser.require().id(), childId);
     }
 }

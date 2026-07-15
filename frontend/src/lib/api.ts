@@ -9,6 +9,7 @@ import type {
   BulkImportResult,
   Category,
   ChildProfile,
+  ChildProgress,
   CourseAudienceGroup,
   CourseDetail,
   CourseProgress,
@@ -850,6 +851,9 @@ export const familyApi = {
       method: "POST",
       token,
     }),
+
+  childProgress: (token: string, childId: string) =>
+    apiFetch<ChildProgress>(`/api/family/children/${childId}/progress`, { token }),
 };
 
 // ---- Tiến độ học ----

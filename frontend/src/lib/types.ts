@@ -489,6 +489,15 @@ export interface ChildProfile {
   fullName: string;
 }
 
+// ---- Tiến độ học của con (Phase 18) ----
+
+export interface ChildProgress {
+  totalLessonsCompleted: number;
+  averageScorePct: number | null;
+  weeklyLessons: { weekStart: string; count: number }[];
+  recentLessons: { sectionTitle: string; courseTitle: string; completedAt: string }[];
+}
+
 // ---- Tiến độ học (Phase 12) ----
 
 export interface CourseProgress {
