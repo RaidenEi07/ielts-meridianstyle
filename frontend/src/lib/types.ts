@@ -494,3 +494,11 @@ export interface ChildProfile {
 export interface CourseProgress {
   completedSectionIds: number[];
 }
+
+// ---- Ghi âm luyện nói (Phase 15) ----
+
+export interface LessonRecording {
+  id: number;
+  audioUrl: string;
+  createdAt: string;
+}

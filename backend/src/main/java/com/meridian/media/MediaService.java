@@ -19,7 +19,7 @@ public class MediaService {
 
     private static final Set<String> ALLOWED_AUDIO_TYPES =
             Set.of("audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav", "audio/wave",
-                    "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/aac");
+                    "audio/ogg", "audio/mp4", "audio/x-m4a", "audio/aac", "audio/webm");
 
     private static final Set<String> ALLOWED_VIDEO_TYPES = Set.of("video/mp4");
 
@@ -55,9 +55,12 @@ public class MediaService {
         if (file == null || file.isEmpty()) {
             throw ApiException.badRequest("Chưa chọn file audio");
         }
-        String contentType = file.getContentType();
+        // MediaRecorder (ghi âm trình duyệt) thường gửi kèm tham số codec, vd.
+        // "audio/webm;codecs=opus" — chỉ so khớp phần MIME type chính, bỏ qua tham số.
+        String rawContentType = file.getContentType();
+        String contentType = rawContentType == null ? null : rawContentType.split(";", 2)[0].trim();
         if (contentType == null || !ALLOWED_AUDIO_TYPES.contains(contentType)) {
-            throw ApiException.badRequest("Chỉ chấp nhận audio MP3, WAV, OGG, M4A hoặc AAC");
+            throw ApiException.badRequest("Chỉ chấp nhận audio MP3, WAV, OGG, M4A, AAC hoặc WEBM");
         }
 
         String extension = switch (contentType) {
@@ -66,6 +69,7 @@ public class MediaService {
             case "audio/ogg" -> ".ogg";
             case "audio/mp4", "audio/x-m4a" -> ".m4a";
             case "audio/aac" -> ".aac";
+            case "audio/webm" -> ".webm";
             default -> "";
         };
         return store(file, "audio", extension);

@@ -17,6 +17,7 @@ import type {
   MeResponse,
   GradebookRow,
   ImportSummary,
+  LessonRecording,
   PassageSummary,
   PublicStats,
   QuestionCategoryNode,
@@ -825,6 +826,8 @@ export const mediaApi = {
     uploadMedia("/api/admin/media/videos", "Tải video thất bại", token, file),
   uploadSubtitle: (token: string, file: File) =>
     uploadMedia("/api/admin/media/subtitles", "Tải phụ đề thất bại", token, file),
+  uploadAudioAsStudent: (token: string, file: File) =>
+    uploadMedia("/api/media/audio", "Tải audio thất bại", token, file),
 };
 
 // ---- Phụ huynh & hồ sơ con ----
@@ -860,4 +863,21 @@ export const progressApi = {
       method: "POST",
       token,
     }),
+};
+
+// ---- Ghi âm luyện nói (Phase 15) ----
+
+export const recordingApi = {
+  list: (sectionId: number, token: string) =>
+    apiFetch<LessonRecording[]>(`/api/recordings/sections/${sectionId}`, { token }),
+
+  save: (sectionId: number, audioUrl: string, token: string) =>
+    apiFetch<LessonRecording>(`/api/recordings/sections/${sectionId}`, {
+      method: "POST",
+      body: { audioUrl },
+      token,
+    }),
+
+  remove: (recordingId: number, token: string) =>
+    apiFetch<void>(`/api/recordings/${recordingId}`, { method: "DELETE", token }),
 };

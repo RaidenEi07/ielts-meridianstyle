@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
 import { LessonVideoPlayer } from "@/components/LessonVideoPlayer";
+import { KidsVoiceRecorder } from "@/components/kids/KidsVoiceRecorder";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ApiError, catalogApi, progressApi, quizApi } from "@/lib/api";
 import type { CourseDetail, QuizSummary, Section } from "@/lib/types";
@@ -148,6 +149,12 @@ export default function VaoHocLessonPage() {
           <p className="mt-6 rounded-lg border border-border bg-surface p-6 text-center text-muted">
             Bài này chưa có video.
           </p>
+        )}
+
+        {accessToken && (
+          <div className="mt-6">
+            <KidsVoiceRecorder sectionId={sectionId} token={accessToken} />
+          </div>
         )}
 
         {error && <p className="mt-4 text-sm text-red">{error}</p>}
