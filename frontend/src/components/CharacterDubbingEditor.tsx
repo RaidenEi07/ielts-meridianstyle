@@ -4,8 +4,17 @@ import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError, dubbingAdminApi, dubbingApi } from "@/lib/api";
 import type { DubbingCharacter } from "@/lib/types";
+import { isYoutubeUrl } from "@/lib/youtube";
 
-export function CharacterDubbingEditor({ sectionId, token }: { sectionId: number; token: string }) {
+export function CharacterDubbingEditor({
+  sectionId,
+  token,
+  videoUrl,
+}: {
+  sectionId: number;
+  token: string;
+  videoUrl?: string | null;
+}) {
   const [characters, setCharacters] = useState<DubbingCharacter[] | null>(null);
   const [newName, setNewName] = useState("");
   const [segmentDrafts, setSegmentDrafts] = useState<Record<number, { start: string; end: string }>>({});
@@ -68,6 +77,17 @@ export function CharacterDubbingEditor({ sectionId, token }: { sectionId: number
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Xóa đoạn thoại thất bại");
     }
+  }
+
+  if (videoUrl && isYoutubeUrl(videoUrl)) {
+    return (
+      <div>
+        <span className="mb-1 block text-xs font-medium text-muted">Lồng tiếng nhân vật</span>
+        <p className="text-xs text-muted">
+          Lồng tiếng nhân vật cần video tải lên server — không áp dụng cho video YouTube.
+        </p>
+      </div>
+    );
   }
 
   return (

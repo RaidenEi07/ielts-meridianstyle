@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { CharacterDubbingRecorder } from "@/components/kids/CharacterDubbingRecorder";
 import { ApiError, catalogApi, dubbingApi } from "@/lib/api";
 import type { CourseDetail, DubbingCharacter, DubbingRecording } from "@/lib/types";
+import { isYoutubeUrl } from "@/lib/youtube";
 import { useAuthStore } from "@/store/auth";
 
 export default function CharacterDubbingPage() {
@@ -65,6 +66,7 @@ export default function CharacterDubbingPage() {
   }
 
   const section = course?.sections.find((s) => s.id === sectionId);
+  const isYoutube = section?.videoUrl ? isYoutubeUrl(section.videoUrl) : false;
 
   return (
     <div className="min-h-screen bg-bg">
@@ -81,30 +83,42 @@ export default function CharacterDubbingPage() {
 
         {error && <p className="mt-3 text-sm text-red">{error}</p>}
 
-        {section?.videoUrl && (
-          <div className="mt-4">
-            <video src={section.videoUrl} controls className="w-full rounded-lg border border-border" />
-          </div>
-        )}
-
-        {accessToken && characters && characters.length === 0 && (
+        {isYoutube ? (
           <p className="mt-6 rounded-lg border border-border bg-surface p-6 text-center text-muted">
-            Buổi học này chưa có lồng tiếng nhân vật.
+            Buổi học này dùng video YouTube, chưa hỗ trợ lồng tiếng.
           </p>
-        )}
+        ) : (
+          <>
+            {section?.videoUrl && (
+              <div className="mt-4">
+                <video
+                  src={section.videoUrl}
+                  controls
+                  className="w-full rounded-lg border border-border"
+                />
+              </div>
+            )}
 
-        {accessToken && characters && characters.length > 0 && (
-          <div className="mt-6 space-y-3">
-            {characters.map((c) => (
-              <CharacterDubbingRecorder
-                key={c.id}
-                character={c}
-                token={accessToken}
-                recording={recordings.find((r) => r.characterId === c.id) ?? null}
-                onChange={loadRecordings}
-              />
-            ))}
-          </div>
+            {accessToken && characters && characters.length === 0 && (
+              <p className="mt-6 rounded-lg border border-border bg-surface p-6 text-center text-muted">
+                Buổi học này chưa có lồng tiếng nhân vật.
+              </p>
+            )}
+
+            {accessToken && characters && characters.length > 0 && (
+              <div className="mt-6 space-y-3">
+                {characters.map((c) => (
+                  <CharacterDubbingRecorder
+                    key={c.id}
+                    character={c}
+                    token={accessToken}
+                    recording={recordings.find((r) => r.characterId === c.id) ?? null}
+                    onChange={loadRecordings}
+                  />
+                ))}
+              </div>
+            )}
+          </>
         )}
       </main>
     </div>

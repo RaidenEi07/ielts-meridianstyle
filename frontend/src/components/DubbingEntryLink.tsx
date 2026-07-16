@@ -3,15 +3,18 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { dubbingApi } from "@/lib/api";
+import { isYoutubeUrl } from "@/lib/youtube";
 
 export function DubbingEntryLink({
   sectionId,
   token,
   href,
+  videoUrl,
 }: {
   sectionId: number;
   token: string;
   href: string;
+  videoUrl?: string | null;
 }) {
   const [hasCharacters, setHasCharacters] = useState(false);
 
@@ -23,6 +26,7 @@ export function DubbingEntryLink({
   }, [sectionId, token]);
 
   if (!hasCharacters) return null;
+  if (videoUrl && isYoutubeUrl(videoUrl)) return null;
 
   return (
     <Link

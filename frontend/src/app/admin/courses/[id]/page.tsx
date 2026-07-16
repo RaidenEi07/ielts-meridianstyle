@@ -449,7 +449,7 @@ function SectionCard({
       </div>
 
       <div className="mb-3">
-        <CharacterDubbingEditor sectionId={section.id} token={token} />
+        <CharacterDubbingEditor sectionId={section.id} token={token} videoUrl={section.videoUrl} />
       </div>
 
       {creating && (

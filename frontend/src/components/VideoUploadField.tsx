@@ -3,6 +3,7 @@
 import { Video, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { ApiError, mediaApi } from "@/lib/api";
+import { isYoutubeUrl, toYoutubeEmbedUrl } from "@/lib/youtube";
 
 export function VideoUploadField({
   token,
@@ -17,6 +18,7 @@ export function VideoUploadField({
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [youtubeInput, setYoutubeInput] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
@@ -35,6 +37,19 @@ export function VideoUploadField({
     }
   }
 
+  function handleSaveYoutubeLink() {
+    if (!isYoutubeUrl(youtubeInput.trim())) {
+      setError("Link không hợp lệ — chỉ chấp nhận link YouTube");
+      return;
+    }
+    setError(null);
+    onChange(youtubeInput.trim());
+    setYoutubeInput("");
+  }
+
+  const valueIsYoutube = value ? isYoutubeUrl(value) : false;
+  const youtubeEmbedUrl = valueIsYoutube && value ? toYoutubeEmbedUrl(value) : null;
+
   return (
     <div>
       <span className="mb-1 block text-xs font-medium text-muted">{label}</span>
@@ -42,7 +57,13 @@ export function VideoUploadField({
         {value ? (
           <div className="flex items-center gap-2 rounded-lg border border-border px-3 py-2">
             <Video className="h-4 w-4 shrink-0 text-muted" />
-            <video src={value} controls className="h-16 max-w-xs" />
+            {valueIsYoutube ? (
+              youtubeEmbedUrl && (
+                <iframe src={youtubeEmbedUrl} className="h-16 w-28" allowFullScreen />
+              )
+            ) : (
+              <video src={value} controls className="h-16 max-w-xs" />
+            )}
             <button
               type="button"
               onClick={() => onChange(null)}
@@ -73,6 +94,25 @@ export function VideoUploadField({
           onChange={handleFileSelected}
         />
       </div>
+
+      <div className="mt-2 flex items-center gap-2">
+        <span className="text-xs text-muted">hoặc</span>
+        <input
+          value={youtubeInput}
+          onChange={(e) => setYoutubeInput(e.target.value)}
+          placeholder="Dán link YouTube"
+          className="input flex-1 text-xs"
+        />
+        <button
+          type="button"
+          onClick={handleSaveYoutubeLink}
+          disabled={!youtubeInput.trim()}
+          className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted hover:text-text disabled:opacity-60"
+        >
+          Lưu link YouTube
+        </button>
+      </div>
+
       {error && <p className="mt-1 text-xs text-red">{error}</p>}
     </div>
   );

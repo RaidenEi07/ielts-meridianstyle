@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { isYoutubeUrl, toYoutubeEmbedUrl } from "@/lib/youtube";
 import { parseVtt, type VttCue } from "./VttParser";
 
 function formatTime(seconds: number): string {
@@ -18,20 +19,37 @@ export function LessonVideoPlayer({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cues, setCues] = useState<VttCue[]>([]);
+  const isYoutube = isYoutubeUrl(videoUrl);
 
   useEffect(() => {
-    if (!subtitleUrl) return;
+    if (!subtitleUrl || isYoutube) return;
     fetch(subtitleUrl)
       .then((res) => res.text())
       .then((text) => setCues(parseVtt(text)))
       .catch(() => setCues([]));
-  }, [subtitleUrl]);
+  }, [subtitleUrl, isYoutube]);
 
   function seekTo(seconds: number) {
     const v = videoRef.current;
     if (!v) return;
     v.currentTime = seconds;
     v.play().catch(() => {});
+  }
+
+  if (isYoutube) {
+    const embedUrl = toYoutubeEmbedUrl(videoUrl);
+    return (
+      <div className="aspect-video w-full overflow-hidden rounded-xl border border-border bg-black">
+        {embedUrl && (
+          <iframe
+            src={embedUrl}
+            className="h-full w-full"
+            allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowFullScreen
+          />
+        )}
+      </div>
+    );
   }
 
   return (

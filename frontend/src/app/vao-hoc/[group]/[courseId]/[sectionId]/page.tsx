@@ -160,6 +160,7 @@ export default function VaoHocLessonPage() {
             sectionId={sectionId}
             token={accessToken}
             href={`/vao-hoc/${params.group}/${courseId}/${sectionId}/long-tieng`}
+            videoUrl={section?.videoUrl}
           />
         )}
 
