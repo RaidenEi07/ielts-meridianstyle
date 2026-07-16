@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
+import { HomeworkMaterialsList } from "@/components/HomeworkMaterialsList";
 import { LessonVideoPlayer } from "@/components/LessonVideoPlayer";
 import { KidsVoiceRecorder } from "@/components/kids/KidsVoiceRecorder";
 import { SiteHeader } from "@/components/SiteHeader";
@@ -150,6 +151,8 @@ export default function VaoHocLessonPage() {
             Bài này chưa có video.
           </p>
         )}
+
+        {accessToken && <HomeworkMaterialsList sectionId={sectionId} token={accessToken} />}
 
         {accessToken && (
           <div className="mt-6">

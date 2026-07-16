@@ -531,6 +531,16 @@ export interface Badge {
   earned: boolean;
 }
 
+// ---- Tài liệu bài tập về nhà (Phase 21) ----
+
+export interface HomeworkMaterial {
+  id: number;
+  mediaType: "AUDIO" | "VIDEO";
+  url: string;
+  label: string | null;
+  sortOrder: number;
+}
+
 // ---- Ghi âm luyện nói (Phase 15) ----
 
 export interface LessonRecording {

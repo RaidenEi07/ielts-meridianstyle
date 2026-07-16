@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useEffect, useState } from "react";
+import { HomeworkMaterialsEditor } from "@/components/HomeworkMaterialsEditor";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { PageHeader } from "@/components/PageHeader";
 import { SortableRow } from "@/components/SortableRow";
@@ -440,6 +441,10 @@ function SectionCard({
           value={section.subtitleUrl}
           onChange={handleSubtitleChange}
         />
+      </div>
+
+      <div className="mb-3">
+        <HomeworkMaterialsEditor sectionId={section.id} token={token} />
       </div>
 
       {creating && (

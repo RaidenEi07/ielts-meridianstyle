@@ -18,6 +18,7 @@ import type {
   Enrollment,
   MeResponse,
   GradebookRow,
+  HomeworkMaterial,
   ImportSummary,
   LeaderboardEntry,
   LessonRecording,
@@ -888,6 +889,29 @@ export const recordingApi = {
 
   remove: (recordingId: number, token: string) =>
     apiFetch<void>(`/api/recordings/${recordingId}`, { method: "DELETE", token }),
+};
+
+// ---- Tài liệu bài tập về nhà (Phase 21) ----
+
+export const homeworkApi = {
+  list: (sectionId: number, token: string) =>
+    apiFetch<HomeworkMaterial[]>(`/api/homework-materials/sections/${sectionId}`, { token }),
+};
+
+export const homeworkAdminApi = {
+  create: (
+    token: string,
+    sectionId: number,
+    data: { mediaType: "AUDIO" | "VIDEO"; url: string; label?: string | null },
+  ) =>
+    apiFetch<HomeworkMaterial>(`/api/admin/homework-materials/sections/${sectionId}`, {
+      method: "POST",
+      body: data,
+      token,
+    }),
+
+  remove: (token: string, id: number) =>
+    apiFetch<void>(`/api/admin/homework-materials/${id}`, { method: "DELETE", token }),
 };
 
 // ---- Game hóa (Phase 19) ----
