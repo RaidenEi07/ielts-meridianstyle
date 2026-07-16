@@ -13,11 +13,13 @@ import static org.mockito.Mockito.when;
 import com.meridian.catalog.Course;
 import com.meridian.catalog.CourseSection;
 import com.meridian.catalog.CourseSectionRepository;
+import com.meridian.catalog.EnrollmentRepository;
 import com.meridian.common.ApiException;
 import com.meridian.rbac.Context;
 import com.meridian.rbac.ContextService;
 import com.meridian.rbac.PermissionService;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -32,7 +34,9 @@ class DubbingServiceTest {
 
     @Mock private DubbingCharacterRepository characterRepository;
     @Mock private DubbingCharacterSegmentRepository segmentRepository;
+    @Mock private DubbingRecordingRepository recordingRepository;
     @Mock private CourseSectionRepository sectionRepository;
+    @Mock private EnrollmentRepository enrollmentRepository;
     @Mock private ContextService contextService;
     @Mock private PermissionService permissionService;
 
@@ -40,14 +44,15 @@ class DubbingServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new DubbingService(characterRepository, segmentRepository, sectionRepository,
-                contextService, permissionService);
+        service = new DubbingService(characterRepository, segmentRepository, recordingRepository,
+                sectionRepository, enrollmentRepository, contextService, permissionService);
     }
 
     private CourseSection sectionWithContext(Long sectionId, Long contextId) {
         Context context = new Context();
         context.setId(contextId);
         Course course = new Course();
+        course.setId(500L);
         course.setContext(context);
         CourseSection section = new CourseSection();
         section.setId(sectionId);
@@ -61,6 +66,16 @@ class DubbingServiceTest {
         c.setSection(section);
         c.setName("Cat");
         return c;
+    }
+
+    private DubbingRecording recording(Long id, UUID userId, DubbingCharacter character, Instant createdAt) {
+        DubbingRecording r = new DubbingRecording();
+        r.setId(id);
+        r.setUserId(userId);
+        r.setCharacter(character);
+        r.setAudioUrl("http://x/" + id + ".webm");
+        r.setCreatedAt(createdAt);
+        return r;
     }
 
     @Test
@@ -139,5 +154,47 @@ class DubbingServiceTest {
         assertThat(result).hasSize(2);
         assertThat(result.get(0).segments()).hasSize(2);
         assertThat(result.get(1).segments()).hasSize(1);
+    }
+
+    @Test
+    void saveRecordingRequiresEnrollment() {
+        UUID userId = UUID.randomUUID();
+        CourseSection section = sectionWithContext(1L, 10L);
+        DubbingCharacter character = character(5L, section);
+        when(characterRepository.findById(5L)).thenReturn(Optional.of(character));
+        when(enrollmentRepository.existsByUserIdAndCourseId(userId, 500L)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.saveRecording(userId, 5L, "http://x/a.webm"))
+                .isInstanceOf(ApiException.class);
+
+        verify(recordingRepository, never()).save(any());
+    }
+
+    @Test
+    void myRecordingsReturnsLatestPerCharacter() {
+        UUID userId = UUID.randomUUID();
+        CourseSection section = sectionWithContext(1L, 10L);
+        DubbingCharacter charA = character(1L, section);
+        when(characterRepository.findBySection_IdOrderBySortOrderAscIdAsc(1L))
+                .thenReturn(List.of(charA));
+
+        DubbingRecording older = recording(100L, userId, charA, Instant.parse("2026-01-01T00:00:00Z"));
+        DubbingRecording newer = recording(101L, userId, charA, Instant.parse("2026-01-02T00:00:00Z"));
+        when(recordingRepository.findByUserIdAndCharacter_IdIn(userId, List.of(1L)))
+                .thenReturn(List.of(older, newer));
+
+        var result = service.myRecordings(userId, 1L);
+
+        assertThat(result).hasSize(1);
+        assertThat(result.get(0).id()).isEqualTo(101L);
+    }
+
+    @Test
+    void deleteRecordingOnlyRemovesOwnRecording() {
+        UUID userId = UUID.randomUUID();
+
+        service.deleteRecording(userId, 42L);
+
+        verify(recordingRepository).deleteByIdAndUserId(42L, userId);
     }
 }

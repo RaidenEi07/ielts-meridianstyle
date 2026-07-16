@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Check } from "lucide-react";
+import { DubbingEntryLink } from "@/components/DubbingEntryLink";
 import { HomeworkMaterialsList } from "@/components/HomeworkMaterialsList";
 import { LessonVideoPlayer } from "@/components/LessonVideoPlayer";
 import { KidsVoiceRecorder } from "@/components/kids/KidsVoiceRecorder";
@@ -153,6 +154,14 @@ export default function VaoHocLessonPage() {
         )}
 
         {accessToken && <HomeworkMaterialsList sectionId={sectionId} token={accessToken} />}
+
+        {accessToken && (
+          <DubbingEntryLink
+            sectionId={sectionId}
+            token={accessToken}
+            href={`/vao-hoc/${params.group}/${courseId}/${sectionId}/long-tieng`}
+          />
+        )}
 
         {accessToken && (
           <div className="mt-6">

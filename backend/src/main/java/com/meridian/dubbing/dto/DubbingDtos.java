@@ -14,4 +14,7 @@ public final class DubbingDtos {
 
     public record CharacterDto(Long id, String name, List<SegmentDto> segments) {
     }
+
+    public record RecordingDto(Long id, Long characterId, String audioUrl) {
+    }
 }

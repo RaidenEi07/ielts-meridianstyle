@@ -16,6 +16,7 @@ import type {
   CourseProgress,
   CourseSummary,
   DubbingCharacter,
+  DubbingRecording,
   Enrollment,
   MeResponse,
   GradebookRow,
@@ -920,6 +921,19 @@ export const homeworkAdminApi = {
 export const dubbingApi = {
   characters: (token: string, sectionId: number) =>
     apiFetch<DubbingCharacter[]>(`/api/dubbing/sections/${sectionId}/characters`, { token }),
+
+  saveRecording: (token: string, characterId: number, audioUrl: string) =>
+    apiFetch<DubbingRecording>(`/api/dubbing/characters/${characterId}/recordings`, {
+      method: "POST",
+      body: { audioUrl },
+      token,
+    }),
+
+  myRecordings: (token: string, sectionId: number) =>
+    apiFetch<DubbingRecording[]>(`/api/dubbing/sections/${sectionId}/my-recordings`, { token }),
+
+  deleteRecording: (token: string, id: number) =>
+    apiFetch<void>(`/api/dubbing/recordings/${id}`, { method: "DELETE", token }),
 };
 
 export const dubbingAdminApi = {

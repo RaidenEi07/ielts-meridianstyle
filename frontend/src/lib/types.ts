@@ -555,6 +555,12 @@ export interface DubbingCharacter {
   segments: DubbingSegment[];
 }
 
+export interface DubbingRecording {
+  id: number;
+  characterId: number;
+  audioUrl: string;
+}
+
 // ---- Ghi âm luyện nói (Phase 15) ----
 
 export interface LessonRecording {

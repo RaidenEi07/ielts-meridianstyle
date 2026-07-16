@@ -2,13 +2,16 @@ package com.meridian.dubbing;
 
 import com.meridian.catalog.CourseSection;
 import com.meridian.catalog.CourseSectionRepository;
+import com.meridian.catalog.EnrollmentRepository;
 import com.meridian.common.ApiException;
 import com.meridian.dubbing.dto.DubbingDtos.CharacterDto;
+import com.meridian.dubbing.dto.DubbingDtos.RecordingDto;
 import com.meridian.dubbing.dto.DubbingDtos.SegmentDto;
 import com.meridian.rbac.Context;
 import com.meridian.rbac.ContextService;
 import com.meridian.rbac.PermissionService;
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,17 +27,22 @@ public class DubbingService {
 
     private final DubbingCharacterRepository characterRepository;
     private final DubbingCharacterSegmentRepository segmentRepository;
+    private final DubbingRecordingRepository recordingRepository;
     private final CourseSectionRepository sectionRepository;
+    private final EnrollmentRepository enrollmentRepository;
     private final ContextService contextService;
     private final PermissionService permissionService;
 
     public DubbingService(DubbingCharacterRepository characterRepository,
             DubbingCharacterSegmentRepository segmentRepository,
-            CourseSectionRepository sectionRepository, ContextService contextService,
-            PermissionService permissionService) {
+            DubbingRecordingRepository recordingRepository,
+            CourseSectionRepository sectionRepository, EnrollmentRepository enrollmentRepository,
+            ContextService contextService, PermissionService permissionService) {
         this.characterRepository = characterRepository;
         this.segmentRepository = segmentRepository;
+        this.recordingRepository = recordingRepository;
         this.sectionRepository = sectionRepository;
+        this.enrollmentRepository = enrollmentRepository;
         this.contextService = contextService;
         this.permissionService = permissionService;
     }
@@ -109,6 +117,47 @@ public class DubbingService {
         segmentRepository.delete(segment);
     }
 
+    @Transactional
+    public RecordingDto saveRecording(UUID userId, Long characterId, String audioUrl) {
+        if (audioUrl == null || audioUrl.isBlank()) {
+            throw ApiException.badRequest("Thiếu đường dẫn file ghi âm");
+        }
+        DubbingCharacter character = getCharacter(characterId);
+        Long courseId = character.getSection().getCourse().getId();
+        if (!enrollmentRepository.existsByUserIdAndCourseId(userId, courseId)) {
+            throw ApiException.forbidden("Bạn cần được ghi danh khóa học này trước");
+        }
+        DubbingRecording recording = new DubbingRecording();
+        recording.setUserId(userId);
+        recording.setCharacter(character);
+        recording.setAudioUrl(audioUrl);
+        recording = recordingRepository.save(recording);
+        return toRecordingDto(recording);
+    }
+
+    @Transactional(readOnly = true)
+    public List<RecordingDto> myRecordings(UUID userId, Long sectionId) {
+        List<DubbingCharacter> characters = characterRepository
+                .findBySection_IdOrderBySortOrderAscIdAsc(sectionId);
+        if (characters.isEmpty()) {
+            return List.of();
+        }
+        List<Long> characterIds = characters.stream().map(DubbingCharacter::getId).toList();
+        Map<Long, DubbingRecording> latestByCharacter = recordingRepository
+                .findByUserIdAndCharacter_IdIn(userId, characterIds).stream()
+                .collect(Collectors.toMap(r -> r.getCharacter().getId(), r -> r,
+                        (a, b) -> a.getCreatedAt().isAfter(b.getCreatedAt()) ? a : b));
+        return latestByCharacter.values().stream()
+                .sorted(Comparator.comparing(DubbingRecording::getCreatedAt))
+                .map(DubbingService::toRecordingDto)
+                .toList();
+    }
+
+    @Transactional
+    public void deleteRecording(UUID userId, Long recordingId) {
+        recordingRepository.deleteByIdAndUserId(recordingId, userId);
+    }
+
     private DubbingCharacter getCharacter(Long characterId) {
         return characterRepository.findById(characterId)
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy nhân vật"));
@@ -123,5 +172,9 @@ public class DubbingService {
 
     private static SegmentDto toSegmentDto(DubbingCharacterSegment s) {
         return new SegmentDto(s.getId(), s.getStartSeconds(), s.getEndSeconds());
+    }
+
+    private static RecordingDto toRecordingDto(DubbingRecording r) {
+        return new RecordingDto(r.getId(), r.getCharacter().getId(), r.getAudioUrl());
     }
 }
