@@ -922,8 +922,8 @@ export const dubbingApi = {
   characters: (token: string, sectionId: number) =>
     apiFetch<DubbingCharacter[]>(`/api/dubbing/sections/${sectionId}/characters`, { token }),
 
-  saveRecording: (token: string, characterId: number, audioUrl: string) =>
-    apiFetch<DubbingRecording>(`/api/dubbing/characters/${characterId}/recordings`, {
+  saveRecording: (token: string, segmentId: number, audioUrl: string) =>
+    apiFetch<DubbingRecording>(`/api/dubbing/segments/${segmentId}/recordings`, {
       method: "POST",
       body: { audioUrl },
       token,

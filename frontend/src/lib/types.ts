@@ -557,7 +557,7 @@ export interface DubbingCharacter {
 
 export interface DubbingRecording {
   id: number;
-  characterId: number;
+  segmentId: number;
   audioUrl: string;
 }
 

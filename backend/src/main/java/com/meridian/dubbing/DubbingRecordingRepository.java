@@ -6,9 +6,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface DubbingRecordingRepository extends JpaRepository<DubbingRecording, Long> {
 
-    List<DubbingRecording> findByUserIdAndCharacter_IdOrderByCreatedAtDesc(UUID userId, Long characterId);
-
-    List<DubbingRecording> findByUserIdAndCharacter_IdIn(UUID userId, List<Long> characterIds);
+    List<DubbingRecording> findByUserIdAndSegment_IdIn(UUID userId, List<Long> segmentIds);
 
     void deleteByIdAndUserId(Long id, UUID userId);
 }

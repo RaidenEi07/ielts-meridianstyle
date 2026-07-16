@@ -68,11 +68,20 @@ class DubbingServiceTest {
         return c;
     }
 
-    private DubbingRecording recording(Long id, UUID userId, DubbingCharacter character, Instant createdAt) {
+    private DubbingCharacterSegment segment(Long id, DubbingCharacter character) {
+        DubbingCharacterSegment s = new DubbingCharacterSegment();
+        s.setId(id);
+        s.setCharacter(character);
+        s.setStartSeconds(new BigDecimal("0"));
+        s.setEndSeconds(new BigDecimal("2"));
+        return s;
+    }
+
+    private DubbingRecording recording(Long id, UUID userId, DubbingCharacterSegment segment, Instant createdAt) {
         DubbingRecording r = new DubbingRecording();
         r.setId(id);
         r.setUserId(userId);
-        r.setCharacter(character);
+        r.setSegment(segment);
         r.setAudioUrl("http://x/" + id + ".webm");
         r.setCreatedAt(createdAt);
         return r;
@@ -161,26 +170,30 @@ class DubbingServiceTest {
         UUID userId = UUID.randomUUID();
         CourseSection section = sectionWithContext(1L, 10L);
         DubbingCharacter character = character(5L, section);
-        when(characterRepository.findById(5L)).thenReturn(Optional.of(character));
+        DubbingCharacterSegment seg = segment(50L, character);
+        when(segmentRepository.findById(50L)).thenReturn(Optional.of(seg));
         when(enrollmentRepository.existsByUserIdAndCourseId(userId, 500L)).thenReturn(false);
 
-        assertThatThrownBy(() -> service.saveRecording(userId, 5L, "http://x/a.webm"))
+        assertThatThrownBy(() -> service.saveRecording(userId, 50L, "http://x/a.webm"))
                 .isInstanceOf(ApiException.class);
 
         verify(recordingRepository, never()).save(any());
     }
 
     @Test
-    void myRecordingsReturnsLatestPerCharacter() {
+    void myRecordingsReturnsLatestPerSegment() {
         UUID userId = UUID.randomUUID();
         CourseSection section = sectionWithContext(1L, 10L);
         DubbingCharacter charA = character(1L, section);
+        DubbingCharacterSegment segA = segment(10L, charA);
         when(characterRepository.findBySection_IdOrderBySortOrderAscIdAsc(1L))
                 .thenReturn(List.of(charA));
+        when(segmentRepository.findByCharacter_IdInOrderBySortOrderAscIdAsc(List.of(1L)))
+                .thenReturn(List.of(segA));
 
-        DubbingRecording older = recording(100L, userId, charA, Instant.parse("2026-01-01T00:00:00Z"));
-        DubbingRecording newer = recording(101L, userId, charA, Instant.parse("2026-01-02T00:00:00Z"));
-        when(recordingRepository.findByUserIdAndCharacter_IdIn(userId, List.of(1L)))
+        DubbingRecording older = recording(100L, userId, segA, Instant.parse("2026-01-01T00:00:00Z"));
+        DubbingRecording newer = recording(101L, userId, segA, Instant.parse("2026-01-02T00:00:00Z"));
+        when(recordingRepository.findByUserIdAndSegment_IdIn(userId, List.of(10L)))
                 .thenReturn(List.of(older, newer));
 
         var result = service.myRecordings(userId, 1L);

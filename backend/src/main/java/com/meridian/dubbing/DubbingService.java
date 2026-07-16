@@ -118,18 +118,18 @@ public class DubbingService {
     }
 
     @Transactional
-    public RecordingDto saveRecording(UUID userId, Long characterId, String audioUrl) {
+    public RecordingDto saveRecording(UUID userId, Long segmentId, String audioUrl) {
         if (audioUrl == null || audioUrl.isBlank()) {
             throw ApiException.badRequest("Thiếu đường dẫn file ghi âm");
         }
-        DubbingCharacter character = getCharacter(characterId);
-        Long courseId = character.getSection().getCourse().getId();
+        DubbingCharacterSegment segment = getSegment(segmentId);
+        Long courseId = segment.getCharacter().getSection().getCourse().getId();
         if (!enrollmentRepository.existsByUserIdAndCourseId(userId, courseId)) {
             throw ApiException.forbidden("Bạn cần được ghi danh khóa học này trước");
         }
         DubbingRecording recording = new DubbingRecording();
         recording.setUserId(userId);
-        recording.setCharacter(character);
+        recording.setSegment(segment);
         recording.setAudioUrl(audioUrl);
         recording = recordingRepository.save(recording);
         return toRecordingDto(recording);
@@ -143,11 +143,16 @@ public class DubbingService {
             return List.of();
         }
         List<Long> characterIds = characters.stream().map(DubbingCharacter::getId).toList();
-        Map<Long, DubbingRecording> latestByCharacter = recordingRepository
-                .findByUserIdAndCharacter_IdIn(userId, characterIds).stream()
-                .collect(Collectors.toMap(r -> r.getCharacter().getId(), r -> r,
+        List<Long> segmentIds = segmentRepository.findByCharacter_IdInOrderBySortOrderAscIdAsc(characterIds)
+                .stream().map(DubbingCharacterSegment::getId).toList();
+        if (segmentIds.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, DubbingRecording> latestBySegment = recordingRepository
+                .findByUserIdAndSegment_IdIn(userId, segmentIds).stream()
+                .collect(Collectors.toMap(r -> r.getSegment().getId(), r -> r,
                         (a, b) -> a.getCreatedAt().isAfter(b.getCreatedAt()) ? a : b));
-        return latestByCharacter.values().stream()
+        return latestBySegment.values().stream()
                 .sorted(Comparator.comparing(DubbingRecording::getCreatedAt))
                 .map(DubbingService::toRecordingDto)
                 .toList();
@@ -163,6 +168,11 @@ public class DubbingService {
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy nhân vật"));
     }
 
+    private DubbingCharacterSegment getSegment(Long segmentId) {
+        return segmentRepository.findById(segmentId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy đoạn thoại"));
+    }
+
     private Long contextIdOf(Context ctx) {
         if (ctx == null) {
             return contextService.requireSystemContext().getId();
@@ -175,6 +185,6 @@ public class DubbingService {
     }
 
     private static RecordingDto toRecordingDto(DubbingRecording r) {
-        return new RecordingDto(r.getId(), r.getCharacter().getId(), r.getAudioUrl());
+        return new RecordingDto(r.getId(), r.getSegment().getId(), r.getAudioUrl());
     }
 }

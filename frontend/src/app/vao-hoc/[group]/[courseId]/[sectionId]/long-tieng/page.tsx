@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { CharacterDubbingRecorder } from "@/components/kids/CharacterDubbingRecorder";
 import { ApiError, catalogApi, dubbingApi } from "@/lib/api";
+import { computeDubWindows, exportDubbedVideo } from "@/lib/dubbingExport";
 import type { CourseDetail, DubbingCharacter, DubbingRecording } from "@/lib/types";
 import { isYoutubeUrl } from "@/lib/youtube";
 import { useAuthStore } from "@/store/auth";
@@ -21,6 +22,9 @@ export default function CharacterDubbingPage() {
   const [characters, setCharacters] = useState<DubbingCharacter[] | null>(null);
   const [recordings, setRecordings] = useState<DubbingRecording[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [exportStage, setExportStage] = useState<string | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportDone, setExportDone] = useState(false);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -68,6 +72,27 @@ export default function CharacterDubbingPage() {
   const section = course?.sections.find((s) => s.id === sectionId);
   const isYoutube = section?.videoUrl ? isYoutubeUrl(section.videoUrl) : false;
 
+  async function handleExport() {
+    if (!section?.videoUrl || !characters) return;
+    setExportError(null);
+    setExportDone(false);
+    try {
+      const windows = computeDubWindows(characters, recordings);
+      const blob = await exportDubbedVideo(section.videoUrl, windows, setExportStage);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `long-tieng-${section.title ?? "video"}.mp4`;
+      a.click();
+      URL.revokeObjectURL(url);
+      setExportDone(true);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Xuất video thất bại");
+    } finally {
+      setExportStage(null);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-bg">
       <PageHeader
@@ -112,10 +137,25 @@ export default function CharacterDubbingPage() {
                     key={c.id}
                     character={c}
                     token={accessToken}
-                    recording={recordings.find((r) => r.characterId === c.id) ?? null}
+                    recordings={recordings}
                     onChange={loadRecordings}
                   />
                 ))}
+              </div>
+            )}
+
+            {accessToken && recordings.length > 0 && (
+              <div className="mt-6 rounded-lg border border-border bg-surface p-4 text-center">
+                <button
+                  type="button"
+                  onClick={handleExport}
+                  disabled={exportStage !== null}
+                  className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  {exportStage ?? "🎬 Xuất video"}
+                </button>
+                {exportDone && <p className="mt-2 text-sm text-green">🎉 Đã xuất video!</p>}
+                {exportError && <p className="mt-2 text-sm text-red">{exportError}</p>}
               </div>
             )}
           </>

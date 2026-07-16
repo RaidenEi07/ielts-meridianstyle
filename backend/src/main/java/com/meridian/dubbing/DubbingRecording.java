@@ -17,8 +17,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 /**
- * Bản ghi âm giọng học sinh thay cho 1 {@link DubbingCharacter} (Phase 16).
- * Cho phép nhiều bản ghi mỗi (user, character) — bản mới nhất theo
+ * Bản ghi âm giọng học sinh thay cho 1 {@link DubbingCharacterSegment} (Phase 16).
+ * Cho phép nhiều bản ghi mỗi (user, segment) — bản mới nhất theo
  * {@code createdAt} là bản "đang hoạt động" khi đọc.
  */
 @Entity
@@ -36,8 +36,8 @@ public class DubbingRecording {
     private UUID userId;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "character_id", nullable = false)
-    private DubbingCharacter character;
+    @JoinColumn(name = "segment_id", nullable = false)
+    private DubbingCharacterSegment segment;
 
     @Column(name = "audio_url", nullable = false, length = 500)
     private String audioUrl;

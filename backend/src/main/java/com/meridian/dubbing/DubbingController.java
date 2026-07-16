@@ -34,10 +34,10 @@ public class DubbingController {
         return dubbingService.listCharacters(sectionId);
     }
 
-    @PostMapping("/characters/{characterId}/recordings")
-    public ResponseEntity<RecordingDto> saveRecording(@PathVariable Long characterId,
+    @PostMapping("/segments/{segmentId}/recordings")
+    public ResponseEntity<RecordingDto> saveRecording(@PathVariable Long segmentId,
             @RequestBody Map<String, String> body) {
-        RecordingDto dto = dubbingService.saveRecording(currentUser.require().id(), characterId,
+        RecordingDto dto = dubbingService.saveRecording(currentUser.require().id(), segmentId,
                 body.get("audioUrl"));
         return ResponseEntity.status(HttpStatus.CREATED).body(dto);
     }
