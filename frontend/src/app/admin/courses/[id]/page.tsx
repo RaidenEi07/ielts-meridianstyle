@@ -12,6 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { useEffect, useState } from "react";
+import { CharacterDubbingEditor } from "@/components/CharacterDubbingEditor";
 import { HomeworkMaterialsEditor } from "@/components/HomeworkMaterialsEditor";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { PageHeader } from "@/components/PageHeader";
@@ -445,6 +446,10 @@ function SectionCard({
 
       <div className="mb-3">
         <HomeworkMaterialsEditor sectionId={section.id} token={token} />
+      </div>
+
+      <div className="mb-3">
+        <CharacterDubbingEditor sectionId={section.id} token={token} />
       </div>
 
       {creating && (

@@ -541,6 +541,20 @@ export interface HomeworkMaterial {
   sortOrder: number;
 }
 
+// ---- Lồng tiếng nhân vật (Phase 16) ----
+
+export interface DubbingSegment {
+  id: number;
+  startSeconds: number;
+  endSeconds: number;
+}
+
+export interface DubbingCharacter {
+  id: number;
+  name: string;
+  segments: DubbingSegment[];
+}
+
 // ---- Ghi âm luyện nói (Phase 15) ----
 
 export interface LessonRecording {

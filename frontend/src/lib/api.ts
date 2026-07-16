@@ -15,6 +15,7 @@ import type {
   CourseDetail,
   CourseProgress,
   CourseSummary,
+  DubbingCharacter,
   Enrollment,
   MeResponse,
   GradebookRow,
@@ -912,6 +913,38 @@ export const homeworkAdminApi = {
 
   remove: (token: string, id: number) =>
     apiFetch<void>(`/api/admin/homework-materials/${id}`, { method: "DELETE", token }),
+};
+
+// ---- Lồng tiếng nhân vật (Phase 16) ----
+
+export const dubbingApi = {
+  characters: (token: string, sectionId: number) =>
+    apiFetch<DubbingCharacter[]>(`/api/dubbing/sections/${sectionId}/characters`, { token }),
+};
+
+export const dubbingAdminApi = {
+  createCharacter: (token: string, sectionId: number, name: string) =>
+    apiFetch<DubbingCharacter>(`/api/admin/dubbing/sections/${sectionId}/characters`, {
+      method: "POST",
+      body: { name },
+      token,
+    }),
+
+  deleteCharacter: (token: string, id: number) =>
+    apiFetch<void>(`/api/admin/dubbing/characters/${id}`, { method: "DELETE", token }),
+
+  addSegment: (token: string, characterId: number, startSeconds: number, endSeconds: number) =>
+    apiFetch<{ id: number; startSeconds: number; endSeconds: number }>(
+      `/api/admin/dubbing/characters/${characterId}/segments`,
+      {
+        method: "POST",
+        body: { startSeconds, endSeconds },
+        token,
+      },
+    ),
+
+  deleteSegment: (token: string, id: number) =>
+    apiFetch<void>(`/api/admin/dubbing/segments/${id}`, { method: "DELETE", token }),
 };
 
 // ---- Game hóa (Phase 19) ----
