@@ -143,7 +143,7 @@ export function SegmentDubbingRecorder({
             <span className="text-xs text-muted">
               {isRecording ? "Đang ghi âm… bấm để dừng" : "Bấm để ghi âm giọng mới"}
             </span>
-            {status === "denied" && errorMessage && (
+            {(status === "denied" || status === "error") && errorMessage && (
               <p className="text-center text-xs text-red">{errorMessage}</p>
             )}
           </div>
