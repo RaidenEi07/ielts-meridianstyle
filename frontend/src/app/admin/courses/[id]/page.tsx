@@ -11,11 +11,14 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CharacterDubbingEditor } from "@/components/CharacterDubbingEditor";
 import { HomeworkMaterialsEditor } from "@/components/HomeworkMaterialsEditor";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { PageHeader } from "@/components/PageHeader";
+import { RichTextEditor } from "@/components/RichTextEditor";
+import { SectionDescriptionField } from "@/components/SectionDescriptionField";
 import { SortableRow } from "@/components/SortableRow";
 import { SubtitleUploadField } from "@/components/SubtitleUploadField";
 import { VideoUploadField } from "@/components/VideoUploadField";
@@ -129,17 +132,23 @@ function CourseEditForm({
   const [price, setPrice] = useState(String(course.price));
   const [status, setStatus] = useState(course.status);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(course.coverImageUrl);
+  const [descriptionHtml, setDescriptionHtml] = useState(course.descriptionHtml ?? "");
+  const [objectives, setObjectives] = useState<string[]>(course.objectives);
+  const [newObjective, setNewObjective] = useState("");
+  const [prerequisites, setPrerequisites] = useState(course.prerequisites ?? "");
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    setTitle(course.title);
-    setSummary(course.summary ?? "");
-    setPrice(String(course.price));
-    setStatus(course.status);
-    setCoverImageUrl(course.coverImageUrl);
-  }, [course]);
+  function addObjective() {
+    if (!newObjective.trim()) return;
+    setObjectives((prev) => [...prev, newObjective.trim()]);
+    setNewObjective("");
+  }
+
+  function removeObjective(index: number) {
+    setObjectives((prev) => prev.filter((_, i) => i !== index));
+  }
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -152,6 +161,9 @@ function CourseEditForm({
         price: Number(price),
         status,
         coverImageUrl: coverImageUrl ?? "",
+        descriptionHtml,
+        objectives,
+        prerequisites,
       });
       setMsg("Đã lưu");
       setTimeout(() => setMsg(null), 2000);
@@ -224,6 +236,68 @@ function CourseEditForm({
         <div className="sm:col-span-2">
           <ImageUploadField token={token} value={coverImageUrl} onChange={setCoverImageUrl} />
         </div>
+
+        <div className="sm:col-span-2">
+          <span className="mb-1 block text-xs font-medium text-muted">Mô tả chi tiết</span>
+          <RichTextEditor value={descriptionHtml} onChange={setDescriptionHtml} token={token} />
+        </div>
+
+        <div className="sm:col-span-2">
+          <span className="mb-1 block text-xs font-medium text-muted">Mục tiêu khóa học</span>
+          {objectives.length > 0 && (
+            <ul className="mb-2 space-y-1">
+              {objectives.map((o, i) => (
+                <li
+                  key={i}
+                  className="flex items-center justify-between rounded-lg border border-border px-3 py-1.5 text-sm"
+                >
+                  <span>{o}</span>
+                  <button
+                    type="button"
+                    onClick={() => removeObjective(i)}
+                    className="text-faint hover:text-red"
+                    title="Xóa mục tiêu"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          <div className="flex gap-2">
+            <input
+              value={newObjective}
+              onChange={(e) => setNewObjective(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addObjective();
+                }
+              }}
+              placeholder="Vd: Nắm vững 500 từ vựng chủ đề gia đình"
+              className="input flex-1 text-sm"
+            />
+            <button
+              type="button"
+              onClick={addObjective}
+              className="rounded-lg border border-border px-3 py-1.5 text-xs font-medium text-muted hover:text-text"
+            >
+              + Thêm
+            </button>
+          </div>
+        </div>
+
+        <label className="block sm:col-span-2">
+          <span className="mb-1 block text-xs font-medium text-muted">Yêu cầu đầu vào</span>
+          <textarea
+            value={prerequisites}
+            onChange={(e) => setPrerequisites(e.target.value)}
+            rows={2}
+            placeholder="Vd: Đã hoàn thành khóa Starters, đọc viết được bảng chữ cái"
+            className="input"
+          />
+        </label>
+
         {error && <p className="text-sm text-red sm:col-span-2">{error}</p>}
         <div className="flex items-center gap-3 sm:col-span-2">
           <button
@@ -441,6 +515,15 @@ function SectionCard({
           token={token}
           value={section.subtitleUrl}
           onChange={handleSubtitleChange}
+        />
+      </div>
+
+      <div className="mb-3">
+        <SectionDescriptionField
+          sectionId={section.id}
+          token={token}
+          value={section.shortDescription}
+          onChanged={onChanged}
         />
       </div>
 

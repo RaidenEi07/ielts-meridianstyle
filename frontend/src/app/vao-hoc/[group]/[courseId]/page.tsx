@@ -118,6 +118,34 @@ export default function VaoHocCoursePage() {
         <h1 className="mt-2 text-3xl font-bold">{course.title}</h1>
         {course.summary && <p className="mt-2 text-muted">{course.summary}</p>}
 
+        {course.descriptionHtml && (
+          <div
+            className="prose prose-sm dark:prose-invert mt-4 max-w-none"
+            dangerouslySetInnerHTML={{ __html: course.descriptionHtml }}
+          />
+        )}
+
+        {course.objectives.length > 0 && (
+          <div className="mt-4">
+            <h2 className="mb-2 text-lg font-semibold">Bạn sẽ học được gì</h2>
+            <ul className="space-y-1.5">
+              {course.objectives.map((o, i) => (
+                <li key={i} className="flex items-start gap-2 text-muted">
+                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-green" />
+                  <span>{o}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {course.prerequisites && (
+          <div className="mt-4">
+            <h2 className="mb-1 text-lg font-semibold">Yêu cầu đầu vào</h2>
+            <p className="text-muted">{course.prerequisites}</p>
+          </div>
+        )}
+
         {total > 0 && (
           <div className="mt-6">
             <div className="mb-1 flex items-center justify-between text-sm">
@@ -176,7 +204,12 @@ export default function VaoHocCoursePage() {
               const content = (
                 <>
                   {badge}
-                  <span className={`font-medium ${!unlocked ? "text-muted" : ""}`}>{s.title}</span>
+                  <div>
+                    <span className={`font-medium ${!unlocked ? "text-muted" : ""}`}>{s.title}</span>
+                    {s.shortDescription && (
+                      <p className="text-sm text-muted">{s.shortDescription}</p>
+                    )}
+                  </div>
                 </>
               );
 

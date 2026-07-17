@@ -19,7 +19,9 @@ import java.time.Instant;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.SQLRestriction;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "courses")
@@ -45,6 +47,16 @@ public class Course {
 
     @Column(columnDefinition = "text")
     private String summary;
+
+    @Column(name = "description_html", columnDefinition = "text")
+    private String descriptionHtml;
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "objectives", columnDefinition = "jsonb")
+    private String objectives;
+
+    @Column(columnDefinition = "text")
+    private String prerequisites;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)

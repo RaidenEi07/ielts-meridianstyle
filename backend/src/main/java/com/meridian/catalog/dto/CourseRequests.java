@@ -19,7 +19,10 @@ public final class CourseRequests {
             String summary,
             String coverImageUrl,
             BigDecimal price,
-            String status) {
+            String status,
+            String descriptionHtml,
+            List<String> objectives,
+            String prerequisites) {
     }
 
     public record UpdateCourse(
@@ -28,17 +31,22 @@ public final class CourseRequests {
             String summary,
             String coverImageUrl,
             BigDecimal price,
-            String status) {
+            String status,
+            String descriptionHtml,
+            List<String> objectives,
+            String prerequisites) {
     }
 
     public record CreateSection(
             @NotBlank(message = "Tiêu đề section là bắt buộc") String title,
             Integer sortOrder,
             String videoUrl,
-            String subtitleUrl) {
+            String subtitleUrl,
+            String shortDescription) {
     }
 
-    public record UpdateSection(String title, Integer sortOrder, String videoUrl, String subtitleUrl) {
+    public record UpdateSection(String title, Integer sortOrder, String videoUrl, String subtitleUrl,
+            String shortDescription) {
     }
 
     public record ReorderSections(@NotEmpty(message = "sectionIds không được rỗng") List<Long> sectionIds) {

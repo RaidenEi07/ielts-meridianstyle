@@ -75,14 +75,17 @@ public class CatalogDataInitializer implements CommandLineRunner {
                         "Lộ trình 12 tuần chinh phục band 6.5+ với mô phỏng thi thật.",
                         null,
                         new BigDecimal("4990000"),
-                        "PUBLISHED"));
+                        "PUBLISHED",
+                        null,
+                        null,
+                        null));
 
         catalogService.createSection(uid, course.id(),
-                new CourseRequests.CreateSection("Tuần 1-4: Nền tảng & Listening", 1, null, null));
+                new CourseRequests.CreateSection("Tuần 1-4: Nền tảng & Listening", 1, null, null, null));
         catalogService.createSection(uid, course.id(),
-                new CourseRequests.CreateSection("Tuần 5-8: Reading & Writing Task 1", 2, null, null));
+                new CourseRequests.CreateSection("Tuần 5-8: Reading & Writing Task 1", 2, null, null, null));
         catalogService.createSection(uid, course.id(),
-                new CourseRequests.CreateSection("Tuần 9-12: Luyện đề & thi thử", 3, null, null));
+                new CourseRequests.CreateSection("Tuần 9-12: Luyện đề & thi thử", 3, null, null, null));
 
         log.info("Đã seed {} danh mục và khóa học mẫu", categoryRepository.count());
     }

@@ -232,6 +232,9 @@ export const catalogAdminApi = {
       coverImageUrl?: string;
       price?: number;
       status?: string;
+      descriptionHtml?: string;
+      objectives?: string[];
+      prerequisites?: string;
     },
   ) =>
     apiFetch<CourseDetail>("/api/admin/catalog/courses", {
@@ -250,6 +253,9 @@ export const catalogAdminApi = {
       coverImageUrl?: string;
       price?: number;
       status?: string;
+      descriptionHtml?: string;
+      objectives?: string[];
+      prerequisites?: string;
     },
   ) =>
     apiFetch<CourseDetail>(`/api/admin/catalog/courses/${id}`, {
@@ -264,7 +270,13 @@ export const catalogAdminApi = {
   createSection: (
     token: string,
     courseId: number,
-    req: { title: string; sortOrder?: number; videoUrl?: string; subtitleUrl?: string },
+    req: {
+      title: string;
+      sortOrder?: number;
+      videoUrl?: string;
+      subtitleUrl?: string;
+      shortDescription?: string;
+    },
   ) =>
     apiFetch<Section>(`/api/admin/catalog/courses/${courseId}/sections`, {
       method: "POST",
@@ -275,7 +287,13 @@ export const catalogAdminApi = {
   updateSection: (
     token: string,
     id: number,
-    req: { title?: string; sortOrder?: number; videoUrl?: string; subtitleUrl?: string },
+    req: {
+      title?: string;
+      sortOrder?: number;
+      videoUrl?: string;
+      subtitleUrl?: string;
+      shortDescription?: string;
+    },
   ) =>
     apiFetch<Section>(`/api/admin/catalog/sections/${id}`, {
       method: "PUT",

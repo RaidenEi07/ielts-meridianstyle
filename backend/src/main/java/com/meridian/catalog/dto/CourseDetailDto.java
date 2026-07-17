@@ -17,9 +17,13 @@ public record CourseDetailDto(
         String examTemplateCode,
         Long contextId,
         long enrolledCount,
-        List<SectionDto> sections) {
+        List<SectionDto> sections,
+        String descriptionHtml,
+        List<String> objectives,
+        String prerequisites) {
 
-    public static CourseDetailDto from(Course c, long enrolledCount, List<SectionDto> sections) {
+    public static CourseDetailDto from(Course c, long enrolledCount, List<SectionDto> sections,
+            List<String> objectives) {
         var template = c.getCategory().getExamTemplate();
         return new CourseDetailDto(
                 c.getId(),
@@ -34,6 +38,9 @@ public record CourseDetailDto(
                 template != null ? template.getCode() : null,
                 c.getContext() != null ? c.getContext().getId() : null,
                 enrolledCount,
-                sections);
+                sections,
+                c.getDescriptionHtml(),
+                objectives,
+                c.getPrerequisites());
     }
 }

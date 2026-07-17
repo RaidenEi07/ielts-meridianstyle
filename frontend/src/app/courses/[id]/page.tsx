@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { CheckCircle2, Lock } from "lucide-react";
+import { Check, CheckCircle2, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ApiError, catalogApi, enrollmentApi, quizApi } from "@/lib/api";
@@ -116,6 +116,37 @@ export default function CourseDetailPage() {
             </p>
           </section>
 
+          {course.descriptionHtml && (
+            <section>
+              <h2 className="mb-2 text-xl font-semibold">Mô tả chi tiết</h2>
+              <div
+                className="prose prose-sm dark:prose-invert max-w-none"
+                dangerouslySetInnerHTML={{ __html: course.descriptionHtml }}
+              />
+            </section>
+          )}
+
+          {course.objectives.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-xl font-semibold">Bạn sẽ học được gì</h2>
+              <ul className="space-y-2">
+                {course.objectives.map((o, i) => (
+                  <li key={i} className="flex items-start gap-2 text-muted">
+                    <Check className="mt-0.5 h-4 w-4 shrink-0 text-green" />
+                    <span>{o}</span>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          {course.prerequisites && (
+            <section>
+              <h2 className="mb-2 text-xl font-semibold">Yêu cầu đầu vào</h2>
+              <p className="text-muted">{course.prerequisites}</p>
+            </section>
+          )}
+
           <section>
             <h2 className="mb-3 text-xl font-semibold">Đề cương</h2>
             {course.sections.length === 0 ? (
@@ -130,7 +161,12 @@ export default function CourseDetailPage() {
                     <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary">
                       {i + 1}
                     </span>
-                    <span className="font-medium">{s.title}</span>
+                    <div>
+                      <span className="font-medium">{s.title}</span>
+                      {s.shortDescription && (
+                        <p className="text-sm text-muted">{s.shortDescription}</p>
+                      )}
+                    </div>
                   </li>
                 ))}
               </ol>

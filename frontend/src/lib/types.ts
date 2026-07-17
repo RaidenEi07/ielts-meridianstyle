@@ -70,12 +70,16 @@ export interface Section {
   sortOrder: number;
   videoUrl: string | null;
   subtitleUrl: string | null;
+  shortDescription: string | null;
 }
 
 export interface CourseDetail extends CourseSummary {
   examTemplateCode: string | null;
   contextId: number | null;
   sections: Section[];
+  descriptionHtml: string | null;
+  objectives: string[];
+  prerequisites: string | null;
 }
 
 export interface Enrollment {

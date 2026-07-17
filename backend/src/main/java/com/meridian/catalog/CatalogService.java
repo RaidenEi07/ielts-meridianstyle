@@ -24,6 +24,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import tools.jackson.core.type.TypeReference;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -90,6 +91,25 @@ public class CatalogService {
             return objectMapper.readTree(raw);
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    private String objectivesToJson(List<String> objectives) {
+        if (objectives == null) {
+            return null;
+        }
+        return objectMapper.writeValueAsString(objectives);
+    }
+
+    private List<String> objectivesFromJson(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return List.of();
+        }
+        try {
+            return objectMapper.readValue(raw, new TypeReference<List<String>>() {
+            });
+        } catch (Exception e) {
+            return List.of();
         }
     }
 
@@ -231,6 +251,9 @@ public class CatalogService {
         course.setCoverImageUrl(req.coverImageUrl());
         course.setPrice(req.price() != null ? req.price() : BigDecimal.ZERO);
         course.setStatus(parseStatus(req.status(), CourseStatus.DRAFT));
+        course.setDescriptionHtml(req.descriptionHtml());
+        course.setObjectives(objectivesToJson(req.objectives()));
+        course.setPrerequisites(req.prerequisites());
         course = courseRepository.saveAndFlush(course);
 
         // Tạo COURSE context (con của context category).
@@ -265,6 +288,15 @@ public class CatalogService {
         if (req.status() != null) {
             course.setStatus(parseStatus(req.status(), course.getStatus()));
         }
+        if (req.descriptionHtml() != null) {
+            course.setDescriptionHtml(req.descriptionHtml());
+        }
+        if (req.objectives() != null) {
+            course.setObjectives(objectivesToJson(req.objectives()));
+        }
+        if (req.prerequisites() != null) {
+            course.setPrerequisites(req.prerequisites());
+        }
         return buildDetail(courseRepository.save(course));
     }
 
@@ -296,6 +328,7 @@ public class CatalogService {
         section.setSortOrder(req.sortOrder() != null ? req.sortOrder() : 0);
         section.setVideoUrl(req.videoUrl());
         section.setSubtitleUrl(req.subtitleUrl());
+        section.setShortDescription(req.shortDescription());
         return SectionDto.from(sectionRepository.save(section));
     }
 
@@ -316,6 +349,9 @@ public class CatalogService {
         }
         if (req.subtitleUrl() != null) {
             section.setSubtitleUrl(req.subtitleUrl().isBlank() ? null : req.subtitleUrl());
+        }
+        if (req.shortDescription() != null) {
+            section.setShortDescription(req.shortDescription().isBlank() ? null : req.shortDescription());
         }
         return SectionDto.from(sectionRepository.save(section));
     }
@@ -361,7 +397,7 @@ public class CatalogService {
                 sectionRepository.findByCourseIdOrderBySortOrderAscIdAsc(course.getId())
                         .stream().map(SectionDto::from).toList();
         long count = enrollmentRepository.countByCourseId(course.getId());
-        return CourseDetailDto.from(course, count, sections);
+        return CourseDetailDto.from(course, count, sections, objectivesFromJson(course.getObjectives()));
     }
 
     private ExamTemplate resolveTemplate(String code) {
