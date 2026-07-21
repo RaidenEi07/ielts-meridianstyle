@@ -35,6 +35,24 @@ export function useAudioRecorder() {
       recorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunksRef.current.push(e.data);
       };
+      recorder.onerror = () => {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        recorderRef.current = null;
+        setStatus("error");
+        setErrorMessage("Ghi âm bị gián đoạn. Vui lòng thử lại.");
+      };
+      // Mic bị thu hồi quyền hoặc thiết bị bị ngắt giữa chừng: track kết thúc
+      // nhưng MediaRecorder không phải lúc nào cũng bắn "error" — bắt riêng để
+      // không bị kẹt mãi ở trạng thái "recording" không phản hồi.
+      stream.getAudioTracks().forEach((track) => {
+        track.onended = () => {
+          if (recorderRef.current !== recorder) return;
+          recorderRef.current = null;
+          setStatus("error");
+          setErrorMessage("Mất quyền truy cập micro giữa chừng. Vui lòng cấp lại quyền và thử lại.");
+        };
+      });
       recorderRef.current = recorder;
       recorder.start();
       setStatus("recording");

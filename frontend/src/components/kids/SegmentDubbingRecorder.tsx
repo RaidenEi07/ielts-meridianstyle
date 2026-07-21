@@ -132,7 +132,6 @@ export function SegmentDubbingRecorder({
             <button
               type="button"
               onClick={handleToggleRecording}
-              disabled={status === "error"}
               className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-md transition-colors disabled:opacity-60 ${
                 isRecording ? "animate-pulse bg-red" : "bg-primary hover:bg-primary/90"
               }`}

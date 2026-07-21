@@ -99,7 +99,6 @@ export function KidsVoiceRecorder({ sectionId, token }: { sectionId: number; tok
         <button
           type="button"
           onClick={handleToggle}
-          disabled={status === "error"}
           className={`grid h-20 w-20 place-items-center rounded-full text-white shadow-md transition-colors disabled:opacity-60 ${
             isRecording ? "animate-pulse bg-red" : "bg-primary hover:bg-primary/90"
           }`}

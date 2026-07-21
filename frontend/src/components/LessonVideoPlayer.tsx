@@ -19,6 +19,7 @@ export function LessonVideoPlayer({
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [cues, setCues] = useState<VttCue[]>([]);
+  const [videoError, setVideoError] = useState(false);
   const isYoutube = isYoutubeUrl(videoUrl);
 
   useEffect(() => {
@@ -54,16 +55,24 @@ export function LessonVideoPlayer({
 
   return (
     <div>
-      <video
-        ref={videoRef}
-        controls
-        src={videoUrl}
-        className="w-full rounded-xl border border-border bg-black"
-      >
-        {subtitleUrl && (
-          <track kind="subtitles" src={subtitleUrl} srcLang="vi" label="Tiếng Việt" default />
-        )}
-      </video>
+      {videoError ? (
+        <div className="flex aspect-video w-full flex-col items-center justify-center gap-2 rounded-xl border border-border bg-black text-center text-sm text-white/80">
+          <p>Video không tải được.</p>
+          <p className="text-xs text-white/60">Vui lòng kiểm tra kết nối mạng và tải lại trang.</p>
+        </div>
+      ) : (
+        <video
+          ref={videoRef}
+          controls
+          src={videoUrl}
+          onError={() => setVideoError(true)}
+          className="w-full rounded-xl border border-border bg-black"
+        >
+          {subtitleUrl && (
+            <track kind="subtitles" src={subtitleUrl} srcLang="vi" label="Tiếng Việt" default />
+          )}
+        </video>
+      )}
 
       {cues.length > 0 && (
         <div className="mt-3">
