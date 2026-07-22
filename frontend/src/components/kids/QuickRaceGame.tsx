@@ -28,7 +28,11 @@ export function QuickRaceGame({
   const [phase, setPhase] = useState<Phase>("question");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<boolean | null>(null);
-  const [correctCount, setCorrectCount] = useState(0);
+  // Ref chứ không phải state: đọc lại trong effect tính điểm cuối cùng (dưới đây)
+  // phải luôn thấy giá trị mới nhất — nếu dùng state, effect đó chỉ phụ thuộc
+  // [phase] nên sẽ đọc closure cũ (chưa cộng điểm câu cuối) khi kết quả chấm
+  // câu cuối trả về đúng lúc effect vừa lên lịch xong (mất điểm câu cuối).
+  const correctCountRef = useRef(0);
   const finishedRef = useRef(false);
 
   useEffect(() => {
@@ -57,7 +61,7 @@ export function QuickRaceGame({
       );
       setFeedback(result.correct);
       if (result.correct) {
-        setCorrectCount((c) => c + 1);
+        correctCountRef.current += 1;
         playCorrectSound();
       } else {
         playIncorrectSound();
@@ -88,7 +92,7 @@ export function QuickRaceGame({
       if (next >= questions.length) {
         if (finishedRef.current) return;
         finishedRef.current = true;
-        const points = correctCount * POINTS_PER_CORRECT;
+        const points = correctCountRef.current * POINTS_PER_CORRECT;
         gameApi
           .awardPoints(token, points, "Hoàn thành lượt Đua trả lời nhanh", "quick_race")
           .then((newBadges) => onComplete(points, newBadges))
