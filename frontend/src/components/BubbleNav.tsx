@@ -29,7 +29,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: GraduationCap, label: "Khóa học", href: "/courses" },
   { icon: BarChart3, label: "Điểm số của tôi", href: "/grades" },
   { icon: School, label: "Quản lý khóa học", href: "/admin/courses", capability: "course:manage" },
-  { icon: BookOpen, label: "Ngân hàng câu hỏi", href: "/teacher/questions", capability: "question:manage" },
+  { icon: BookOpen, label: "Ngân hàng câu hỏi", href: "/teacher/question-bank", capability: "question:manage" },
   { icon: Settings, label: "Cấu hình hệ thống", href: "/admin/settings", capability: "system:manage" },
   { icon: Users, label: "Quản lý tài khoản", href: "/admin/users", capability: "user:manage" },
 ];
@@ -53,7 +53,16 @@ export function BubbleNav() {
   const { accessToken, hydrated, hasCapability, roleAssignments } = useAuthStore();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
+  const [prevPathname, setPrevPathname] = useState(pathname);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  // Đóng menu khi đổi trang — điều chỉnh state ngay trong lúc render (theo
+  // đúng khuyến nghị của React cho "reset state khi 1 giá trị bên ngoài đổi"),
+  // không dùng effect để tránh cascading render.
+  if (pathname !== prevPathname) {
+    setPrevPathname(pathname);
+    setOpen(false);
+  }
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
@@ -64,10 +73,6 @@ export function BubbleNav() {
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
-
-  useEffect(() => {
-    setOpen(false);
-  }, [pathname]);
 
   if (!hydrated || !accessToken) return null;
   if (HIDDEN_PREFIXES.some((p) => pathname?.startsWith(p))) return null;

@@ -106,8 +106,8 @@ export default function KidsQuestionBankPage() {
     <div className="min-h-screen bg-bg">
       <PageHeader
         title="Ngân hàng câu hỏi — Trẻ em"
-        backHref="/dashboard"
-        backLabel="Bảng điều khiển"
+        backHref="/teacher/question-bank"
+        backLabel="Ngân hàng câu hỏi"
       />
 
       <div className="mx-auto grid max-w-6xl gap-6 px-6 py-8 md:grid-cols-[240px_1fr]">
