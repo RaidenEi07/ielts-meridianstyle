@@ -8,6 +8,8 @@ public interface CourseCategoryRepository extends JpaRepository<CourseCategory, 
 
     Optional<CourseCategory> findBySlug(String slug);
 
+    Optional<CourseCategory> findByNameIgnoreCase(String name);
+
     boolean existsBySlug(String slug);
 
     List<CourseCategory> findAllByOrderByNameAsc();

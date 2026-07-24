@@ -47,6 +47,10 @@ services:
       # "web tổng" (điều phối khóa học sang web con) hay "web con" (mặc định) —
       # đặt SITE_ROLE=MASTER trong .env của deployment đóng vai trò web tổng.
       SITE_ROLE: ${SITE_ROLE:-CHILD}
+      # Chỉ web con dùng: API key mà web tổng phải gửi kèm khi đẩy khóa học tới
+      # (POST /api/catalog/import) — lấy đúng giá trị apiKey web tổng đã sinh cho
+      # web con này ở trang "Web con". Bỏ trống thì endpoint này luôn từ chối request.
+      MASTER_API_KEY: ${MASTER_API_KEY:-}
     ports:
       - "${BACKEND_PORT:-8090}:8090"
     volumes:

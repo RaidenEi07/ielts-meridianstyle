@@ -1,5 +1,6 @@
 package com.meridian.config;
 
+import com.meridian.distribution.CourseImportApiKeyFilter;
 import com.meridian.security.JwtAuthenticationFilter;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
@@ -23,11 +24,14 @@ public class SecurityConfig {
 
     private final MeridianProperties properties;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final CourseImportApiKeyFilter courseImportApiKeyFilter;
 
     public SecurityConfig(MeridianProperties properties,
-            JwtAuthenticationFilter jwtAuthenticationFilter) {
+            JwtAuthenticationFilter jwtAuthenticationFilter,
+            CourseImportApiKeyFilter courseImportApiKeyFilter) {
         this.properties = properties;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.courseImportApiKeyFilter = courseImportApiKeyFilter;
     }
 
     @Bean
@@ -47,11 +51,14 @@ public class SecurityConfig {
                     .requestMatchers(HttpMethod.POST, "/api/inquiries").permitAll()
                     .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
                     .requestMatchers("/actuator/health", "/error").permitAll()
+                    // Xác thực riêng bằng API key (CourseImportApiKeyFilter), không qua JWT.
+                    .requestMatchers(HttpMethod.POST, "/api/catalog/import").permitAll()
                     .anyRequest().authenticated())
             .exceptionHandling(eh -> eh.authenticationEntryPoint(
                     new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .addFilterBefore(jwtAuthenticationFilter,
-                    UsernamePasswordAuthenticationFilter.class);
+                    UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(courseImportApiKeyFilter, JwtAuthenticationFilter.class);
 
         return http.build();
     }
