@@ -11,6 +11,7 @@ import type {
   Category,
   ChildProfile,
   ChildProgress,
+  ChildSite,
   CourseAudienceGroup,
   CourseDetail,
   CourseProgress,
@@ -760,6 +761,33 @@ export const adminUserApi = {
       body: { users },
       token,
     }),
+};
+
+// ---- Sổ quản lý web con (cần course:distribute, chỉ web tổng) ----
+
+export const childSiteAdminApi = {
+  list: (token: string) => apiFetch<ChildSite[]>("/api/admin/child-sites", { token }),
+
+  create: (token: string, req: { name: string; baseUrl: string }) =>
+    apiFetch<ChildSite>("/api/admin/child-sites", {
+      method: "POST",
+      body: req,
+      token,
+    }),
+
+  update: (
+    token: string,
+    id: number,
+    req: { name?: string; baseUrl?: string; active?: boolean },
+  ) =>
+    apiFetch<ChildSite>(`/api/admin/child-sites/${id}`, {
+      method: "PUT",
+      body: req,
+      token,
+    }),
+
+  remove: (token: string, id: number) =>
+    apiFetch<void>(`/api/admin/child-sites/${id}`, { method: "DELETE", token }),
 };
 
 // ---- Quản lý tài khoản & vai trò (cần user:manage / role:assign) ----

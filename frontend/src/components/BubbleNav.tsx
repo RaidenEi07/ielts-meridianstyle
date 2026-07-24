@@ -8,6 +8,7 @@ import {
   Compass,
   GraduationCap,
   Home,
+  Network,
   School,
   Settings,
   Users,
@@ -34,6 +35,13 @@ const NAV_ITEMS: NavItem[] = [
   { icon: BookOpen, label: "Ngân hàng câu hỏi", href: "/teacher/question-bank", capability: "question:manage" },
   { icon: Settings, label: "Cấu hình hệ thống", href: "/admin/settings", capability: "system:manage" },
   { icon: Users, label: "Quản lý tài khoản", href: "/admin/users", capability: "user:manage" },
+  {
+    icon: Network,
+    label: "Web con",
+    href: "/admin/child-sites",
+    capability: "course:distribute",
+    masterOnly: true,
+  },
 ];
 
 const ROLE_PRIORITY = ["admin", "teacher", "student"];

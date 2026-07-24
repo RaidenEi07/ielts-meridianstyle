@@ -30,6 +30,17 @@ export interface MeResponse {
   isMaster: boolean;
 }
 
+// ---- Web con (chỉ web tổng dùng) ----
+
+export interface ChildSite {
+  id: number;
+  name: string;
+  baseUrl: string;
+  apiKey: string;
+  active: boolean;
+  createdAt: string;
+}
+
 // ---- Catalog (Giai đoạn 2) ----
 
 export interface ExamTemplateSummary {
