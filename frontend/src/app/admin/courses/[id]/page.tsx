@@ -22,8 +22,8 @@ import { SectionDescriptionField } from "@/components/SectionDescriptionField";
 import { SortableRow } from "@/components/SortableRow";
 import { SubtitleUploadField } from "@/components/SubtitleUploadField";
 import { VideoUploadField } from "@/components/VideoUploadField";
-import { ApiError, catalogAdminApi, catalogApi, quizAdminApi } from "@/lib/api";
-import type { CourseDetail, QuizSummary, Section } from "@/lib/types";
+import { ApiError, catalogAdminApi, catalogApi, childSiteAdminApi, quizAdminApi } from "@/lib/api";
+import type { ChildSite, CourseDetail, DistributeResult, QuizSummary, Section } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useEditModeStore } from "@/store/editMode";
@@ -193,9 +193,12 @@ function CourseEditForm({
             {st.label}
           </span>
         </div>
-        <button type="button" onClick={remove} className="text-sm text-red">
-          Xóa khóa học
-        </button>
+        <div className="flex items-center gap-4">
+          <DistributeCourseButton courseId={course.id} token={token} />
+          <button type="button" onClick={remove} className="text-sm text-red">
+            Xóa khóa học
+          </button>
+        </div>
       </div>
       <p className="mb-4 text-xs text-muted">
         {course.categoryName} · shortname: {course.shortname}
@@ -311,6 +314,113 @@ function CourseEditForm({
         </div>
       </form>
     </section>
+  );
+}
+
+function DistributeCourseButton({ courseId, token }: { courseId: number; token: string }) {
+  const isMaster = useAuthStore((s) => s.isMaster);
+  const hasCapability = useAuthStore((s) => s.hasCapability);
+  const [open, setOpen] = useState(false);
+  const [sites, setSites] = useState<ChildSite[] | null>(null);
+  const [selected, setSelected] = useState<number[]>([]);
+  const [sending, setSending] = useState(false);
+  const [results, setResults] = useState<DistributeResult[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!isMaster || !hasCapability("course:distribute")) {
+    return null;
+  }
+
+  function openPanel() {
+    setOpen(true);
+    setResults(null);
+    setError(null);
+    childSiteAdminApi.list(token).then(setSites).catch(() => setSites([]));
+  }
+
+  function toggle(id: number) {
+    setSelected((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  async function send() {
+    if (selected.length === 0) return;
+    setSending(true);
+    setError(null);
+    try {
+      const res = await catalogAdminApi.distribute(token, courseId, selected);
+      setResults(res);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gửi thất bại");
+    } finally {
+      setSending(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button type="button" onClick={openPanel} className="text-sm font-semibold text-accent">
+        Gửi tới web con
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen(false)} className="text-sm font-semibold text-accent">
+        Gửi tới web con ▴
+      </button>
+      <div className="absolute right-0 top-full z-10 mt-2 w-80 rounded-card border border-border bg-surface p-4 text-left shadow-[0_16px_40px_-10px_rgba(38,33,27,.35)]">
+        <p className="mb-2 text-xs text-muted">
+          Chọn web con để gửi 1 bản sao độc lập của khóa học này. Gửi lại khóa học đã gửi trước
+          đó sẽ cập nhật bản sao cũ trên web con.
+        </p>
+        {sites === null ? (
+          <p className="text-sm text-muted">Đang tải…</p>
+        ) : sites.length === 0 ? (
+          <p className="text-sm text-muted">Chưa có web con nào được đăng ký.</p>
+        ) : (
+          <ul className="mb-3 space-y-1.5">
+            {sites.map((s) => (
+              <li key={s.id}>
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={selected.includes(s.id)}
+                    onChange={() => toggle(s.id)}
+                  />
+                  <span>{s.name}</span>
+                  <span className="text-xs text-muted">({s.baseUrl})</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        )}
+
+        {error && <p className="mb-2 text-xs text-red">{error}</p>}
+
+        {results && (
+          <ul className="mb-3 space-y-1 border-t border-border pt-2">
+            {results.map((r) => (
+              <li key={r.childSiteId} className="text-xs">
+                <span className={r.success ? "text-green" : "text-red"}>
+                  {r.success ? "✓" : "✗"} {r.childSiteName ?? `#${r.childSiteId}`}
+                </span>
+                {!r.success && r.message && <span className="text-muted"> — {r.message}</span>}
+              </li>
+            ))}
+          </ul>
+        )}
+
+        <button
+          type="button"
+          onClick={send}
+          disabled={sending || selected.length === 0}
+          className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {sending ? "Đang gửi…" : `Gửi (${selected.length})`}
+        </button>
+      </div>
+    </div>
   );
 }
 

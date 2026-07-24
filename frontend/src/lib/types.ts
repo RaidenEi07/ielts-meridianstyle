@@ -41,6 +41,13 @@ export interface ChildSite {
   createdAt: string;
 }
 
+export interface DistributeResult {
+  childSiteId: number;
+  childSiteName: string | null;
+  success: boolean;
+  message: string | null;
+}
+
 // ---- Catalog (Giai đoạn 2) ----
 
 export interface ExamTemplateSummary {

@@ -16,6 +16,7 @@ import type {
   CourseDetail,
   CourseProgress,
   CourseSummary,
+  DistributeResult,
   DubbingCharacter,
   DubbingRecording,
   Enrollment,
@@ -309,6 +310,14 @@ export const catalogAdminApi = {
     apiFetch<void>(`/api/admin/catalog/courses/${courseId}/sections/reorder`, {
       method: "PUT",
       body: { sectionIds },
+      token,
+    }),
+
+  // Điều phối bản sao độc lập của khóa học sang web con (cần course:distribute).
+  distribute: (token: string, courseId: number, childSiteIds: number[]) =>
+    apiFetch<DistributeResult[]>(`/api/admin/catalog/courses/${courseId}/distribute`, {
+      method: "POST",
+      body: { childSiteIds },
       token,
     }),
 };
