@@ -11,6 +11,8 @@ interface AuthState {
   refreshToken: string | null;
   roleAssignments: RoleAssignment[];
   systemCapabilities: string[];
+  /** Deployment này là "web tổng" (điều phối khóa học) hay "web con" (mặc định false). */
+  isMaster: boolean;
   /** Đã hydrate xong từ localStorage chưa (tránh nháy khi load lại). */
   hydrated: boolean;
 
@@ -47,6 +49,7 @@ export const useAuthStore = create<AuthState>()(
       refreshToken: null,
       roleAssignments: [],
       systemCapabilities: [],
+      isMaster: false,
       hydrated: false,
       parentAccessToken: null,
       parentRefreshToken: null,
@@ -90,6 +93,7 @@ export const useAuthStore = create<AuthState>()(
           user: me.user,
           roleAssignments: me.roleAssignments,
           systemCapabilities: me.systemCapabilities,
+          isMaster: me.isMaster,
         });
       },
 
@@ -100,6 +104,7 @@ export const useAuthStore = create<AuthState>()(
           refreshToken: null,
           roleAssignments: [],
           systemCapabilities: [],
+          isMaster: false,
           parentAccessToken: null,
           parentRefreshToken: null,
           activeChildId: null,

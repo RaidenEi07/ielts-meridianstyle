@@ -23,6 +23,7 @@ import com.meridian.user.UserStatus;
 import io.jsonwebtoken.JwtException;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,11 +40,12 @@ public class AuthService {
     private final PermissionService permissionService;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
+    private final Environment env;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
             RoleAssignmentRepository roleAssignmentRepository,
             ContextService contextService, PermissionService permissionService,
-            PasswordEncoder passwordEncoder, JwtService jwtService) {
+            PasswordEncoder passwordEncoder, JwtService jwtService, Environment env) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.roleAssignmentRepository = roleAssignmentRepository;
@@ -51,6 +53,7 @@ public class AuthService {
         this.permissionService = permissionService;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
+        this.env = env;
     }
 
     @Transactional
@@ -160,7 +163,8 @@ public class AuthService {
                         contextService.requireSystemContext().getId())
                 .stream().sorted().toList();
 
-        return new MeResponse(UserDto.from(user), assignments, systemCaps);
+        boolean isMaster = "MASTER".equalsIgnoreCase(env.getProperty("SITE_ROLE", "CHILD"));
+        return new MeResponse(UserDto.from(user), assignments, systemCaps, isMaster);
     }
 
     private AuthResponse issueTokens(User user) {

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { Move } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { useAuthStore } from "@/store/auth";
 import { useEditModeStore } from "@/store/editMode";
 
 export function PageHeader({
@@ -20,6 +21,7 @@ export function PageHeader({
   showEditModeToggle?: boolean;
 }) {
   const { enabled, toggle } = useEditModeStore();
+  const isMaster = useAuthStore((s) => s.isMaster);
 
   return (
     <header className="border-b border-border bg-surface">
@@ -28,6 +30,14 @@ export function PageHeader({
           <Link href="/">
             <Logo />
           </Link>
+          {isMaster && (
+            <span
+              className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white"
+              title="Deployment này điều phối khóa học sang các web con"
+            >
+              🏠 Web tổng
+            </span>
+          )}
           {title && (
             <span className="rounded-full bg-soft px-3 py-1 text-xs font-semibold text-muted">
               {title}

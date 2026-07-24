@@ -28,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.env.Environment;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,13 +41,14 @@ class AuthServiceTest {
     @Mock private PermissionService permissionService;
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtService jwtService;
+    @Mock private Environment env;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
         authService = new AuthService(userRepository, roleRepository, roleAssignmentRepository,
-                contextService, permissionService, passwordEncoder, jwtService);
+                contextService, permissionService, passwordEncoder, jwtService, env);
     }
 
     private void stubTokenIssuance() {

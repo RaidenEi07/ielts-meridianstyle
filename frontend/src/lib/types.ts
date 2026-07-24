@@ -27,6 +27,7 @@ export interface MeResponse {
   user: User;
   roleAssignments: RoleAssignment[];
   systemCapabilities: string[];
+  isMaster: boolean;
 }
 
 // ---- Catalog (Giai đoạn 2) ----

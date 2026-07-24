@@ -22,6 +22,8 @@ interface NavItem {
   label: string;
   href: string;
   capability?: string;
+  /** Chỉ hiện trên deployment "web tổng" (isMaster) — vd. quản lý web con. */
+  masterOnly?: boolean;
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -50,7 +52,7 @@ function isActive(href: string, pathname: string | null): boolean {
 }
 
 export function BubbleNav() {
-  const { accessToken, hydrated, hasCapability, roleAssignments } = useAuthStore();
+  const { accessToken, hydrated, hasCapability, roleAssignments, isMaster } = useAuthStore();
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
@@ -77,7 +79,9 @@ export function BubbleNav() {
   if (!hydrated || !accessToken) return null;
   if (HIDDEN_PREFIXES.some((p) => pathname?.startsWith(p))) return null;
 
-  const items = NAV_ITEMS.filter((i) => !i.capability || hasCapability(i.capability));
+  const items = NAV_ITEMS.filter(
+    (i) => (!i.capability || hasCapability(i.capability)) && (!i.masterOnly || isMaster),
+  );
   const primaryRole = ROLE_PRIORITY.find((r) => roleAssignments.some((ra) => ra.roleShortname === r));
   const ringClass = (primaryRole && ROLE_RING[primaryRole]) || "border-border";
 
