@@ -73,6 +73,22 @@
 
   --radius-card: 12px;
   --radius-lg: 18px;
+
+  /* Nới rộng toàn bộ thang max-w-* (khung nội dung trang) thêm 20% so với
+     mặc định Tailwind, áp dụng tự động cho mọi nơi đang dùng max-w-3xs..7xl. */
+  --container-3xs: 19.2rem;
+  --container-2xs: 21.6rem;
+  --container-xs: 24rem;
+  --container-sm: 28.8rem;
+  --container-md: 33.6rem;
+  --container-lg: 38.4rem;
+  --container-xl: 43.2rem;
+  --container-2xl: 50.4rem;
+  --container-3xl: 57.6rem;
+  --container-4xl: 67.2rem;
+  --container-5xl: 76.8rem;
+  --container-6xl: 86.4rem;
+  --container-7xl: 96rem;
 }
 
 body {

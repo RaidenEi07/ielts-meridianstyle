@@ -651,34 +651,42 @@ function QuestionsPanel({
             strategy={verticalListSortingStrategy}
           >
             <ul className="space-y-2">
-              {detail.questions.map((q) => {
+              {detail.questions.map((q, i) => {
                 const label = pageLabel(q.pageId);
+                const prevLabel = i > 0 ? pageLabel(detail.questions[i - 1].pageId) : undefined;
+                const isNewGroup = i === 0 || label !== prevLabel;
                 return (
-                  <SortableRow key={q.quizQuestionId} id={q.quizQuestionId} editMode={editMode}>
-                    <li className="flex items-center gap-3 rounded-lg bg-soft px-3 py-2 text-sm">
-                      <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
-                        {q.type}
-                      </span>
-                      <span
-                        className={
-                          label
-                            ? "rounded-full bg-accent-soft px-2 py-0.5 text-xs font-medium text-accent"
-                            : "rounded-full border border-border px-2 py-0.5 text-xs font-medium text-muted"
-                        }
-                      >
-                        {label ?? "Chưa gán trang"}
-                      </span>
-                      <span className="flex-1">{q.name}</span>
-                      <span className="font-mono text-xs text-muted">{q.mark} điểm</span>
-                      <button
-                        type="button"
-                        onClick={() => removeQuestion(q.quizQuestionId)}
-                        className="text-xs text-red"
-                      >
-                        Gỡ
-                      </button>
-                    </li>
-                  </SortableRow>
+                  <li key={q.quizQuestionId}>
+                    {isNewGroup && (
+                      <div className={`mb-2 flex items-center gap-2 ${i > 0 ? "mt-5 pt-3 border-t border-border" : ""}`}>
+                        <span
+                          className={
+                            label
+                              ? "rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent"
+                              : "rounded-full border border-border px-2.5 py-1 text-xs font-bold text-muted"
+                          }
+                        >
+                          {label ?? "Chưa gán trang"}
+                        </span>
+                      </div>
+                    )}
+                    <SortableRow id={q.quizQuestionId} editMode={editMode}>
+                      <div className="flex items-center gap-3 rounded-lg bg-soft px-3 py-2 text-sm">
+                        <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
+                          {q.type}
+                        </span>
+                        <span className="flex-1">{q.name}</span>
+                        <span className="font-mono text-xs text-muted">{q.mark} điểm</span>
+                        <button
+                          type="button"
+                          onClick={() => removeQuestion(q.quizQuestionId)}
+                          className="text-xs text-red"
+                        >
+                          Gỡ
+                        </button>
+                      </div>
+                    </SortableRow>
+                  </li>
                 );
               })}
             </ul>
