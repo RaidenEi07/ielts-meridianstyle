@@ -23,6 +23,7 @@ import type {
   QuestionSummary,
   QuizDetailAdmin,
   QuizPageAdmin,
+  QuizQuestionAdmin,
 } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
@@ -34,6 +35,33 @@ const STATUS_META: Record<string, { label: string; cls: string }> = {
   PUBLISHED: { label: "Đã xuất bản", cls: "bg-green-soft text-green" },
   ARCHIVED: { label: "Lưu trữ", cls: "bg-red-soft text-red" },
 };
+
+interface QuestionGroup {
+  pageId: number | null;
+  page: QuizPageAdmin | undefined;
+  items: QuizQuestionAdmin[];
+}
+
+// Buckets by pageId (not by position), so each Part is exactly one group no
+// matter how sortOrder currently interleaves them; groups are ordered by
+// Part number ascending, with unassigned questions last.
+function groupQuestionsByPage(
+  questions: QuizQuestionAdmin[],
+  pagesById: Map<number, QuizPageAdmin>,
+): QuestionGroup[] {
+  const buckets = new Map<number | null, QuizQuestionAdmin[]>();
+  for (const q of questions) {
+    if (!buckets.has(q.pageId)) buckets.set(q.pageId, []);
+    buckets.get(q.pageId)!.push(q);
+  }
+  const groups: QuestionGroup[] = [...buckets.entries()].map(([pageId, items]) => ({
+    pageId,
+    page: pageId !== null ? pagesById.get(pageId) : undefined,
+    items,
+  }));
+  groups.sort((a, b) => (a.page?.pageNumber ?? Infinity) - (b.page?.pageNumber ?? Infinity));
+  return groups;
+}
 
 export default function AdminQuizDetailPage() {
   const params = useParams<{ id: string }>();
@@ -571,12 +599,11 @@ function QuestionsPanel({
   const attachedIds = new Set(detail.questions.map((q) => q.questionId));
   const pagesById = new Map(detail.pages.map((p) => [p.id, p]));
 
-  function pageLabel(pageId: number | null) {
-    if (pageId === null) return null;
-    const page = pagesById.get(pageId);
-    if (!page) return null;
-    return `Part ${page.pageNumber}${page.partLabel ? ` — ${page.partLabel}` : ""}`;
-  }
+  // Bucket questions by Part so each Part renders as exactly one contiguous
+  // block (instead of scattering wherever its questions happen to fall in
+  // sortOrder) — the flattened bucket order becomes the real sortOrder, since
+  // that's the same order students see when taking the quiz.
+  const questionGroups = groupQuestionsByPage(detail.questions, pagesById);
 
   function openPicker() {
     setPicking(true);
@@ -620,24 +647,44 @@ function QuestionsPanel({
     onChanged();
   }
 
-  async function handleDragEnd(event: DragEndEvent) {
+  // Reordering only ever happens within one Part's own list (dragging across
+  // Parts would silently snap back, since group membership comes from pageId,
+  // not from where a row is dropped) — after moving within the group, rebuild
+  // the full cross-group order and persist that as the new sortOrder.
+  async function handleGroupDragEnd(groupItems: QuizQuestionAdmin[], event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
-    const oldIndex = detail.questions.findIndex((q) => q.quizQuestionId === active.id);
-    const newIndex = detail.questions.findIndex((q) => q.quizQuestionId === over.id);
+    const oldIndex = groupItems.findIndex((q) => q.quizQuestionId === active.id);
+    const newIndex = groupItems.findIndex((q) => q.quizQuestionId === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = arrayMove(detail.questions, oldIndex, newIndex);
+    const reorderedGroup = arrayMove(groupItems, oldIndex, newIndex);
+    const fullOrder = questionGroups.flatMap((g) => (g.items === groupItems ? reorderedGroup : g.items));
     try {
       await quizAdminApi.reorderQuestions(
         token,
         detail.quiz.id,
-        reordered.map((q) => q.quizQuestionId),
+        fullOrder.map((q) => q.quizQuestionId),
       );
       onChanged();
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Sắp xếp câu hỏi thất bại");
     }
   }
+
+  // Self-heal: if the persisted sortOrder doesn't already match Part grouping
+  // (e.g. content imported before this grouping existed, with sortOrder that
+  // jumps between Parts), normalize it once so the exam-taking order always
+  // matches exactly what's displayed here — never leave the two diverging.
+  useEffect(() => {
+    const desired = questionGroups.flatMap((g) => g.items.map((q) => q.quizQuestionId));
+    const current = detail.questions.map((q) => q.quizQuestionId);
+    const alreadyGrouped =
+      desired.length === current.length && desired.every((id, i) => id === current[i]);
+    if (!alreadyGrouped) {
+      quizAdminApi.reorderQuestions(token, detail.quiz.id, desired).then(onChanged).catch(() => {});
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [detail.questions]);
 
   return (
     <section className="rounded-card border border-border bg-surface p-6">
@@ -655,53 +702,59 @@ function QuestionsPanel({
       {detail.questions.length === 0 ? (
         <p className="text-sm text-muted">Chưa có câu hỏi nào trong quiz này.</p>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext
-            items={detail.questions.map((q) => q.quizQuestionId)}
-            strategy={verticalListSortingStrategy}
-          >
-            <ul className="space-y-2">
-              {detail.questions.map((q, i) => {
-                const label = pageLabel(q.pageId);
-                const prevLabel = i > 0 ? pageLabel(detail.questions[i - 1].pageId) : undefined;
-                const isNewGroup = i === 0 || label !== prevLabel;
-                return (
-                  <li key={q.quizQuestionId}>
-                    {isNewGroup && (
-                      <div className={`mb-2 flex items-center gap-2 ${i > 0 ? "mt-5 pt-3 border-t border-border" : ""}`}>
-                        <span
-                          className={
-                            label
-                              ? "rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent"
-                              : "rounded-full border border-border px-2.5 py-1 text-xs font-bold text-muted"
-                          }
-                        >
-                          {label ?? "Chưa gán trang"}
-                        </span>
-                      </div>
-                    )}
-                    <SortableRow id={q.quizQuestionId} editMode={editMode}>
-                      <div className="flex items-center gap-3 rounded-lg bg-soft px-3 py-2 text-sm">
-                        <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
-                          {q.type}
-                        </span>
-                        <span className="flex-1">{q.name}</span>
-                        <span className="font-mono text-xs text-muted">{q.mark} điểm</span>
-                        <button
-                          type="button"
-                          onClick={() => removeQuestion(q.quizQuestionId)}
-                          className="text-xs text-red"
-                        >
-                          Gỡ
-                        </button>
-                      </div>
-                    </SortableRow>
-                  </li>
-                );
-              })}
-            </ul>
-          </SortableContext>
-        </DndContext>
+        <div className="space-y-5">
+          {questionGroups.map((group) => (
+            <div key={group.pageId ?? "unassigned"}>
+              <div className="mb-2 flex items-center gap-2">
+                <span
+                  className={
+                    group.page
+                      ? "rounded-full bg-accent-soft px-2.5 py-1 text-xs font-bold text-accent"
+                      : "rounded-full border border-border px-2.5 py-1 text-xs font-bold text-muted"
+                  }
+                >
+                  {group.page
+                    ? `Part ${group.page.pageNumber}${group.page.partLabel ? ` — ${group.page.partLabel}` : ""}`
+                    : "Chưa gán trang"}
+                </span>
+                <span className="text-xs text-faint">{group.items.length} câu</span>
+              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => handleGroupDragEnd(group.items, event)}
+              >
+                <SortableContext
+                  items={group.items.map((q) => q.quizQuestionId)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <ul className="space-y-2">
+                    {group.items.map((q) => (
+                      <li key={q.quizQuestionId}>
+                        <SortableRow id={q.quizQuestionId} editMode={editMode}>
+                          <div className="flex items-center gap-3 rounded-lg bg-soft px-3 py-2 text-sm">
+                            <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
+                              {q.type}
+                            </span>
+                            <span className="flex-1">{q.name}</span>
+                            <span className="font-mono text-xs text-muted">{q.mark} điểm</span>
+                            <button
+                              type="button"
+                              onClick={() => removeQuestion(q.quizQuestionId)}
+                              className="text-xs text-red"
+                            >
+                              Gỡ
+                            </button>
+                          </div>
+                        </SortableRow>
+                      </li>
+                    ))}
+                  </ul>
+                </SortableContext>
+              </DndContext>
+            </div>
+          ))}
+        </div>
       )}
 
       {picking && (
