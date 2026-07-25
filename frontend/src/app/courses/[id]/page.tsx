@@ -22,6 +22,7 @@ export default function CourseDetailPage() {
     "idle" | "loading" | "done" | "already"
   >("idle");
   const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
+  const [showAllSections, setShowAllSections] = useState(false);
 
   useEffect(() => {
     if (!Number.isFinite(courseId)) return;
@@ -152,24 +153,37 @@ export default function CourseDetailPage() {
             {course.sections.length === 0 ? (
               <p className="text-muted">Đề cương đang được cập nhật.</p>
             ) : (
-              <ol className="space-y-2">
-                {course.sections.map((s, i) => (
-                  <li
-                    key={s.id}
-                    className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3"
+              <>
+                <ol className="space-y-2">
+                  {(showAllSections ? course.sections : course.sections.slice(0, 5)).map(
+                    (s, i) => (
+                      <li
+                        key={s.id}
+                        className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3"
+                      >
+                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary">
+                          {i + 1}
+                        </span>
+                        <div>
+                          <span className="font-medium">{s.title}</span>
+                          {s.shortDescription && (
+                            <p className="text-sm text-muted">{s.shortDescription}</p>
+                          )}
+                        </div>
+                      </li>
+                    ),
+                  )}
+                </ol>
+                {course.sections.length > 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowAllSections((v) => !v)}
+                    className="mt-3 text-sm font-semibold text-accent hover:underline"
                   >
-                    <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary">
-                      {i + 1}
-                    </span>
-                    <div>
-                      <span className="font-medium">{s.title}</span>
-                      {s.shortDescription && (
-                        <p className="text-sm text-muted">{s.shortDescription}</p>
-                      )}
-                    </div>
-                  </li>
-                ))}
-              </ol>
+                    {showAllSections ? "Thu gọn" : `Xem thêm (${course.sections.length - 5})`}
+                  </button>
+                )}
+              </>
             )}
           </section>
 
