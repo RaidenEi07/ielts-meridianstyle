@@ -1,5 +1,6 @@
 package com.meridian.quiz.dto;
 
+import com.meridian.catalog.CourseAudienceGroup;
 import java.math.BigDecimal;
 import java.util.List;
 
@@ -24,7 +25,8 @@ public final class QuizDtos {
             String status,
             Long contextId,
             long questionCount,
-            String examTemplateCode) {
+            String examTemplateCode,
+            CourseAudienceGroup audienceGroup) {
     }
 
     public record QuizQuestionDto(

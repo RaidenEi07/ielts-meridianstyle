@@ -1,6 +1,7 @@
 package com.meridian.catalog.dto;
 
 import com.meridian.catalog.Course;
+import com.meridian.catalog.CourseAudienceGroup;
 import java.math.BigDecimal;
 
 public record CourseSummaryDto(
@@ -13,6 +14,7 @@ public record CourseSummaryDto(
         BigDecimal price,
         Long categoryId,
         String categoryName,
+        CourseAudienceGroup audienceGroup,
         long enrolledCount) {
 
     public static CourseSummaryDto from(Course c, long enrolledCount) {
@@ -26,6 +28,7 @@ public record CourseSummaryDto(
                 c.getPrice(),
                 c.getCategory().getId(),
                 c.getCategory().getName(),
+                c.getCategory().getAudienceGroup(),
                 enrolledCount);
     }
 }

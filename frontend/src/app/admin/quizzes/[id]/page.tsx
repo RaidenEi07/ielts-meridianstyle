@@ -140,6 +140,7 @@ function QuizSettingsForm({
   const router = useRouter();
   const confirm = useConfirm();
   const q = detail.quiz;
+  const isAcademic = q.audienceGroup === "IELTS";
   const [title, setTitle] = useState(q.title);
   const [intro, setIntro] = useState(q.intro ?? "");
   const [minutes, setMinutes] = useState(
@@ -257,15 +258,17 @@ function QuizSettingsForm({
             className="input"
           />
         </label>
-        <label className="block">
-          <span className="mb-1 block text-xs font-medium text-muted">Điểm đạt</span>
-          <input
-            type="number"
-            value={passMark}
-            onChange={(e) => setPassMark(e.target.value)}
-            className="input"
-          />
-        </label>
+        {isAcademic && (
+          <label className="block">
+            <span className="mb-1 block text-xs font-medium text-muted">Điểm đạt</span>
+            <input
+              type="number"
+              value={passMark}
+              onChange={(e) => setPassMark(e.target.value)}
+              className="input"
+            />
+          </label>
+        )}
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-muted">Trạng thái</span>
           <select value={status} onChange={(e) => setStatus(e.target.value)} className="input">
@@ -282,15 +285,17 @@ function QuizSettingsForm({
           />
           Trộn thứ tự câu hỏi
         </label>
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={antiCheat}
-            onChange={(e) => setAntiCheat(e.target.checked)}
-          />
-          Bật chống gian lận
-        </label>
-        {antiCheat && (
+        {isAcademic && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={antiCheat}
+              onChange={(e) => setAntiCheat(e.target.checked)}
+            />
+            Bật chống gian lận
+          </label>
+        )}
+        {isAcademic && antiCheat && (
           <label className="block">
             <span className="mb-1 block text-xs font-medium text-muted">
               Số vi phạm tối đa trước khi tự nộp
@@ -340,6 +345,10 @@ function PagesPanel({
   const [creatingPassage, setCreatingPassage] = useState(false);
   const [editingPassage, setEditingPassage] = useState<PassageSummary | null>(null);
   const confirm = useConfirm();
+
+  if (detail.quiz.audienceGroup !== "IELTS") {
+    return null;
+  }
 
   const usedNumbers = new Set(detail.pages.map((p) => p.pageNumber));
   const nextNumber = [1, 2, 3].find((n) => !usedNumbers.has(n));
@@ -557,6 +566,7 @@ function QuestionsPanel({
   const editMode = useEditModeStore((s) => s.enabled);
   const sensors = useSensors(useSensor(PointerSensor));
   const confirm = useConfirm();
+  const isAcademic = detail.quiz.audienceGroup === "IELTS";
 
   const attachedIds = new Set(detail.questions.map((q) => q.questionId));
   const pagesById = new Map(detail.pages.map((p) => [p.id, p]));
@@ -713,22 +723,24 @@ function QuestionsPanel({
             </div>
           </div>
           <div className="mb-3 flex flex-wrap items-center justify-end gap-3">
-            <label className="flex items-center gap-2 text-xs text-muted">
-              Gán vào trang:
-              <select
-                value={pageId}
-                onChange={(e) => setPageId(e.target.value ? Number(e.target.value) : "")}
-                className="input py-1 text-xs"
-              >
-                <option value="">— Không gán trang —</option>
-                {detail.pages.map((p) => (
-                  <option key={p.id} value={p.id}>
-                    Part {p.pageNumber}
-                    {p.partLabel ? ` — ${p.partLabel}` : ""}
-                  </option>
-                ))}
-              </select>
-            </label>
+            {isAcademic && (
+              <label className="flex items-center gap-2 text-xs text-muted">
+                Gán vào trang:
+                <select
+                  value={pageId}
+                  onChange={(e) => setPageId(e.target.value ? Number(e.target.value) : "")}
+                  className="input py-1 text-xs"
+                >
+                  <option value="">— Không gán trang —</option>
+                  {detail.pages.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      Part {p.pageNumber}
+                      {p.partLabel ? ` — ${p.partLabel}` : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
             <label className="flex items-center gap-2 text-xs text-muted">
               Điểm mỗi câu:
               <input

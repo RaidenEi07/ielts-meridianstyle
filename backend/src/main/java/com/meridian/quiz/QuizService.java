@@ -258,7 +258,8 @@ public class QuizService {
                 quiz.getStatus().name(),
                 quiz.getContext() != null ? quiz.getContext().getId() : null,
                 quizQuestionRepository.countByQuizId(quiz.getId()),
-                template != null ? template.getCode() : null);
+                template != null ? template.getCode() : null,
+                course.getCategory().getAudienceGroup());
     }
 
     private void applyCreate(Quiz quiz, QuizRequests.CreateQuiz req) {

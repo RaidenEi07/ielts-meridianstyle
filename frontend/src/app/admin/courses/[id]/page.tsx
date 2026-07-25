@@ -23,7 +23,14 @@ import { SortableRow } from "@/components/SortableRow";
 import { SubtitleUploadField } from "@/components/SubtitleUploadField";
 import { VideoUploadField } from "@/components/VideoUploadField";
 import { ApiError, catalogAdminApi, catalogApi, childSiteAdminApi, quizAdminApi } from "@/lib/api";
-import type { ChildSite, CourseDetail, DistributeResult, QuizSummary, Section } from "@/lib/types";
+import type {
+  ChildSite,
+  CourseAudienceGroup,
+  CourseDetail,
+  DistributeResult,
+  QuizSummary,
+  Section,
+} from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useEditModeStore } from "@/store/editMode";
@@ -509,6 +516,7 @@ function SectionsPanel({
                 <SortableRow key={s.id} id={s.id} editMode={editMode}>
                   <SectionCard
                     section={s}
+                    audienceGroup={course.audienceGroup}
                     token={token}
                     onRemove={() => removeSection(s.id)}
                     onChanged={onChanged}
@@ -525,15 +533,18 @@ function SectionsPanel({
 
 function SectionCard({
   section,
+  audienceGroup,
   token,
   onRemove,
   onChanged,
 }: {
   section: Section;
+  audienceGroup: CourseAudienceGroup;
   token: string;
   onRemove: () => void;
   onChanged: () => void;
 }) {
+  const isAcademic = audienceGroup === "IELTS";
   const [quizzes, setQuizzes] = useState<QuizSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
@@ -637,13 +648,17 @@ function SectionCard({
         />
       </div>
 
-      <div className="mb-3">
-        <HomeworkMaterialsEditor sectionId={section.id} token={token} />
-      </div>
+      {!isAcademic && (
+        <div className="mb-3">
+          <HomeworkMaterialsEditor sectionId={section.id} token={token} />
+        </div>
+      )}
 
-      <div className="mb-3">
-        <CharacterDubbingEditor sectionId={section.id} token={token} videoUrl={section.videoUrl} />
-      </div>
+      {!isAcademic && (
+        <div className="mb-3">
+          <CharacterDubbingEditor sectionId={section.id} token={token} videoUrl={section.videoUrl} />
+        </div>
+      )}
 
       {creating && (
         <form onSubmit={createQuiz} className="mb-3 flex gap-2">

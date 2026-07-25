@@ -80,6 +80,7 @@ export interface CourseSummary {
   price: number;
   categoryId: number;
   categoryName: string;
+  audienceGroup: CourseAudienceGroup;
   enrolledCount: number;
 }
 
@@ -242,6 +243,7 @@ export interface QuizSummary {
   contextId: number | null;
   questionCount: number;
   examTemplateCode: string | null;
+  audienceGroup: CourseAudienceGroup;
 }
 
 // ---- Quiz management (admin/teacher) ----
