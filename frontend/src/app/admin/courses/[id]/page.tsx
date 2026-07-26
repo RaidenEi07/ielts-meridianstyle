@@ -103,21 +103,50 @@ export default function AdminCourseDetailPage() {
         title="Chi tiết khóa học"
         backHref="/admin/courses"
         backLabel="Danh sách khóa học"
-        maxWidthClass="max-w-4xl"
+        maxWidthClass="max-w-5xl"
         showEditModeToggle
       />
 
-      <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
-        {error && <p className="text-sm text-red">{error}</p>}
-        {!course ? (
-          <p className="text-muted">Đang tải…</p>
-        ) : (
-          <>
-            <CourseEditForm course={course} token={token} onSaved={refresh} />
-            <SectionsPanel course={course} token={token} onChanged={refresh} />
-          </>
+      <div className="mx-auto grid max-w-5xl gap-6 px-6 py-8 lg:grid-cols-[220px_1fr]">
+        {course && course.sections.length > 0 && (
+          <aside className="hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
+            <div className="rounded-[18px] border border-border bg-surface p-4">
+              <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                Mục lục
+              </h3>
+              <nav className="space-y-0.5">
+                {course.sections.map((s, i) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() =>
+                      document
+                        .getElementById(`admin-section-${s.id}`)
+                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                    }
+                    className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-soft hover:text-text"
+                  >
+                    <span className="shrink-0 font-mono text-xs text-faint">{i + 1}.</span>
+                    <span className="line-clamp-2">{s.title}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </aside>
         )}
-      </main>
+
+        <main className="space-y-6">
+          {error && <p className="text-sm text-red">{error}</p>}
+          {!course ? (
+            <p className="text-muted">Đang tải…</p>
+          ) : (
+            <>
+              <CourseEditForm course={course} token={token} onSaved={refresh} />
+              <SectionsPanel course={course} token={token} onChanged={refresh} />
+            </>
+          )}
+        </main>
+      </div>
     </div>
   );
 }
@@ -512,15 +541,17 @@ function SectionsPanel({
               strategy={verticalListSortingStrategy}
             >
               {course.sections.map((s) => (
-                <SortableRow key={s.id} id={s.id} editMode={editMode}>
-                  <SectionCard
-                    section={s}
-                    audienceGroup={course.audienceGroup}
-                    token={token}
-                    onRemove={() => removeSection(s.id)}
-                    onChanged={onChanged}
-                  />
-                </SortableRow>
+                <div key={s.id} id={`admin-section-${s.id}`} className="scroll-mt-24">
+                  <SortableRow id={s.id} editMode={editMode}>
+                    <SectionCard
+                      section={s}
+                      audienceGroup={course.audienceGroup}
+                      token={token}
+                      onRemove={() => removeSection(s.id)}
+                      onChanged={onChanged}
+                    />
+                  </SortableRow>
+                </div>
               ))}
             </SortableContext>
           </DndContext>
