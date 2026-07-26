@@ -139,6 +139,8 @@ interface Note {
   /** Nếu ghi chú được tạo từ việc bôi đen văn bản: id của <mark> tương ứng + step chứa nó. */
   markId?: string;
   stepKey?: string;
+  /** Đoạn văn bản gốc đã bôi đen (nếu ghi chú được tạo từ selection), để hiển thị làm ngữ cảnh. */
+  quote?: string;
 }
 
 function unwrapMark(mark: Element) {
@@ -203,10 +205,10 @@ export default function QuizPlayerPage() {
     }
   }, [attemptId, notes]);
 
-  function addNote(text: string, markId?: string, stepKey?: string) {
+  function addNote(text: string, markId?: string, stepKey?: string, quote?: string) {
     if (!text.trim()) return;
     setNotes((prev) => [
-      { id: `${Date.now()}-${Math.random()}`, text: text.trim(), createdAt: Date.now(), markId, stepKey },
+      { id: `${Date.now()}-${Math.random()}`, text: text.trim(), createdAt: Date.now(), markId, stepKey, quote },
       ...prev,
     ]);
   }
@@ -748,7 +750,12 @@ function NotesPanel({
               }`}
             >
               {n.markId && <Highlighter className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />}
-              <span className="flex-1 whitespace-pre-wrap break-words">{n.text}</span>
+              <span className="flex-1 whitespace-pre-wrap break-words">
+                {n.quote && (
+                  <span className="mb-0.5 block truncate text-xs italic text-muted">“{n.quote}”</span>
+                )}
+                {n.text}
+              </span>
               <button
                 type="button"
                 onClick={(e) => {
@@ -776,11 +783,24 @@ interface SelectionMenuState {
   y: number;
 }
 
+// Highlight màu vàng thuần (chức năng "Highlight") so với cam-đậm cho "Ghi chú"
+// — trước đây ghi chú dùng var(--accent-soft), vốn là màu nền pill rất nhạt
+// (gần trắng ở light mode, gần đen ở dark mode), không phải màu để bôi đen
+// văn bản nên gần như không thấy được. Dùng 2 màu cố định, đủ đậm ở cả 2 theme,
+// khác tông để phân biệt 2 loại đánh dấu.
+const HIGHLIGHT_COLOR = "#fde68a";
+const NOTE_MARK_COLOR = "#f7bd7a";
+
+type SelectionStage =
+  | { kind: "closed" }
+  | { kind: "choice"; x: number; y: number }
+  | { kind: "compose"; x: number; y: number; sessionKey: number };
+
 function useSelectionCapture(
   containerRef: React.RefObject<HTMLDivElement | null>,
-  onCaptureNote: (text: string, markId: string) => void,
+  onCaptureNote: (text: string, quote: string, markId: string) => void,
 ) {
-  const [menu, setMenu] = useState<SelectionMenuState | null>(null);
+  const [stage, setStage] = useState<SelectionStage>({ kind: "closed" });
   const rangeRef = useRef<Range | null>(null);
 
   function handleMouseUp(e: React.MouseEvent) {
@@ -788,7 +808,7 @@ function useSelectionCapture(
     const existingMark = target.closest("mark");
     if (existingMark && containerRef.current?.contains(existingMark)) {
       unwrapMark(existingMark);
-      setMenu(null);
+      setStage({ kind: "closed" });
       return;
     }
     const sel = window.getSelection();
@@ -810,12 +830,12 @@ function useSelectionCapture(
       return;
     }
     rangeRef.current = range.cloneRange();
-    setMenu({ x: e.clientX, y: e.clientY });
+    setStage({ kind: "choice", x: e.clientX, y: e.clientY });
   }
 
   function closeMenu() {
     rangeRef.current = null;
-    setMenu(null);
+    setStage({ kind: "closed" });
     window.getSelection()?.removeAllRanges();
   }
 
@@ -827,7 +847,7 @@ function useSelectionCapture(
     }
     try {
       const mark = document.createElement("mark");
-      mark.style.background = "#fde68a";
+      mark.style.background = HIGHLIGHT_COLOR;
       mark.style.color = "inherit";
       mark.style.cursor = "pointer";
       mark.title = "Bấm để xóa highlight này";
@@ -838,30 +858,44 @@ function useSelectionCapture(
     closeMenu();
   }
 
-  function applyNote() {
-    const range = rangeRef.current;
-    if (!range) {
+  // Chọn "Ghi chú" chỉ MỞ Ô NHẬP TEXT tại đúng vị trí đã bôi đen — không tạo
+  // mark/ghi chú ngay lập tức (trước đây làm vậy, khiến người dùng không có
+  // cơ hội gõ nội dung ghi chú của riêng mình, chỉ lưu lại đúng đoạn đã bôi đen).
+  function openNoteCompose() {
+    if (!rangeRef.current) {
       closeMenu();
       return;
     }
-    const text = range.toString().trim();
+    setStage((s) =>
+      s.kind === "choice" ? { kind: "compose", x: s.x, y: s.y, sessionKey: Date.now() } : s,
+    );
+  }
+
+  function submitNote(text: string) {
+    const range = rangeRef.current;
+    const trimmed = text.trim();
+    if (!range || !trimmed) {
+      closeMenu();
+      return;
+    }
+    const quote = range.toString().trim();
     const markId = `note-mark-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     try {
       const mark = document.createElement("mark");
       mark.id = markId;
-      mark.style.background = "var(--accent-soft)";
+      mark.style.background = NOTE_MARK_COLOR;
       mark.style.color = "inherit";
       mark.style.cursor = "pointer";
       mark.title = "Ghi chú — bấm để xóa";
       range.surroundContents(mark);
-      if (text) onCaptureNote(text, markId);
+      onCaptureNote(trimmed, quote, markId);
     } catch {
       /* selection spans nhiều node — bỏ qua */
     }
     closeMenu();
   }
 
-  return { menu, handleMouseUp, applyHighlight, applyNote, closeMenu };
+  return { stage, handleMouseUp, applyHighlight, openNoteCompose, submitNote, closeMenu };
 }
 
 function SelectionMenu({
@@ -902,6 +936,72 @@ function SelectionMenu({
   );
 }
 
+// Ô nhỏ để gõ nội dung ghi chú, hiện ngay tại vị trí đã bôi đen sau khi bấm
+// "Ghi chú" — mark/ghi chú chỉ thực sự được tạo khi bấm Lưu (hoặc Enter).
+function NoteComposer({
+  state, onSubmit, onCancel,
+}: {
+  state: SelectionMenuState | null;
+  onSubmit: (text: string) => void;
+  onCancel: () => void;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [text, setText] = useState("");
+
+  useEffect(() => {
+    if (!state) return;
+    textareaRef.current?.focus();
+    function onDocMouseDown(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) onCancel();
+    }
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") onCancel();
+    }
+    document.addEventListener("mousedown", onDocMouseDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", onDocMouseDown);
+      document.removeEventListener("keydown", onKeyDown);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
+  if (!state) return null;
+  return (
+    <div
+      ref={ref}
+      style={{ position: "fixed", left: state.x, top: state.y, transform: "translate(-50%, -120%)" }}
+      className="z-50 w-64 rounded-lg border border-border bg-surface p-2 shadow-xl"
+    >
+      <textarea
+        ref={textareaRef}
+        value={text}
+        onChange={(e) => setText(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" && !e.shiftKey) {
+            e.preventDefault();
+            onSubmit(text);
+          }
+        }}
+        placeholder="Nhập nội dung ghi chú…"
+        rows={3}
+        className="input w-full resize-none text-sm"
+      />
+      <div className="mt-1.5 flex justify-end gap-1.5">
+        <button type="button" onClick={onCancel}
+          className="rounded-md px-2 py-1 text-xs font-semibold text-muted hover:bg-soft">
+          Hủy
+        </button>
+        <button type="button" onClick={() => onSubmit(text)}
+          className="rounded-md bg-accent px-2.5 py-1 text-xs font-semibold text-white hover:opacity-90">
+          Lưu
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ------------------------------------------------------------------
 // Reading split-pane với divider kéo được + highlight
 // ------------------------------------------------------------------
@@ -918,7 +1018,7 @@ function ReadingSplitPane({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onAnswer: (q: PlayerQuestion, r: any) => void;
   onFlag: (id: number) => void;
-  onCaptureNote: (text: string, markId: string, stepKey: string) => void;
+  onCaptureNote: (text: string, markId: string, stepKey: string, quote: string) => void;
 }) {
   const [leftPct, setLeftPct] = useState(52);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -943,9 +1043,14 @@ function ReadingSplitPane({
     };
   }, []);
 
-  const passageSel = useSelectionCapture(passageRef, (text, markId) => onCaptureNote(text, markId, stepKey));
-  const questionsSel = useSelectionCapture(questionsRef, (text, markId) => onCaptureNote(text, markId, stepKey));
+  const passageSel = useSelectionCapture(passageRef, (text, quote, markId) => onCaptureNote(text, markId, stepKey, quote));
+  const questionsSel = useSelectionCapture(questionsRef, (text, quote, markId) => onCaptureNote(text, markId, stepKey, quote));
   const passageContentRef = useImperativeHtml(page.passageContent ?? "");
+
+  const passageChoice = passageSel.stage.kind === "choice" ? passageSel.stage : null;
+  const passageCompose = passageSel.stage.kind === "compose" ? passageSel.stage : null;
+  const questionsChoice = questionsSel.stage.kind === "choice" ? questionsSel.stage : null;
+  const questionsCompose = questionsSel.stage.kind === "compose" ? questionsSel.stage : null;
 
   return (
     <div>
@@ -968,8 +1073,10 @@ function ReadingSplitPane({
               style={{ fontFamily: "var(--font-serif)", fontSize: "15.5px", lineHeight: 1.85 }}
             />
           </div>
-          <SelectionMenu state={passageSel.menu} onHighlight={passageSel.applyHighlight}
-            onNote={passageSel.applyNote} onClose={passageSel.closeMenu} />
+          <SelectionMenu state={passageChoice} onHighlight={passageSel.applyHighlight}
+            onNote={passageSel.openNoteCompose} onClose={passageSel.closeMenu} />
+          <NoteComposer key={passageCompose?.sessionKey ?? "closed"} state={passageCompose}
+            onSubmit={passageSel.submitNote} onCancel={passageSel.closeMenu} />
         </div>
 
         {/* Divider */}
@@ -991,8 +1098,10 @@ function ReadingSplitPane({
                 onChange={(r) => onAnswer(q, r)} onFlag={() => onFlag(q.quizQuestionId)} />
             ))}
           </div>
-          <SelectionMenu state={questionsSel.menu} onHighlight={questionsSel.applyHighlight}
-            onNote={questionsSel.applyNote} onClose={questionsSel.closeMenu} />
+          <SelectionMenu state={questionsChoice} onHighlight={questionsSel.applyHighlight}
+            onNote={questionsSel.openNoteCompose} onClose={questionsSel.closeMenu} />
+          <NoteComposer key={questionsCompose?.sessionKey ?? "closed"} state={questionsCompose}
+            onSubmit={questionsSel.submitNote} onCancel={questionsSel.closeMenu} />
         </div>
       </div>
     </div>
