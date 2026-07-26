@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { X } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CharacterDubbingEditor } from "@/components/CharacterDubbingEditor";
 import { HomeworkMaterialsEditor } from "@/components/HomeworkMaterialsEditor";
@@ -51,6 +51,7 @@ export default function AdminCourseDetailPage() {
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [sectionSearch, setSectionSearch] = useState("");
 
   useEffect(() => {
     if (!hydrated) return;
@@ -114,22 +115,42 @@ export default function AdminCourseDetailPage() {
               <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
                 Mục lục
               </h3>
+              {course.sections.length > 5 && (
+                <div className="relative mb-2">
+                  <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
+                  <input
+                    value={sectionSearch}
+                    onChange={(e) => setSectionSearch(e.target.value)}
+                    placeholder="Tìm section…"
+                    className="input w-full py-1.5 pl-8 text-xs"
+                  />
+                </div>
+              )}
               <nav className="space-y-0.5">
-                {course.sections.map((s, i) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() =>
-                      document
-                        .getElementById(`admin-section-${s.id}`)
-                        ?.scrollIntoView({ behavior: "smooth", block: "start" })
-                    }
-                    className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-soft hover:text-text"
-                  >
-                    <span className="shrink-0 font-mono text-xs text-faint">{i + 1}.</span>
-                    <span className="line-clamp-2">{s.title}</span>
-                  </button>
-                ))}
+                {course.sections
+                  .map((s, i) => ({ s, i }))
+                  .filter(({ s }) =>
+                    s.title.toLowerCase().includes(sectionSearch.trim().toLowerCase()),
+                  )
+                  .map(({ s, i }) => (
+                    <button
+                      key={s.id}
+                      type="button"
+                      onClick={() =>
+                        document
+                          .getElementById(`admin-section-${s.id}`)
+                          ?.scrollIntoView({ behavior: "smooth", block: "start" })
+                      }
+                      className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-soft hover:text-text"
+                    >
+                      <span className="shrink-0 font-mono text-xs text-faint">{i + 1}.</span>
+                      <span className="line-clamp-2">{s.title}</span>
+                    </button>
+                  ))}
+                {sectionSearch.trim() &&
+                  !course.sections.some((s) =>
+                    s.title.toLowerCase().includes(sectionSearch.trim().toLowerCase()),
+                  ) && <p className="px-2 py-1.5 text-xs text-faint">Không tìm thấy section nào.</p>}
               </nav>
             </div>
           </aside>
