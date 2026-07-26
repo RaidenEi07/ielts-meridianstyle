@@ -500,6 +500,17 @@ export const questionBankApi = {
       token,
     }),
 
+  updateCategory: (
+    token: string,
+    id: number,
+    req: { name: string; parentId?: number | null; description?: string; audience?: Audience },
+  ) =>
+    apiFetch<QuestionCategoryNode>(`/api/admin/question-bank/categories/${id}`, {
+      method: "PUT",
+      body: req,
+      token,
+    }),
+
   tags: (token: string) =>
     apiFetch<QuestionTag[]>("/api/admin/question-bank/tags", { token }),
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { CategoryTree } from "@/components/CategoryTree";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, questionBankApi } from "@/lib/api";
 import { TYPE_META } from "@/lib/questionTypes";
@@ -115,22 +116,18 @@ export default function KidsQuestionBankPage() {
         <aside className="md:sticky md:top-8 md:self-start">
           <div className="rounded-card border border-border bg-surface p-4">
             <h2 className="mb-2 text-sm font-semibold text-muted">Danh mục</h2>
-            <ul className="space-y-1">
-              <CatItem
-                active={activeCat === null}
-                label="Tất cả"
-                onClick={() => setActiveCat(null)}
-              />
-              {categories.map((c) => (
-                <CatItem
-                  key={c.id}
-                  active={activeCat === c.id}
-                  label={c.name}
-                  indent={c.parentId !== null}
-                  onClick={() => setActiveCat(c.id)}
-                />
-              ))}
-            </ul>
+            <button
+              type="button"
+              onClick={() => setActiveCat(null)}
+              className={`mb-1 w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                activeCat === null
+                  ? "bg-primary-soft font-semibold text-primary"
+                  : "text-text hover:bg-soft"
+              }`}
+            >
+              Tất cả
+            </button>
+            <CategoryTree categories={categories} activeCat={activeCat} onSelect={setActiveCat} />
           </div>
         </aside>
 
@@ -223,28 +220,3 @@ export default function KidsQuestionBankPage() {
   );
 }
 
-function CatItem({
-  active,
-  label,
-  indent,
-  onClick,
-}: {
-  active: boolean;
-  label: string;
-  indent?: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <li>
-      <button
-        type="button"
-        onClick={onClick}
-        className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
-          indent ? "pl-6" : ""
-        } ${active ? "bg-primary-soft font-semibold text-primary" : "text-text hover:bg-soft"}`}
-      >
-        {label}
-      </button>
-    </li>
-  );
-}

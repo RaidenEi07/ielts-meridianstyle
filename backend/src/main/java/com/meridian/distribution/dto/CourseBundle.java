@@ -59,8 +59,13 @@ public final class CourseBundle {
     public record QuizQuestionBundle(String questionRef, BigDecimal mark, Integer pageNumber, int sortOrder) {
     }
 
-    /** {@code refId} là khóa cục bộ trong gói (không phải id thật) — nhiều câu hỏi có thể dùng chung 1 danh mục/passage. */
-    public record QuestionCategoryBundle(String refId, String name, String description) {
+    /**
+     * {@code refId} là khóa cục bộ trong gói (không phải id thật) — nhiều câu hỏi có thể dùng chung
+     * 1 danh mục/passage. {@code parentRef} trỏ tới {@code refId} của 1 danh mục khác TRONG CÙNG gói
+     * này, đứng trước nó trong {@link Manifest#questionCategories()} (danh mục cha phải được liệt kê
+     * trước danh mục con) — null nếu là danh mục gốc (không có cha).
+     */
+    public record QuestionCategoryBundle(String refId, String name, String description, String parentRef) {
     }
 
     public record PassageBundle(String refId, String title, String kind, String content, String audioUrl) {

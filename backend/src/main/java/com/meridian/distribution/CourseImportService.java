@@ -136,17 +136,25 @@ public class CourseImportService {
             courseCreated = true;
         }
 
+        // Danh mục cha phải được liệt kê trước danh mục con trong manifest (xem javadoc
+        // CourseBundle.QuestionCategoryBundle), nên duyệt tuần tự là đủ để parentRef luôn
+        // đã có trong map trước khi con của nó cần tra cứu. Tra cứu trùng tên đã tính luôn
+        // theo đúng cha (không còn theo tên suông) để "Reading"/"Listening" ở các Mock test
+        // khác nhau không bị nhầm lẫn.
         Map<String, Long> questionCategoryIdByRef = new HashMap<>();
         int qCategoriesCreated = 0;
         int qCategoriesReused = 0;
         for (CourseBundle.QuestionCategoryBundle qc : manifest.questionCategories()) {
-            Optional<QuestionCategory> existing = questionCategoryRepository.findByNameIgnoreCase(qc.name());
+            Long parentId = qc.parentRef() != null ? questionCategoryIdByRef.get(qc.parentRef()) : null;
+            Optional<QuestionCategory> existing = parentId != null
+                    ? questionCategoryRepository.findByNameIgnoreCaseAndParent_Id(qc.name(), parentId)
+                    : questionCategoryRepository.findByNameIgnoreCaseAndParentIsNull(qc.name());
             if (existing.isPresent()) {
                 questionCategoryIdByRef.put(qc.refId(), existing.get().getId());
                 qCategoriesReused++;
             } else {
                 QuestionCategoryDto created = questionTaxonomyService.createCategory(
-                        new QuestionBankRequests.CreateCategory(qc.name(), null, qc.description(), null));
+                        new QuestionBankRequests.CreateCategory(qc.name(), parentId, qc.description(), null));
                 questionCategoryIdByRef.put(qc.refId(), created.id());
                 qCategoriesCreated++;
             }

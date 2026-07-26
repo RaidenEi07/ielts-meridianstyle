@@ -76,6 +76,13 @@ public class QuestionBankController {
                 .body(taxonomyService.createCategory(req));
     }
 
+    @PutMapping("/categories/{id}")
+    public QuestionCategoryDto updateCategory(@PathVariable Long id,
+            @Valid @RequestBody QuestionBankRequests.UpdateCategory req) {
+        guard();
+        return taxonomyService.updateCategory(id, req);
+    }
+
     // ---- Tags ----
 
     @GetMapping("/tags")

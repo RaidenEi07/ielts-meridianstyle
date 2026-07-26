@@ -16,6 +16,13 @@ public final class QuestionBankRequests {
             Audience audience) {
     }
 
+    public record UpdateCategory(
+            @NotBlank(message = "Tên danh mục là bắt buộc") String name,
+            Long parentId,
+            String description,
+            Audience audience) {
+    }
+
     public record CreateTag(@NotBlank(message = "Tên tag là bắt buộc") String name) {
     }
 

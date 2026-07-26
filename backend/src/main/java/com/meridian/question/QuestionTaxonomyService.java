@@ -7,6 +7,7 @@ import com.meridian.question.dto.QuestionCategoryDto;
 import com.meridian.question.dto.QuestionTagDto;
 import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -44,6 +45,9 @@ public class QuestionTaxonomyService {
 
     @Transactional
     public QuestionCategoryDto createCategory(QuestionBankRequests.CreateCategory req) {
+        if (findByNameAndParent(req.name(), req.parentId()).isPresent()) {
+            throw ApiException.conflict("Danh mục cùng tên đã tồn tại trong danh mục cha này");
+        }
         QuestionCategory category = new QuestionCategory();
         category.setName(req.name());
         category.setDescription(req.description());
@@ -53,6 +57,42 @@ public class QuestionTaxonomyService {
                     .orElseThrow(() -> ApiException.notFound("Không tìm thấy danh mục cha")));
         }
         return QuestionCategoryDto.from(categoryRepository.save(category));
+    }
+
+    /** Đổi tên và/hoặc chuyển danh mục sang cha khác — chặn đổi thành cha của chính mình/con cháu mình. */
+    @Transactional
+    public QuestionCategoryDto updateCategory(Long id, QuestionBankRequests.UpdateCategory req) {
+        QuestionCategory category = requireCategory(id);
+        Optional<QuestionCategory> dup = findByNameAndParent(req.name(), req.parentId());
+        if (dup.isPresent() && !dup.get().getId().equals(id)) {
+            throw ApiException.conflict("Danh mục cùng tên đã tồn tại trong danh mục cha này");
+        }
+        QuestionCategory newParent = null;
+        if (req.parentId() != null) {
+            if (req.parentId().equals(id)) {
+                throw ApiException.badRequest("Danh mục không thể là cha của chính nó");
+            }
+            newParent = categoryRepository.findById(req.parentId())
+                    .orElseThrow(() -> ApiException.notFound("Không tìm thấy danh mục cha"));
+            for (QuestionCategory ancestor = newParent; ancestor != null; ancestor = ancestor.getParent()) {
+                if (ancestor.getId().equals(id)) {
+                    throw ApiException.badRequest("Không thể chuyển danh mục vào chính con cháu của nó");
+                }
+            }
+        }
+        category.setName(req.name());
+        category.setDescription(req.description());
+        if (req.audience() != null) {
+            category.setAudience(req.audience());
+        }
+        category.setParent(newParent);
+        return QuestionCategoryDto.from(categoryRepository.save(category));
+    }
+
+    private Optional<QuestionCategory> findByNameAndParent(String name, Long parentId) {
+        return parentId != null
+                ? categoryRepository.findByNameIgnoreCaseAndParent_Id(name, parentId)
+                : categoryRepository.findByNameIgnoreCaseAndParentIsNull(name);
     }
 
     QuestionCategory requireCategory(Long id) {

@@ -150,9 +150,13 @@ public class CourseExportService {
         QuestionCategory category = questionCategoryRepository.findById(categoryId).orElse(null);
         String refId = "c" + (refIds.size() + 1);
         refIds.put(categoryId, refId);
+        String parentRef = category != null && category.getParent() != null
+                ? resolveQuestionCategoryRef(category.getParent().getId(), refIds, bundles)
+                : null;
         bundles.add(new CourseBundle.QuestionCategoryBundle(refId,
                 category != null ? category.getName() : "Chưa phân loại",
-                category != null ? category.getDescription() : null));
+                category != null ? category.getDescription() : null,
+                parentRef));
         return refId;
     }
 
