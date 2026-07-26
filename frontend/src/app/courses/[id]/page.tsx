@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { Check, CheckCircle2, Lock } from "lucide-react";
+import { Check, CheckCircle2, ChevronDown, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ApiError, catalogApi, enrollmentApi, quizApi } from "@/lib/api";
@@ -24,6 +24,10 @@ export default function CourseDetailPage() {
   const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
   const [showAllSections, setShowAllSections] = useState(false);
   const [pendingScrollSectionId, setPendingScrollSectionId] = useState<number | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
+  const [quizzes, setQuizzes] = useState<QuizSummary[] | null>(null);
+  const [startingQuiz, setStartingQuiz] = useState<number | null>(null);
+  const [quizError, setQuizError] = useState<string | null>(null);
 
   useEffect(() => {
     if (pendingScrollSectionId === null) return;
@@ -34,9 +38,40 @@ export default function CourseDetailPage() {
     }
   }, [pendingScrollSectionId, showAllSections]);
 
+  useEffect(() => {
+    if (!hydrated || !accessToken) return;
+    quizApi.courseQuizzes(courseId, accessToken).then(setQuizzes).catch(() => {});
+  }, [hydrated, accessToken, courseId]);
+
   function jumpToSection(id: number) {
     setShowAllSections(true);
     setPendingScrollSectionId(id);
+    setExpandedSections((prev) => new Set(prev).add(id));
+  }
+
+  function toggleSection(id: number) {
+    setExpandedSections((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function startQuiz(quizId: number) {
+    if (!accessToken) {
+      router.push("/login");
+      return;
+    }
+    setStartingQuiz(quizId);
+    setQuizError(null);
+    try {
+      const attempt = await quizApi.start(quizId, accessToken);
+      router.push(`/quiz/${attempt.attemptId}`);
+    } catch (e) {
+      setQuizError(e instanceof ApiError ? e.message : "Không bắt đầu được bài làm");
+      setStartingQuiz(null);
+    }
   }
 
   useEffect(() => {
@@ -195,23 +230,101 @@ export default function CourseDetailPage() {
               <>
                 <ol className="space-y-2">
                   {(showAllSections ? course.sections : course.sections.slice(0, 5)).map(
-                    (s, i) => (
-                      <li
-                        key={s.id}
-                        id={`section-${s.id}`}
-                        className="flex scroll-mt-24 items-center gap-3 rounded-card border border-border bg-surface px-4 py-3"
-                      >
-                        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary">
-                          {i + 1}
-                        </span>
-                        <div>
-                          <span className="font-medium">{s.title}</span>
-                          {s.shortDescription && (
-                            <p className="text-sm text-muted">{s.shortDescription}</p>
+                    (s, i) => {
+                      const isOpen = expandedSections.has(s.id);
+                      const sectionQuizzes = quizzes?.filter((q) => q.sectionId === s.id) ?? [];
+                      return (
+                        <li
+                          key={s.id}
+                          id={`section-${s.id}`}
+                          className="scroll-mt-24 rounded-card border border-border bg-surface"
+                        >
+                          <button
+                            type="button"
+                            onClick={() => toggleSection(s.id)}
+                            className="flex w-full items-center gap-3 px-4 py-3 text-left"
+                          >
+                            <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary">
+                              {i + 1}
+                            </span>
+                            <div className="flex-1">
+                              <span className="font-medium">{s.title}</span>
+                              {s.shortDescription && (
+                                <p className="text-sm text-muted">{s.shortDescription}</p>
+                              )}
+                            </div>
+                            <ChevronDown
+                              className={`h-4 w-4 shrink-0 text-muted transition-transform ${
+                                isOpen ? "rotate-180" : ""
+                              }`}
+                            />
+                          </button>
+                          {isOpen && (
+                            <div className="border-t border-border px-4 py-3">
+                              {!hydrated ? null : !accessToken ? (
+                                <p className="text-sm text-muted">
+                                  <Link href="/login" className="text-accent">
+                                    Đăng nhập
+                                  </Link>{" "}
+                                  để làm bài kiểm tra của section này.
+                                </p>
+                              ) : quizzes === null ? (
+                                <p className="text-sm text-muted">Đang tải…</p>
+                              ) : sectionQuizzes.length === 0 ? (
+                                <p className="text-sm text-muted">
+                                  Section này chưa có bài kiểm tra nào.
+                                </p>
+                              ) : (
+                                <>
+                                  {quizError && (
+                                    <p className="mb-2 text-sm text-red">{quizError}</p>
+                                  )}
+                                  <ul className="space-y-2">
+                                    {sectionQuizzes.map((q) => (
+                                      <li
+                                        key={q.id}
+                                        className="flex items-center gap-3 rounded-card border border-border bg-bg px-4 py-3"
+                                      >
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            <span className="font-medium">{q.title}</span>
+                                            {q.examTemplateCode && (
+                                              <span className="rounded-full bg-red px-2 py-0.5 text-[10px] font-bold text-white">
+                                                {q.examTemplateCode}
+                                              </span>
+                                            )}
+                                            {q.antiCheatEnabled && (
+                                              <span className="text-xs text-muted">
+                                                <Lock className="h-3.5 w-3.5" />
+                                              </span>
+                                            )}
+                                          </div>
+                                          <p className="text-xs text-muted">
+                                            {q.questionCount} câu
+                                            {q.timeLimitSeconds
+                                              ? ` · ${Math.round(q.timeLimitSeconds / 60)} phút`
+                                              : ""}
+                                            {q.maxAttempts > 0 ? ` · tối đa ${q.maxAttempts} lượt` : ""}
+                                          </p>
+                                        </div>
+                                        <button
+                                          type="button"
+                                          onClick={() => startQuiz(q.id)}
+                                          disabled={startingQuiz === q.id}
+                                          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                                        >
+                                          {startingQuiz === q.id ? "Đang mở…" : "Làm bài →"}
+                                        </button>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </>
+                              )}
+                            </div>
                           )}
-                        </div>
-                      </li>
-                    ),
+                        </li>
+                      );
+                    },
                   )}
                 </ol>
                 {course.sections.length > 5 && (
@@ -226,9 +339,6 @@ export default function CourseDetailPage() {
               </>
             )}
           </section>
-
-          {/* Bài kiểm tra */}
-          <QuizzesSection courseId={courseId} />
         </main>
 
         {/* Sidebar ghi danh */}
@@ -290,93 +400,3 @@ export default function CourseDetailPage() {
   );
 }
 
-function QuizzesSection({ courseId }: { courseId: number }) {
-  const router = useRouter();
-  const { accessToken, hydrated } = useAuthStore();
-  const [quizzes, setQuizzes] = useState<QuizSummary[]>([]);
-  const [starting, setStarting] = useState<number | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!hydrated || !accessToken) return;
-    quizApi.courseQuizzes(courseId, accessToken).then(setQuizzes).catch(() => {});
-  }, [hydrated, accessToken, courseId]);
-
-  async function startQuiz(quizId: number) {
-    if (!accessToken) {
-      router.push("/login");
-      return;
-    }
-    setStarting(quizId);
-    setError(null);
-    try {
-      const attempt = await quizApi.start(quizId, accessToken);
-      router.push(`/quiz/${attempt.attemptId}`);
-    } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Không bắt đầu được bài làm");
-      setStarting(null);
-    }
-  }
-
-  if (hydrated && !accessToken) {
-    return (
-      <section>
-        <h2 className="mb-3 text-xl font-semibold">Bài kiểm tra</h2>
-        <p className="text-sm text-muted">
-          <Link href="/login" className="text-accent">
-            Đăng nhập
-          </Link>{" "}
-          để làm bài kiểm tra của khóa học.
-        </p>
-      </section>
-    );
-  }
-
-  if (quizzes.length === 0) return null;
-
-  return (
-    <section>
-      <h2 className="mb-3 text-xl font-semibold">Bài kiểm tra</h2>
-      {error && <p className="mb-2 text-sm text-red">{error}</p>}
-      <ul className="space-y-2">
-        {quizzes.map((q) => (
-          <li
-            key={q.id}
-            className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3"
-          >
-            <div className="flex-1">
-              <div className="flex items-center gap-2">
-                <span className="font-medium">{q.title}</span>
-                {q.examTemplateCode && (
-                  <span className="rounded-full bg-red px-2 py-0.5 text-[10px] font-bold text-white">
-                    {q.examTemplateCode}
-                  </span>
-                )}
-                {q.antiCheatEnabled && (
-                  <span className="text-xs text-muted">
-                    <Lock className="h-3.5 w-3.5" />
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-muted">
-                {q.questionCount} câu
-                {q.timeLimitSeconds
-                  ? ` · ${Math.round(q.timeLimitSeconds / 60)} phút`
-                  : ""}
-                {q.maxAttempts > 0 ? ` · tối đa ${q.maxAttempts} lượt` : ""}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => startQuiz(q.id)}
-              disabled={starting === q.id}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            >
-              {starting === q.id ? "Đang mở…" : "Làm bài →"}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </section>
-  );
-}
