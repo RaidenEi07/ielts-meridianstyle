@@ -23,6 +23,21 @@ export default function CourseDetailPage() {
   >("idle");
   const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
   const [showAllSections, setShowAllSections] = useState(false);
+  const [pendingScrollSectionId, setPendingScrollSectionId] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (pendingScrollSectionId === null) return;
+    const el = document.getElementById(`section-${pendingScrollSectionId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      queueMicrotask(() => setPendingScrollSectionId(null));
+    }
+  }, [pendingScrollSectionId, showAllSections]);
+
+  function jumpToSection(id: number) {
+    setShowAllSections(true);
+    setPendingScrollSectionId(id);
+  }
 
   useEffect(() => {
     if (!Number.isFinite(courseId)) return;
@@ -107,7 +122,31 @@ export default function CourseDetailPage() {
         </div>
       </div>
 
-      <div className="mx-auto grid max-w-5xl gap-8 px-6 py-10 md:grid-cols-[1fr_320px]">
+      <div className="mx-auto grid max-w-5xl gap-8 px-6 py-10 md:grid-cols-[1fr_320px] lg:grid-cols-[220px_1fr_320px]">
+        {/* Điều hướng section */}
+        {course.sections.length > 0 && (
+          <aside className="hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
+            <div className="rounded-[18px] border border-border bg-surface p-4">
+              <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
+                Mục lục
+              </h3>
+              <nav className="space-y-0.5">
+                {course.sections.map((s, i) => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => jumpToSection(s.id)}
+                    className="flex w-full items-start gap-2 rounded-lg px-2 py-1.5 text-left text-sm text-muted transition-colors hover:bg-soft hover:text-text"
+                  >
+                    <span className="shrink-0 font-mono text-xs text-faint">{i + 1}.</span>
+                    <span className="line-clamp-2">{s.title}</span>
+                  </button>
+                ))}
+              </nav>
+            </div>
+          </aside>
+        )}
+
         {/* Nội dung */}
         <main className="space-y-8">
           <section>
@@ -159,7 +198,8 @@ export default function CourseDetailPage() {
                     (s, i) => (
                       <li
                         key={s.id}
-                        className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3"
+                        id={`section-${s.id}`}
+                        className="flex scroll-mt-24 items-center gap-3 rounded-card border border-border bg-surface px-4 py-3"
                       >
                         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary">
                           {i + 1}
