@@ -97,7 +97,16 @@ public class ReportService {
             }
             List<QuizAttempt> attempts = entry.getValue();
             Quiz quiz = attempts.get(0).getQuiz();
-            var course = quiz.getSection().getCourse();
+            com.meridian.catalog.Course course;
+            try {
+                // .getCourse() có thể ném ObjectNotFoundException nếu khóa học chứa
+                // quiz này đã bị xóa (mềm) nhưng attempt cũ vẫn còn tham chiếu tới —
+                // bỏ qua bản ghi rác này, giống cách xử lý quiz đã xóa ở trên.
+                course = quiz.getSection().getCourse();
+                course.getTitle();
+            } catch (RuntimeException e) {
+                continue;
+            }
             if (courseId != null && !course.getId().equals(courseId)) {
                 continue;
             }
