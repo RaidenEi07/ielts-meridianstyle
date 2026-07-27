@@ -4,6 +4,7 @@ import { useState } from "react";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { ApiError, questionBankApi } from "@/lib/api";
+import { categoryOptionLabel } from "@/lib/categoryLabel";
 import { TYPE_META } from "@/lib/questionTypes";
 import type {
   Audience,
@@ -258,7 +259,7 @@ export function QuestionForm({
                 placeholder="Tìm danh mục…"
                 options={categories.map((c) => ({
                   value: c.id,
-                  label: c.parentId !== null ? `— ${c.name}` : c.name,
+                  label: categoryOptionLabel(c, categories),
                 }))}
               />
               {creatingCategory && (

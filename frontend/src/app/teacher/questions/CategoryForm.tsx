@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { ApiError, questionBankApi } from "@/lib/api";
+import { categoryOptionLabel } from "@/lib/categoryLabel";
 import type { Audience, QuestionCategoryNode } from "@/lib/types";
 
 export function CategoryForm({
@@ -57,7 +58,7 @@ export function CategoryForm({
           allowClear
           clearLabel="— Không có danh mục cha —"
           placeholder="Tìm danh mục cha…"
-          options={categories.map((c) => ({ value: c.id, label: c.name }))}
+          options={categories.map((c) => ({ value: c.id, label: categoryOptionLabel(c, categories) }))}
         />
       </label>
       <label className="block">

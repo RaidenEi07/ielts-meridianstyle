@@ -17,6 +17,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { SortableRow } from "@/components/SortableRow";
 import { ApiError, quizAdminApi, questionBankApi } from "@/lib/api";
+import { categoryOptionLabel } from "@/lib/categoryLabel";
 import type {
   PassageSummary,
   QuestionCategoryNode,
@@ -835,7 +836,7 @@ function QuestionsPanel({
                   placeholder="Lọc theo danh mục…"
                   options={categories.map((c) => ({
                     value: c.id,
-                    label: c.parentId !== null ? `— ${c.name}` : c.name,
+                    label: categoryOptionLabel(c, categories),
                   }))}
                 />
               </div>
