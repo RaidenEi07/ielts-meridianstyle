@@ -27,6 +27,8 @@ export default function KidsQuestionBankPage() {
   const [activeCat, setActiveCat] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<QuestionDetail | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
   const confirm = useConfirm();
 
   useEffect(() => {
@@ -57,8 +59,57 @@ export default function KidsQuestionBankPage() {
 
   useEffect(() => {
     refresh();
+    setSelected(new Set());
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed, accessToken, activeCat]);
+
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) =>
+      prev.size === questions.length ? new Set() : new Set(questions.map((q) => q.id)),
+    );
+  }
+
+  async function bulkDelete() {
+    if (!accessToken || selected.size === 0) return;
+    if (!(await confirm(`Xóa ${selected.size} câu hỏi đã chọn? Hành động này không thể hoàn tác.`))) {
+      return;
+    }
+    setError(null);
+    setBulkWorking(true);
+    try {
+      await questionBankApi.bulkDeleteQuestions(accessToken, [...selected]);
+      setSelected(new Set());
+      refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Xóa hàng loạt thất bại");
+    } finally {
+      setBulkWorking(false);
+    }
+  }
+
+  async function bulkDuplicate() {
+    if (!accessToken || selected.size === 0) return;
+    setError(null);
+    setBulkWorking(true);
+    try {
+      await questionBankApi.bulkDuplicateQuestions(accessToken, [...selected]);
+      setSelected(new Set());
+      refresh();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Nhân đôi hàng loạt thất bại");
+    } finally {
+      setBulkWorking(false);
+    }
+  }
 
   async function openPreview(id: number) {
     if (!accessToken) return;
@@ -143,10 +194,38 @@ export default function KidsQuestionBankPage() {
             </Link>
           </div>
           {error && <p className="mb-3 text-sm text-red">{error}</p>}
+          {selected.size > 0 && (
+            <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-primary-soft p-3 text-sm">
+              <span className="font-medium text-primary">{selected.size} câu hỏi đã chọn</span>
+              <button
+                type="button"
+                onClick={bulkDuplicate}
+                disabled={bulkWorking}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-text disabled:opacity-60"
+              >
+                Nhân đôi ({selected.size})
+              </button>
+              <button
+                type="button"
+                onClick={bulkDelete}
+                disabled={bulkWorking}
+                className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                Xóa ({selected.size})
+              </button>
+            </div>
+          )}
           <div className="overflow-hidden rounded-card border border-border bg-surface">
             <table className="w-full text-left text-sm">
               <thead className="bg-soft text-muted">
                 <tr>
+                  <th className="px-4 py-2.5">
+                    <input
+                      type="checkbox"
+                      checked={questions.length > 0 && selected.size === questions.length}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="px-4 py-2.5 font-medium">Tên</th>
                   <th className="px-4 py-2.5 font-medium">Loại</th>
                   <th className="px-4 py-2.5 text-right font-medium">Điểm</th>
@@ -156,7 +235,7 @@ export default function KidsQuestionBankPage() {
               <tbody>
                 {questions.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-muted">
+                    <td colSpan={5} className="px-4 py-6 text-center text-muted">
                       Chưa có câu hỏi nào.
                     </td>
                   </tr>
@@ -168,6 +247,13 @@ export default function KidsQuestionBankPage() {
                     };
                     return (
                       <tr key={q.id} className="border-t border-border">
+                        <td className="px-4 py-3">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(q.id)}
+                            onChange={() => toggleSelected(q.id)}
+                          />
+                        </td>
                         <td className="px-4 py-3 font-medium">{q.name}</td>
                         <td className="px-4 py-3">
                           <span

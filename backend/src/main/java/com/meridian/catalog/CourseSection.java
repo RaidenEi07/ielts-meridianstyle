@@ -48,6 +48,9 @@ public class CourseSection {
     @Column(name = "short_description", columnDefinition = "text")
     private String shortDescription;
 
+    @Column(nullable = false)
+    private boolean hidden = false;
+
     @Column(name = "deleted_at")
     private Instant deletedAt;
 

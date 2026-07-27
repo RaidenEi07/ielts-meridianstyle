@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, rosterApi, usersAdminApi } from "@/lib/api";
 import type { AdminUser, RoleOption, StudentSummary } from "@/lib/types";
@@ -40,6 +40,7 @@ export default function AdminUsersPage() {
   const [assignTeacherId, setAssignTeacherId] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [rosters, setRosters] = useState<Record<string, StudentSummary[]>>({});
+  const [editingUserId, setEditingUserId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -297,6 +298,7 @@ export default function AdminUsersPage() {
                 {tab === "teacher" && (
                   <th className="px-4 py-2.5 font-medium">Học sinh phụ trách</th>
                 )}
+                <th className="px-4 py-2.5"></th>
               </tr>
             </thead>
             <tbody>
@@ -305,7 +307,8 @@ export default function AdminUsersPage() {
                 const heldRoles = new Set(u.roleAssignments.map((ra) => ra.roleShortname));
                 const assignableRoles = roles.filter((r) => !heldRoles.has(r.shortname));
                 return (
-                  <tr key={u.id} className="border-t border-border align-top">
+                  <Fragment key={u.id}>
+                  <tr className="border-t border-border align-top">
                     {tab === "student" && (
                       <td className="px-4 py-3">
                         <input
@@ -392,7 +395,43 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
                     )}
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setEditingUserId((v) => (v === u.id ? null : u.id))}
+                          className="text-xs font-semibold text-primary"
+                        >
+                          Sửa
+                        </button>
+                        <Link
+                          href={`/admin/users/${u.id}`}
+                          className="text-xs font-semibold text-accent"
+                        >
+                          Xem chi tiết →
+                        </Link>
+                      </div>
+                    </td>
                   </tr>
+                  {editingUserId === u.id && (
+                    <tr className="border-t border-border">
+                      <td
+                        colSpan={(tab === "student" ? 1 : 0) + 6 + (tab === "teacher" ? 1 : 0) + 1}
+                        className="bg-bg px-4 py-4"
+                      >
+                        <EditUserForm
+                          token={token}
+                          user={u}
+                          onCancel={() => setEditingUserId(null)}
+                          onSaved={() => {
+                            setEditingUserId(null);
+                            refresh();
+                          }}
+                        />
+                      </td>
+                    </tr>
+                  )}
+                  </Fragment>
                 );
               })}
             </tbody>
@@ -400,6 +439,102 @@ export default function AdminUsersPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+function EditUserForm({
+  token,
+  user,
+  onSaved,
+  onCancel,
+}: {
+  token: string;
+  user: AdminUser;
+  onSaved: () => void;
+  onCancel: () => void;
+}) {
+  const [fullName, setFullName] = useState(user.fullName);
+  const [email, setEmail] = useState(user.email);
+  const [status, setStatus] = useState(user.status);
+  const [newPassword, setNewPassword] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function save(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    setError(null);
+    try {
+      await usersAdminApi.update(token, user.id, {
+        fullName,
+        email,
+        status,
+        newPassword: newPassword || undefined,
+      });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Cập nhật tài khoản thất bại");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <form onSubmit={save} className="grid gap-3 sm:grid-cols-2">
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-muted">Họ tên</span>
+        <input value={fullName} onChange={(e) => setFullName(e.target.value)} className="input" required />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-muted">Email</span>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="input"
+          required
+        />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-muted">Mật khẩu mới (để trống nếu không đổi)</span>
+        <input
+          type="password"
+          value={newPassword}
+          onChange={(e) => setNewPassword(e.target.value)}
+          className="input"
+          minLength={8}
+        />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-muted">Trạng thái</span>
+        <select
+          value={status}
+          onChange={(e) => setStatus(e.target.value as AdminUser["status"])}
+          className="input"
+        >
+          <option value="ACTIVE">Hoạt động</option>
+          <option value="SUSPENDED">Bị khóa</option>
+          <option value="PENDING">Chờ duyệt</option>
+        </select>
+      </label>
+      {error && <p className="text-sm text-red sm:col-span-2">{error}</p>}
+      <div className="flex gap-2 sm:col-span-2">
+        <button
+          type="submit"
+          disabled={saving}
+          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+        >
+          {saving ? "Đang lưu…" : "Lưu thay đổi"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="rounded-lg border border-border px-4 py-2 text-sm text-muted"
+        >
+          Hủy
+        </button>
+      </div>
+    </form>
   );
 }
 

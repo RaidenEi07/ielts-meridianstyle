@@ -5,12 +5,16 @@ import com.meridian.auth.dto.LoginRequest;
 import com.meridian.auth.dto.MeResponse;
 import com.meridian.auth.dto.RefreshRequest;
 import com.meridian.auth.dto.RegisterRequest;
+import com.meridian.rbac.RbacService;
+import com.meridian.rbac.dto.AdminUserDto;
+import com.meridian.rbac.dto.UpdateUserRequest;
 import com.meridian.security.AuthenticatedUser;
 import com.meridian.security.CurrentUserProvider;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,11 +26,13 @@ public class AuthController {
 
     private final AuthService authService;
     private final CurrentUserProvider currentUserProvider;
+    private final RbacService rbacService;
 
     public AuthController(AuthService authService,
-            CurrentUserProvider currentUserProvider) {
+            CurrentUserProvider currentUserProvider, RbacService rbacService) {
         this.authService = authService;
         this.currentUserProvider = currentUserProvider;
+        this.rbacService = rbacService;
     }
 
     @PostMapping("/register")
@@ -57,5 +63,11 @@ public class AuthController {
     public MeResponse me() {
         AuthenticatedUser current = currentUserProvider.require();
         return authService.getCurrentUser(current.id());
+    }
+
+    @PatchMapping("/me")
+    public AdminUserDto updateMe(@Valid @RequestBody UpdateUserRequest request) {
+        AuthenticatedUser current = currentUserProvider.require();
+        return rbacService.updateOwnProfile(current.id(), request);
     }
 }

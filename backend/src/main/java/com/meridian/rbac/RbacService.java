@@ -6,10 +6,12 @@ import com.meridian.rbac.dto.AdminUserDto;
 import com.meridian.rbac.dto.AssignRoleRequest;
 import com.meridian.rbac.dto.CreateUserRequest;
 import com.meridian.rbac.dto.RoleDto;
+import com.meridian.rbac.dto.UpdateUserRequest;
 import com.meridian.user.User;
 import com.meridian.user.UserRepository;
 import com.meridian.user.UserStatus;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -123,5 +125,61 @@ public class RbacService {
             throw ApiException.notFound("Không tìm thấy role assignment");
         }
         roleAssignmentRepository.deleteById(assignmentId);
+    }
+
+    /**
+     * Lõi sửa thông tin tài khoản, không tự kiểm tra quyền — 2 lối vào gọi
+     * hàm này: {@link #updateOwnProfile} (tự sửa, không cần capability) và
+     * controller admin (cần user:manage, kiểm tra ở tầng controller).
+     */
+    @Transactional
+    public AdminUserDto updateUser(UUID targetUserId, UpdateUserRequest req) {
+        User user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy người dùng"));
+        if (req.fullName() != null && !req.fullName().isBlank()) {
+            user.setFullName(req.fullName());
+        }
+        if (req.email() != null && !req.email().isBlank()
+                && !req.email().equalsIgnoreCase(user.getEmail())) {
+            if (userRepository.existsByEmailIgnoreCase(req.email())) {
+                throw ApiException.conflict("Email đã được sử dụng");
+            }
+            user.setEmail(req.email());
+        }
+        if (req.newPassword() != null && !req.newPassword().isBlank()) {
+            user.setPasswordHash(passwordEncoder.encode(req.newPassword()));
+        }
+        if (req.status() != null && !req.status().isBlank()) {
+            try {
+                user.setStatus(UserStatus.valueOf(req.status().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                throw ApiException.badRequest("Trạng thái không hợp lệ");
+            }
+        }
+        user = userRepository.save(user);
+        List<RoleAssignmentDto> assignments = roleAssignmentRepository.findByUserId(user.getId())
+                .stream().map(RoleAssignmentDto::from).toList();
+        return AdminUserDto.from(user, assignments);
+    }
+
+    /**
+     * Tự sửa hồ sơ của chính mình — mọi role đều gọi được, không cần
+     * capability, nhưng đổi mật khẩu bắt buộc đúng mật khẩu hiện tại, và
+     * không được tự đổi status của chính mình (chỉ admin sửa người khác mới
+     * đổi được status).
+     */
+    @Transactional
+    public AdminUserDto updateOwnProfile(UUID userId, UpdateUserRequest req) {
+        if (req.newPassword() != null && !req.newPassword().isBlank()) {
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> ApiException.notFound("Không tìm thấy người dùng"));
+            if (req.currentPassword() == null
+                    || !passwordEncoder.matches(req.currentPassword(), user.getPasswordHash())) {
+                throw ApiException.badRequest("Mật khẩu hiện tại không đúng");
+            }
+        }
+        UpdateUserRequest sanitized = new UpdateUserRequest(
+                req.fullName(), req.email(), req.newPassword(), req.currentPassword(), null);
+        return updateUser(userId, sanitized);
     }
 }

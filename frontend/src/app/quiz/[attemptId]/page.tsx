@@ -24,7 +24,6 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
-import { KidsDragDropSentence } from "@/components/kids/KidsDragDropSentence";
 import { KidsMatchingGame } from "@/components/kids/KidsMatchingGame";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
 import { quizApi } from "@/lib/api";
@@ -1366,13 +1365,6 @@ function QuestionCard({
           <KidsMatchingGame
             pairs={question.matchingPairs}
             pool={question.matchingRightPool}
-            answer={answer}
-            onChange={onChange}
-          />
-        ) : question.audience === "KIDS" && question.type === "DRAG_DROP_TEXT" ? (
-          <KidsDragDropSentence
-            template={(question.settings as { template?: string } | null)?.template ?? ""}
-            dragItems={question.dragItems}
             answer={answer}
             onChange={onChange}
           />

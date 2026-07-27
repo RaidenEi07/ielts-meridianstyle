@@ -635,6 +635,16 @@ function SectionCard({
     }
   }
 
+  async function toggleHidden() {
+    setError(null);
+    try {
+      await catalogAdminApi.updateSection(token, section.id, { hidden: !section.hidden });
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Đổi trạng thái ẩn/hiện thất bại");
+    }
+  }
+
   async function handleQuizDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!quizzes || !over || active.id === over.id) return;
@@ -654,8 +664,18 @@ function SectionCard({
   return (
     <div className="rounded-lg border border-border p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="font-semibold">{section.title}</h3>
+        <div className="flex items-center gap-2">
+          <h3 className="font-semibold">{section.title}</h3>
+          {section.hidden && (
+            <span className="rounded-full bg-soft px-2 py-0.5 text-xs font-semibold text-muted">
+              Đã ẩn
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-3">
+          <button type="button" onClick={toggleHidden} className="text-xs font-semibold text-muted">
+            {section.hidden ? "Hiện" : "Ẩn"}
+          </button>
           <button
             type="button"
             onClick={() => setCreating((v) => !v)}

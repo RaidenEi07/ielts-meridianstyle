@@ -218,12 +218,12 @@ public class CourseImportService {
             Long sectionId;
             if (matchedSection != null) {
                 catalogService.updateSection(actorId, matchedSection.getId(), new CourseRequests.UpdateSection(
-                        sb.title(), sb.sortOrder(), sb.videoUrl(), sb.subtitleUrl(), sb.shortDescription()));
+                        sb.title(), sb.sortOrder(), sb.videoUrl(), sb.subtitleUrl(), sb.shortDescription(), null));
                 sectionId = matchedSection.getId();
                 sectionsReused++;
             } else {
                 SectionDto created = catalogService.createSection(actorId, courseId, new CourseRequests.CreateSection(
-                        sb.title(), sb.sortOrder(), sb.videoUrl(), sb.subtitleUrl(), sb.shortDescription()));
+                        sb.title(), sb.sortOrder(), sb.videoUrl(), sb.subtitleUrl(), sb.shortDescription(), null));
                 sectionId = created.id();
                 sectionsCreated++;
             }

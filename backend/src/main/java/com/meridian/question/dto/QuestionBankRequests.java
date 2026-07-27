@@ -2,6 +2,8 @@ package com.meridian.question.dto;
 
 import com.meridian.question.Audience;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
+import java.util.List;
 
 /** Request body cho category/tag/passage của ngân hàng câu hỏi. */
 public final class QuestionBankRequests {
@@ -31,5 +33,8 @@ public final class QuestionBankRequests {
             String kind,
             String content,
             String audioUrl) {
+    }
+
+    public record BulkQuestionIds(@NotEmpty(message = "ids không được rỗng") List<Long> ids) {
     }
 }

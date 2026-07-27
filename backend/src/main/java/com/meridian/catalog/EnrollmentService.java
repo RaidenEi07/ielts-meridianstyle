@@ -97,6 +97,13 @@ public class EnrollmentService {
                 .map(EnrollmentDto::from).toList();
     }
 
+    /** Admin xem danh sách khóa học đã ghi danh của MỘT học viên bất kỳ. */
+    @Transactional(readOnly = true)
+    public List<EnrollmentDto> adminListEnrollments(UUID adminUserId, UUID targetUserId) {
+        permissionService.requireSystemCapability(adminUserId, "user:manage");
+        return listMyEnrollments(targetUserId);
+    }
+
     @Transactional
     public EnrollmentDto updateProgress(UUID userId, Long enrollmentId,
             EnrollmentRequests.UpdateProgress req) {

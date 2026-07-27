@@ -52,7 +52,11 @@ export default function VaoHocCoursePage() {
   }, [hydrated, accessToken, courseId]);
 
   const sortedSections = useMemo(
-    () => (course?.sections ?? []).slice().sort((a, b) => a.sortOrder - b.sortOrder),
+    () =>
+      (course?.sections ?? [])
+        .filter((s) => !s.hidden)
+        .slice()
+        .sort((a, b) => a.sortOrder - b.sortOrder),
     [course],
   );
 

@@ -142,6 +142,16 @@ export const authApi = {
       method: "POST",
       body: { username, email, password, fullName },
     }),
+
+  updateMe: (
+    token: string,
+    req: { fullName?: string; email?: string; newPassword?: string; currentPassword?: string },
+  ) =>
+    apiFetch<AdminUser>("/api/auth/me", {
+      method: "PATCH",
+      body: req,
+      token,
+    }),
 };
 
 // ---- Catalog endpoints (public reads) ----
@@ -295,6 +305,7 @@ export const catalogAdminApi = {
       videoUrl?: string;
       subtitleUrl?: string;
       shortDescription?: string;
+      hidden?: boolean;
     },
   ) =>
     apiFetch<Section>(`/api/admin/catalog/sections/${id}`, {
@@ -436,6 +447,9 @@ export const enrollmentApi = {
     }),
 
   mine: (token: string) => apiFetch<Enrollment[]>("/api/enrollments/me", { token }),
+
+  forStudentAsAdmin: (token: string, userId: string) =>
+    apiFetch<Enrollment[]>(`/api/enrollments/admin/${userId}`, { token }),
 };
 
 // ---- Question bank (staff, cần question:manage) ----
@@ -544,6 +558,20 @@ export const questionBankApi = {
   duplicateQuestion: (token: string, id: number) =>
     apiFetch<QuestionDetail>(`/api/admin/question-bank/questions/${id}/duplicate`, {
       method: "POST",
+      token,
+    }),
+
+  bulkDeleteQuestions: (token: string, ids: number[]) =>
+    apiFetch<void>(`/api/admin/question-bank/questions/bulk-delete`, {
+      method: "POST",
+      body: { ids },
+      token,
+    }),
+
+  bulkDuplicateQuestions: (token: string, ids: number[]) =>
+    apiFetch<QuestionDetail[]>(`/api/admin/question-bank/questions/bulk-duplicate`, {
+      method: "POST",
+      body: { ids },
       token,
     }),
 
@@ -833,6 +861,17 @@ export const usersAdminApi = {
   ) =>
     apiFetch<AdminUser>("/api/admin/users", {
       method: "POST",
+      body: req,
+      token,
+    }),
+
+  update: (
+    token: string,
+    userId: string,
+    req: { fullName?: string; email?: string; newPassword?: string; status?: string },
+  ) =>
+    apiFetch<AdminUser>(`/api/admin/users/${userId}`, {
+      method: "PATCH",
       body: req,
       token,
     }),

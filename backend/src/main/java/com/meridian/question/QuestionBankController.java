@@ -181,6 +181,23 @@ public class QuestionBankController {
                 .body(questionService.duplicateQuestion(uid, id));
     }
 
+    @PostMapping("/questions/bulk-delete")
+    public ResponseEntity<Void> bulkDeleteQuestions(
+            @Valid @RequestBody QuestionBankRequests.BulkQuestionIds req) {
+        guard();
+        for (Long id : req.ids()) {
+            questionService.deleteQuestion(id);
+        }
+        return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/questions/bulk-duplicate")
+    public List<QuestionDetailDto> bulkDuplicateQuestions(
+            @Valid @RequestBody QuestionBankRequests.BulkQuestionIds req) {
+        UUID uid = guard();
+        return req.ids().stream().map(id -> questionService.duplicateQuestion(uid, id)).toList();
+    }
+
     // ---- Xuất/Nhập theo danh mục ----
 
     @GetMapping("/categories/{id}/export")

@@ -46,6 +46,11 @@ public class EnrollmentController {
         return enrollmentService.listMyEnrollments(uid());
     }
 
+    @GetMapping("/admin/{userId}")
+    public List<EnrollmentDto> adminEnrollments(@PathVariable UUID userId) {
+        return enrollmentService.adminListEnrollments(uid(), userId);
+    }
+
     @PatchMapping("/{id}/progress")
     public EnrollmentDto updateProgress(@PathVariable Long id,
             @Valid @RequestBody EnrollmentRequests.UpdateProgress req) {

@@ -127,6 +127,8 @@ export default function CourseDetailPage() {
     );
   }
 
+  const visibleSections = course.sections.filter((s) => !s.hidden);
+
   return (
     <div className="min-h-screen">
       <SiteHeader />
@@ -159,14 +161,14 @@ export default function CourseDetailPage() {
 
       <div className="mx-auto grid max-w-5xl gap-8 px-6 py-10 md:grid-cols-[1fr_320px] lg:grid-cols-[220px_1fr_320px]">
         {/* Điều hướng section */}
-        {course.sections.length > 0 && (
+        {visibleSections.length > 0 && (
           <aside className="hidden lg:block lg:sticky lg:top-24 lg:max-h-[calc(100vh-7rem)] lg:self-start lg:overflow-y-auto">
             <div className="rounded-[18px] border border-border bg-surface p-4">
               <h3 className="mb-2 px-2 text-xs font-semibold uppercase tracking-wide text-muted">
                 Mục lục
               </h3>
               <nav className="space-y-0.5">
-                {course.sections.map((s, i) => (
+                {visibleSections.map((s, i) => (
                   <button
                     key={s.id}
                     type="button"
@@ -224,12 +226,12 @@ export default function CourseDetailPage() {
 
           <section>
             <h2 className="mb-3 text-xl font-semibold">Đề cương</h2>
-            {course.sections.length === 0 ? (
+            {visibleSections.length === 0 ? (
               <p className="text-muted">Đề cương đang được cập nhật.</p>
             ) : (
               <>
                 <ol className="space-y-2">
-                  {(showAllSections ? course.sections : course.sections.slice(0, 5)).map(
+                  {(showAllSections ? visibleSections : visibleSections.slice(0, 5)).map(
                     (s, i) => {
                       const isOpen = expandedSections.has(s.id);
                       const sectionQuizzes = quizzes?.filter((q) => q.sectionId === s.id) ?? [];
@@ -327,13 +329,13 @@ export default function CourseDetailPage() {
                     },
                   )}
                 </ol>
-                {course.sections.length > 5 && (
+                {visibleSections.length > 5 && (
                   <button
                     type="button"
                     onClick={() => setShowAllSections((v) => !v)}
                     className="mt-3 text-sm font-semibold text-accent hover:underline"
                   >
-                    {showAllSections ? "Thu gọn" : `Xem thêm (${course.sections.length - 5})`}
+                    {showAllSections ? "Thu gọn" : `Xem thêm (${visibleSections.length - 5})`}
                   </button>
                 )}
               </>

@@ -5,14 +5,17 @@ import com.meridian.rbac.dto.AdminUserDto;
 import com.meridian.rbac.dto.AssignRoleRequest;
 import com.meridian.rbac.dto.CreateUserRequest;
 import com.meridian.rbac.dto.RoleDto;
+import com.meridian.rbac.dto.UpdateUserRequest;
 import com.meridian.security.AuthenticatedUser;
 import com.meridian.security.CurrentUserProvider;
 import jakarta.validation.Valid;
 import java.util.List;
+import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -50,6 +53,12 @@ public class RbacController {
     public ResponseEntity<AdminUserDto> createUser(@Valid @RequestBody CreateUserRequest request) {
         requireSystem("user:manage");
         return ResponseEntity.status(HttpStatus.CREATED).body(rbacService.createUser(request));
+    }
+
+    @PatchMapping("/users/{id}")
+    public AdminUserDto updateUser(@PathVariable UUID id, @Valid @RequestBody UpdateUserRequest request) {
+        requireSystem("user:manage");
+        return rbacService.updateUser(id, request);
     }
 
     @GetMapping("/roles")

@@ -42,11 +42,12 @@ public final class CourseRequests {
             Integer sortOrder,
             String videoUrl,
             String subtitleUrl,
-            String shortDescription) {
+            String shortDescription,
+            Boolean hidden) {
     }
 
     public record UpdateSection(String title, Integer sortOrder, String videoUrl, String subtitleUrl,
-            String shortDescription) {
+            String shortDescription, Boolean hidden) {
     }
 
     public record ReorderSections(@NotEmpty(message = "sectionIds không được rỗng") List<Long> sectionIds) {

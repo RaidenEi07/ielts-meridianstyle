@@ -208,6 +208,7 @@ public class QuizService {
     @Transactional(readOnly = true)
     public List<QuizDto> listPublishedByCourse(Long courseId) {
         return sectionRepository.findByCourseIdOrderBySortOrderAscIdAsc(courseId).stream()
+                .filter(s -> !s.isHidden())
                 .flatMap(s -> quizRepository.findBySectionIdOrderBySortOrderAscIdAsc(s.getId()).stream())
                 .filter(q -> q.getStatus() == QuizStatus.PUBLISHED)
                 .map(this::toDto)

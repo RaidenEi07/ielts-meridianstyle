@@ -1,6 +1,8 @@
 "use client";
 
+import { DragDropImageBoard } from "@/components/DragDropImageBoard";
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
+import { KidsDragDropSentence } from "@/components/kids/KidsDragDropSentence";
 import type { PlayerQuestion } from "@/lib/types";
 
 /**
@@ -170,90 +172,29 @@ export function QuestionRenderer({
     }
 
     case "DRAG_DROP_TEXT": {
-      const placements: Record<string, string> = answer?.placements ?? {};
       const template: string =
         (question.settings as { template?: string } | null)?.template ?? "";
-      const parts = template.split(/\[\[(\d+)\]\]/);
       return (
-        <p className="whitespace-pre-wrap leading-8">
-          {parts.map((part, i) => {
-            if (i % 2 === 0) return <span key={i}>{part}</span>;
-            const targetLabel = part;
-            const selectedItemId = Object.keys(placements).find(
-              (id) => placements[id] === targetLabel,
-            );
-            return (
-              <select
-                key={i}
-                value={selectedItemId ?? ""}
-                onChange={(e) => {
-                  const itemId = e.target.value;
-                  const next = { ...placements };
-                  Object.keys(next).forEach((id) => {
-                    if (next[id] === targetLabel) delete next[id];
-                  });
-                  if (itemId) next[itemId] = targetLabel;
-                  onChange({ placements: next });
-                }}
-                className="input mx-1 inline-block w-auto text-sm"
-              >
-                <option value="">—</option>
-                {question.dragItems.map((it) => (
-                  <option key={it.id} value={it.id}>
-                    {it.content}
-                  </option>
-                ))}
-              </select>
-            );
-          })}
-        </p>
+        <KidsDragDropSentence
+          template={template}
+          dragItems={question.dragItems}
+          answer={answer}
+          onChange={onChange}
+        />
       );
     }
 
     case "DRAG_DROP_MARKER": {
-      const placements: Record<string, string> = answer?.placements ?? {};
       const bgUrl = (question.settings as { backgroundImageUrl?: string } | null)
         ?.backgroundImageUrl;
       return (
-        <div className="space-y-3">
-          {bgUrl && (
-            <div className="relative inline-block">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={bgUrl} alt="" className="max-w-full rounded-lg border border-border" />
-              {question.dragZones.map((z) => (
-                <div
-                  key={z.id}
-                  className="absolute flex items-center justify-center rounded border-2 border-dashed border-accent bg-accent-soft/60 text-xs font-semibold text-accent"
-                  style={{ left: z.x, top: z.y, width: z.width, height: z.height }}
-                >
-                  {z.label}
-                </div>
-              ))}
-            </div>
-          )}
-          <div className="space-y-2">
-            {question.dragItems.map((it) => (
-              <div key={it.id} className="flex items-center gap-3 text-sm">
-                <span className="w-40 shrink-0 font-medium">{it.content}</span>
-                <span className="text-muted">→</span>
-                <select
-                  value={placements[String(it.id)] ?? ""}
-                  onChange={(e) =>
-                    onChange({ placements: { ...placements, [String(it.id)]: e.target.value } })
-                  }
-                  className="input flex-1 text-sm"
-                >
-                  <option value="">— Chọn vùng —</option>
-                  {question.dragZones.map((z) => (
-                    <option key={z.id} value={z.label}>
-                      {z.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-        </div>
+        <DragDropImageBoard
+          backgroundImageUrl={bgUrl ?? null}
+          dragItems={question.dragItems}
+          dragZones={question.dragZones}
+          answer={answer}
+          onChange={onChange}
+        />
       );
     }
 

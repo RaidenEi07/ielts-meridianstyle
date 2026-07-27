@@ -598,6 +598,8 @@ function QuestionsPanel({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [mark, setMark] = useState("1");
   const [pageId, setPageId] = useState<number | "">("");
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const [editingDetail, setEditingDetail] = useState<QuestionDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const editMode = useEditModeStore((s) => s.enabled);
   const sensors = useSensors(useSensor(PointerSensor));
@@ -630,8 +632,7 @@ function QuestionsPanel({
     questionBankApi.categories(token, createAudience).then(setCreateCategories).catch(() => {});
   }
 
-  function openCreateTab() {
-    setPickerTab("create");
+  function ensureFormData() {
     if (createCategories.length === 0) refreshCreateCategories();
     if (passages.length === 0) {
       questionBankApi.passages(token).then(setPassages).catch(() => {});
@@ -639,6 +640,33 @@ function QuestionsPanel({
     if (tags.length === 0) {
       questionBankApi.tags(token).then(setTags).catch(() => {});
     }
+  }
+
+  function openCreateTab() {
+    setPickerTab("create");
+    ensureFormData();
+  }
+
+  // Sửa câu hỏi ngay tại trang quiz — cả câu đã gắn lẫn câu đang chọn trong tab
+  // ngân hàng — không cần rời trang sang /teacher/questions/[id] như trước.
+  function openEdit(questionId: number) {
+    setEditingId(questionId);
+    setEditingDetail(null);
+    ensureFormData();
+    questionBankApi.question(token, questionId).then(setEditingDetail).catch(() => {
+      setError("Không tải được câu hỏi để sửa");
+      setEditingId(null);
+    });
+  }
+
+  function closeEdit() {
+    setEditingId(null);
+    setEditingDetail(null);
+  }
+
+  function handleQuestionEdited() {
+    closeEdit();
+    onChanged();
   }
 
   // Câu hỏi vừa tạo xong (từ form nhúng ngay trong quiz) được gán luôn vào
@@ -786,6 +814,13 @@ function QuestionsPanel({
                             <span className="font-mono text-xs text-muted">{q.mark} điểm</span>
                             <button
                               type="button"
+                              onClick={() => openEdit(q.questionId)}
+                              className="text-xs font-semibold text-primary"
+                            >
+                              Sửa
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => removeQuestion(q.quizQuestionId)}
                               className="text-xs text-red"
                             >
@@ -800,6 +835,31 @@ function QuestionsPanel({
               </DndContext>
             </div>
           ))}
+        </div>
+      )}
+
+      {editingId !== null && (
+        <div className="mt-4 rounded-lg border border-border p-4">
+          <div className="mb-3 flex items-center justify-between">
+            <h3 className="text-sm font-semibold">Sửa câu hỏi</h3>
+            <button type="button" onClick={closeEdit} className="text-xs text-muted">
+              Đóng
+            </button>
+          </div>
+          {!editingDetail ? (
+            <p className="text-sm text-muted">Đang tải…</p>
+          ) : (
+            <QuestionForm
+              mode="edit"
+              initial={editingDetail}
+              categories={createCategories}
+              passages={passages}
+              tags={tags}
+              token={token}
+              onSaved={handleQuestionEdited}
+              onCategoriesChanged={refreshCreateCategories}
+            />
+          )}
         </div>
       )}
 
@@ -896,6 +956,17 @@ function QuestionsPanel({
                           </span>
                           <span className="flex-1">{q.name}</span>
                           <span className="text-xs text-muted">{q.categoryName}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openEdit(q.id);
+                            }}
+                            className="text-xs font-semibold text-primary"
+                          >
+                            Sửa
+                          </button>
                         </label>
                       </li>
                     ))}

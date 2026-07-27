@@ -91,6 +91,7 @@ export interface Section {
   videoUrl: string | null;
   subtitleUrl: string | null;
   shortDescription: string | null;
+  hidden: boolean;
 }
 
 export interface CourseDetail extends CourseSummary {

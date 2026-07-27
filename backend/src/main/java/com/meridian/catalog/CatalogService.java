@@ -13,6 +13,7 @@ import com.meridian.common.ApiException;
 import com.meridian.common.Slugs;
 import com.meridian.quiz.Quiz;
 import com.meridian.quiz.QuizRepository;
+import com.meridian.quiz.QuizStatus;
 import com.meridian.rbac.Context;
 import com.meridian.rbac.ContextType;
 import com.meridian.rbac.ContextService;
@@ -286,7 +287,12 @@ public class CatalogService {
             course.setPrice(req.price());
         }
         if (req.status() != null) {
-            course.setStatus(parseStatus(req.status(), course.getStatus()));
+            CourseStatus oldStatus = course.getStatus();
+            CourseStatus newStatus = parseStatus(req.status(), oldStatus);
+            course.setStatus(newStatus);
+            if (newStatus == CourseStatus.PUBLISHED && oldStatus != CourseStatus.PUBLISHED) {
+                cascadePublish(course.getId());
+            }
         }
         if (req.descriptionHtml() != null) {
             course.setDescriptionHtml(req.descriptionHtml());
@@ -329,6 +335,9 @@ public class CatalogService {
         section.setVideoUrl(req.videoUrl());
         section.setSubtitleUrl(req.subtitleUrl());
         section.setShortDescription(req.shortDescription());
+        if (req.hidden() != null) {
+            section.setHidden(req.hidden());
+        }
         return SectionDto.from(sectionRepository.save(section));
     }
 
@@ -353,6 +362,9 @@ public class CatalogService {
         if (req.shortDescription() != null) {
             section.setShortDescription(req.shortDescription().isBlank() ? null : req.shortDescription());
         }
+        if (req.hidden() != null) {
+            section.setHidden(req.hidden());
+        }
         return SectionDto.from(sectionRepository.save(section));
     }
 
@@ -369,6 +381,27 @@ public class CatalogService {
         quizRepository.saveAll(quizzes);
         section.setDeletedAt(now);
         sectionRepository.save(section);
+    }
+
+    /** Publish khóa học kéo theo: mọi section hết ẩn, mọi quiz đang DRAFT chuyển PUBLISHED (ARCHIVED giữ nguyên). */
+    private void cascadePublish(Long courseId) {
+        List<CourseSection> sections = sectionRepository.findByCourseIdOrderBySortOrderAscIdAsc(courseId);
+        for (CourseSection section : sections) {
+            if (section.isHidden()) {
+                section.setHidden(false);
+                sectionRepository.save(section);
+            }
+            List<Quiz> quizzes = quizRepository.findBySectionIdOrderBySortOrderAscIdAsc(section.getId());
+            List<Quiz> toPublish = quizzes.stream()
+                    .filter(q -> q.getStatus() == QuizStatus.DRAFT)
+                    .toList();
+            for (Quiz quiz : toPublish) {
+                quiz.setStatus(QuizStatus.PUBLISHED);
+            }
+            if (!toPublish.isEmpty()) {
+                quizRepository.saveAll(toPublish);
+            }
+        }
     }
 
     @Transactional
