@@ -20,7 +20,9 @@ import { ApiError, quizAdminApi, questionBankApi } from "@/lib/api";
 import type {
   PassageSummary,
   QuestionCategoryNode,
+  QuestionDetail,
   QuestionSummary,
+  QuestionTag,
   QuizDetailAdmin,
   QuizPageAdmin,
   QuizQuestionAdmin,
@@ -28,6 +30,7 @@ import type {
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useEditModeStore } from "@/store/editMode";
+import { QuestionForm } from "@/app/teacher/questions/QuestionForm";
 import { PassageForm } from "./PassageForm";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
@@ -584,8 +587,12 @@ function QuestionsPanel({
   onChanged: () => void;
 }) {
   const [picking, setPicking] = useState(false);
+  const [pickerTab, setPickerTab] = useState<"bank" | "create">("bank");
   const [bank, setBank] = useState<QuestionSummary[] | null>(null);
   const [categories, setCategories] = useState<QuestionCategoryNode[]>([]);
+  const [createCategories, setCreateCategories] = useState<QuestionCategoryNode[]>([]);
+  const [passages, setPassages] = useState<PassageSummary[]>([]);
+  const [tags, setTags] = useState<QuestionTag[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<number | "">("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [mark, setMark] = useState("1");
@@ -607,11 +614,49 @@ function QuestionsPanel({
 
   function openPicker() {
     setPicking(true);
+    setPickerTab("bank");
     if (!bank) {
       questionBankApi.questions(token).then(setBank).catch(() => setBank([]));
     }
     if (categories.length === 0) {
       questionBankApi.categories(token).then(setCategories).catch(() => {});
+    }
+  }
+
+  const createAudience = isAcademic ? "IELTS" : "KIDS";
+
+  function refreshCreateCategories() {
+    questionBankApi.categories(token, createAudience).then(setCreateCategories).catch(() => {});
+  }
+
+  function openCreateTab() {
+    setPickerTab("create");
+    if (createCategories.length === 0) refreshCreateCategories();
+    if (passages.length === 0) {
+      questionBankApi.passages(token).then(setPassages).catch(() => {});
+    }
+    if (tags.length === 0) {
+      questionBankApi.tags(token).then(setTags).catch(() => {});
+    }
+  }
+
+  // Câu hỏi vừa tạo xong (từ form nhúng ngay trong quiz) được gán luôn vào
+  // Part/điểm đang chọn — không cần quay lại ngân hàng câu hỏi để tìm và gán
+  // thủ công như trước.
+  async function handleQuestionCreated(q: QuestionDetail) {
+    setError(null);
+    try {
+      await quizAdminApi.importQuestions(token, detail.quiz.id, {
+        questionIds: [q.id],
+        mark: Number(mark) || 1,
+        pageId: pageId ? Number(pageId) : undefined,
+      });
+      setBank(null);
+      setPicking(false);
+      setPickerTab("bank");
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Gán câu hỏi vừa tạo thất bại");
     }
   }
 
@@ -760,22 +805,44 @@ function QuestionsPanel({
       {picking && (
         <div className="mt-4 rounded-lg border border-border p-4">
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold">Chọn câu hỏi từ ngân hàng</h3>
-            <div className="w-56">
-              <SearchableSelect
-                value={categoryFilter}
-                onChange={setCategoryFilter}
-                allowClear
-                clearLabel="— Tất cả danh mục —"
-                placeholder="Lọc theo danh mục…"
-                options={categories.map((c) => ({
-                  value: c.id,
-                  label: c.parentId !== null ? `— ${c.name}` : c.name,
-                }))}
-              />
+            <div className="flex gap-1 rounded-lg bg-soft p-1">
+              <button
+                type="button"
+                onClick={() => setPickerTab("bank")}
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  pickerTab === "bank" ? "bg-surface text-text shadow-sm" : "text-muted"
+                }`}
+              >
+                Chọn từ ngân hàng
+              </button>
+              <button
+                type="button"
+                onClick={openCreateTab}
+                className={`rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
+                  pickerTab === "create" ? "bg-surface text-text shadow-sm" : "text-muted"
+                }`}
+              >
+                + Tạo câu hỏi mới
+              </button>
             </div>
+            {pickerTab === "bank" && (
+              <div className="w-56">
+                <SearchableSelect
+                  value={categoryFilter}
+                  onChange={setCategoryFilter}
+                  allowClear
+                  clearLabel="— Tất cả danh mục —"
+                  placeholder="Lọc theo danh mục…"
+                  options={categories.map((c) => ({
+                    value: c.id,
+                    label: c.parentId !== null ? `— ${c.name}` : c.name,
+                  }))}
+                />
+              </div>
+            )}
           </div>
-          <div className="mb-3 flex flex-wrap items-center justify-end gap-3">
+
+          <div className="mb-3 flex flex-wrap items-center justify-end gap-3 border-b border-border pb-3">
             {isAcademic && (
               <label className="flex items-center gap-2 text-xs text-muted">
                 Gán vào trang:
@@ -805,57 +872,86 @@ function QuestionsPanel({
             </label>
           </div>
           {error && <p className="mb-2 text-xs text-red">{error}</p>}
-          {bank === null ? (
-            <p className="text-sm text-muted">Đang tải…</p>
-          ) : (
-            <ul className="max-h-72 space-y-1 overflow-y-auto">
-              {bank
-                .filter((q) => !attachedIds.has(q.id))
-                .filter((q) => categoryFilter === "" || q.categoryId === categoryFilter)
-                .map((q) => (
-                  <li key={q.id}>
-                    <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-soft">
-                      <input
-                        type="checkbox"
-                        checked={selected.has(q.id)}
-                        onChange={() => toggle(q.id)}
-                      />
-                      <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
-                        {q.type}
-                      </span>
-                      <span className="flex-1">{q.name}</span>
-                      <span className="text-xs text-muted">{q.categoryName}</span>
-                    </label>
-                  </li>
-                ))}
-              {bank
-                .filter((q) => !attachedIds.has(q.id))
-                .filter((q) => categoryFilter === "" || q.categoryId === categoryFilter).length === 0 && (
-                <li className="px-2 py-4 text-center text-sm text-muted">
-                  {categoryFilter === ""
-                    ? "Không còn câu hỏi nào để thêm (đã dùng hết ngân hàng)."
-                    : "Không có câu hỏi nào trong danh mục này."}
-                </li>
+
+          {pickerTab === "bank" ? (
+            <>
+              {bank === null ? (
+                <p className="text-sm text-muted">Đang tải…</p>
+              ) : (
+                <ul className="max-h-72 space-y-1 overflow-y-auto">
+                  {bank
+                    .filter((q) => !attachedIds.has(q.id))
+                    .filter((q) => categoryFilter === "" || q.categoryId === categoryFilter)
+                    .map((q) => (
+                      <li key={q.id}>
+                        <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-soft">
+                          <input
+                            type="checkbox"
+                            checked={selected.has(q.id)}
+                            onChange={() => toggle(q.id)}
+                          />
+                          <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
+                            {q.type}
+                          </span>
+                          <span className="flex-1">{q.name}</span>
+                          <span className="text-xs text-muted">{q.categoryName}</span>
+                        </label>
+                      </li>
+                    ))}
+                  {bank
+                    .filter((q) => !attachedIds.has(q.id))
+                    .filter((q) => categoryFilter === "" || q.categoryId === categoryFilter).length === 0 && (
+                    <li className="px-2 py-4 text-center text-sm text-muted">
+                      {categoryFilter === ""
+                        ? "Không còn câu hỏi nào để thêm (đã dùng hết ngân hàng)."
+                        : "Không có câu hỏi nào trong danh mục này."}
+                    </li>
+                  )}
+                </ul>
               )}
-            </ul>
+              <div className="mt-3 flex gap-2">
+                <button
+                  type="button"
+                  onClick={importSelected}
+                  disabled={selected.size === 0}
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                >
+                  Thêm {selected.size > 0 ? `(${selected.size})` : ""}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPicking(false)}
+                  className="rounded-lg border border-border px-4 py-2 text-sm text-muted"
+                >
+                  Đóng
+                </button>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-lg bg-bg p-4">
+              <p className="mb-3 text-xs text-muted">
+                Tạo xong sẽ tự động gán câu hỏi này vào quiz theo Part/điểm đã chọn ở trên.
+              </p>
+              <QuestionForm
+                mode="create"
+                categories={createCategories}
+                passages={passages}
+                tags={tags}
+                token={token}
+                allowedTypes={isAcademic ? undefined : ["MATCHING", "DRAG_DROP_TEXT"]}
+                lockAudience={createAudience}
+                onSaved={handleQuestionCreated}
+                onCategoriesChanged={refreshCreateCategories}
+              />
+              <button
+                type="button"
+                onClick={() => setPicking(false)}
+                className="mt-3 rounded-lg border border-border px-4 py-2 text-sm text-muted"
+              >
+                Đóng
+              </button>
+            </div>
           )}
-          <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={importSelected}
-              disabled={selected.size === 0}
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
-            >
-              Thêm {selected.size > 0 ? `(${selected.size})` : ""}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPicking(false)}
-              className="rounded-lg border border-border px-4 py-2 text-sm text-muted"
-            >
-              Đóng
-            </button>
-          </div>
         </div>
       )}
     </section>

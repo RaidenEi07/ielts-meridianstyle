@@ -24,6 +24,7 @@ import { EssayForm } from "./forms/EssayForm";
 import { MatchingForm } from "./forms/MatchingForm";
 import { OptionListForm } from "./forms/OptionListForm";
 import { ShortAnswerForm } from "./forms/ShortAnswerForm";
+import { TrueFalseForm } from "./forms/TrueFalseForm";
 import { CategoryForm } from "./CategoryForm";
 import { QuestionTypeGuide } from "./QuestionTypeGuide";
 import { QuestionTypePicker } from "./QuestionTypePicker";
@@ -191,6 +192,16 @@ export function QuestionForm({
         allowedTypes={allowedTypes}
         onSelect={(t) => {
           setType(t);
+          // Đúng/Sai/Không thể nói luôn cần đúng 1 bộ 3 đáp án — điền sẵn bộ
+          // chuẩn "TRUE/FALSE/NOT GIVEN" ngay khi chọn loại này, để người mới
+          // không phải tự đoán cần điền gì (vẫn đổi được bộ khác trong form).
+          if (t === "TRUE_FALSE_NOT_GIVEN" && options.length === 0) {
+            setOptions([
+              { id: null, content: "TRUE", correct: false, feedback: null, sortOrder: 0 },
+              { id: null, content: "FALSE", correct: false, feedback: null, sortOrder: 1 },
+              { id: null, content: "NOT GIVEN", correct: false, feedback: null, sortOrder: 2 },
+            ]);
+          }
           setStep("form");
         }}
       />
@@ -361,8 +372,9 @@ export function QuestionForm({
 
         <section className="rounded-card border border-border bg-surface p-6">
           <h2 className="mb-4 text-lg font-semibold">Nội dung theo loại câu hỏi</h2>
-          {(type === "MULTIPLE_CHOICE" || type === "TRUE_FALSE_NOT_GIVEN") && (
-            <OptionListForm value={options} onChange={setOptions} />
+          {type === "MULTIPLE_CHOICE" && <OptionListForm value={options} onChange={setOptions} />}
+          {type === "TRUE_FALSE_NOT_GIVEN" && (
+            <TrueFalseForm value={options} onChange={setOptions} />
           )}
           {type === "MATCHING" && (
             <MatchingForm

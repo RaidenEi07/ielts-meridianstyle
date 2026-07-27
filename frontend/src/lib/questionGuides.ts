@@ -23,7 +23,7 @@ export const QUESTION_GUIDES: Record<string, QuestionGuide> = {
     steps: [
       "Nhập 1 câu khẳng định (statement) ở ô nội dung.",
       "Nên gắn kèm 1 Passage để học viên có ngữ cảnh trả lời.",
-      "Thêm đúng 3 lựa chọn \"True\", \"False\", \"Not Given\", tick đúng 1 ô là đáp án.",
+      "Bộ 3 lựa chọn True/False/Not Given đã điền sẵn — đổi sang Yes/No/Not Given nếu câu hỏi về quan điểm người viết, rồi chọn đúng 1 ô tròn là đáp án đúng.",
     ],
   },
   MATCHING: {
