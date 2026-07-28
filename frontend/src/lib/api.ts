@@ -25,6 +25,7 @@ import type {
   HomeworkMaterial,
   ImportSummary,
   TextImportSummary,
+  CheckpointQuestion,
   VideoCheckpoint,
   LeaderboardEntry,
   LessonRecording,
@@ -452,6 +453,9 @@ export const checkpointApi = {
   // lẫn học viên xem tiến độ — không cần endpoint đọc riêng cho admin.
   listForSection: (token: string, sectionId: number) =>
     apiFetch<VideoCheckpoint[]>(`/api/sections/${sectionId}/checkpoints`, { token }),
+
+  getPlayerQuestion: (token: string, checkpointId: number) =>
+    apiFetch<CheckpointQuestion>(`/api/checkpoints/${checkpointId}/question`, { token }),
 
   replaceForSection: (
     token: string,

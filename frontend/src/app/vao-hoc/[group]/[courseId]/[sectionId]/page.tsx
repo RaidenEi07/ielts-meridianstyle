@@ -9,8 +9,8 @@ import { HomeworkMaterialsList } from "@/components/HomeworkMaterialsList";
 import { LessonVideoPlayer } from "@/components/LessonVideoPlayer";
 import { KidsVoiceRecorder } from "@/components/kids/KidsVoiceRecorder";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ApiError, catalogApi, progressApi, quizApi } from "@/lib/api";
-import type { CourseDetail, QuizSummary, Section } from "@/lib/types";
+import { ApiError, catalogApi, checkpointApi, progressApi, quizApi } from "@/lib/api";
+import type { CourseDetail, QuizSummary, Section, VideoCheckpoint } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
 export default function VaoHocLessonPage() {
@@ -27,6 +27,7 @@ export default function VaoHocLessonPage() {
   const [starting, setStarting] = useState<number | null>(null);
   const [completing, setCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [checkpoints, setCheckpoints] = useState<VideoCheckpoint[]>([]);
 
   useEffect(() => {
     if (!Number.isFinite(courseId)) return;
@@ -40,6 +41,18 @@ export default function VaoHocLessonPage() {
       .then((all) => setQuizzes(all.filter((q) => q.sectionId === sectionId)))
       .catch(() => {});
   }, [hydrated, accessToken, courseId, sectionId]);
+
+  useEffect(() => {
+    if (!hydrated || !accessToken || !Number.isFinite(sectionId)) return;
+    checkpointApi.listForSection(accessToken, sectionId).then(setCheckpoints).catch(() => {});
+  }, [hydrated, accessToken, sectionId]);
+
+  function handleCheckpointAnswered(checkpointId: number) {
+    setCheckpoints((prev) => prev.map((c) => (c.id === checkpointId ? { ...c, answered: true } : c)));
+  }
+
+  // 0 checkpoint = hành vi cũ (luôn mở); có checkpoint thì phải trả lời hết mới mở.
+  const allCheckpointsAnswered = checkpoints.every((c) => c.answered);
 
   function loadProgress() {
     if (!accessToken || !Number.isFinite(courseId)) return;
@@ -145,7 +158,13 @@ export default function VaoHocLessonPage() {
 
         {section?.videoUrl ? (
           <div className="mt-6">
-            <LessonVideoPlayer videoUrl={section.videoUrl} subtitleUrl={section.subtitleUrl} />
+            <LessonVideoPlayer
+              videoUrl={section.videoUrl}
+              subtitleUrl={section.subtitleUrl}
+              checkpoints={checkpoints}
+              token={accessToken}
+              onCheckpointAnswered={handleCheckpointAnswered}
+            />
           </div>
         ) : (
           <p className="mt-6 rounded-lg border border-border bg-surface p-6 text-center text-muted">
@@ -175,6 +194,11 @@ export default function VaoHocLessonPage() {
         {quizzes.length > 0 && (
           <div className="mt-6 space-y-3">
             <h2 className="text-lg font-semibold">Luyện tập</h2>
+            {!allCheckpointsAnswered && (
+              <p className="rounded-lg bg-accent-soft px-4 py-2.5 text-sm text-accent">
+                Trả lời hết câu hỏi trong video để mở bài luyện tập.
+              </p>
+            )}
             {quizzes.map((q) => (
               <div
                 key={q.id}
@@ -184,7 +208,7 @@ export default function VaoHocLessonPage() {
                 <button
                   type="button"
                   onClick={() => startQuiz(q.id)}
-                  disabled={starting === q.id}
+                  disabled={starting === q.id || !allCheckpointsAnswered}
                   className="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {starting === q.id ? "Đang mở…" : "Luyện tập"}

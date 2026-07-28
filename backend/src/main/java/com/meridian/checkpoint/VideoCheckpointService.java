@@ -3,15 +3,25 @@ package com.meridian.checkpoint;
 import com.meridian.catalog.CourseSection;
 import com.meridian.catalog.CourseSectionRepository;
 import com.meridian.checkpoint.dto.CheckpointAnswerResultDto;
+import com.meridian.checkpoint.dto.CheckpointQuestionDto;
 import com.meridian.checkpoint.dto.VideoCheckpointDto;
 import com.meridian.checkpoint.dto.VideoCheckpointRequests;
 import com.meridian.common.ApiException;
 import com.meridian.question.QuestionRepository;
+import com.meridian.question.QuestionService;
+import com.meridian.question.dto.QuestionDetailDto;
 import com.meridian.quiz.GradingService;
+import com.meridian.quiz.dto.AttemptDtos.PlayerClozeSubAnswer;
+import com.meridian.quiz.dto.AttemptDtos.PlayerDragItem;
+import com.meridian.quiz.dto.AttemptDtos.PlayerDragZone;
+import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingOption;
+import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingPair;
+import com.meridian.quiz.dto.AttemptDtos.PlayerOption;
 import com.meridian.rbac.Context;
 import com.meridian.rbac.ContextService;
 import com.meridian.rbac.PermissionService;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -34,6 +44,7 @@ public class VideoCheckpointService {
     private final VideoCheckpointAnswerRepository answerRepository;
     private final CourseSectionRepository sectionRepository;
     private final QuestionRepository questionRepository;
+    private final QuestionService questionService;
     private final GradingService gradingService;
     private final ContextService contextService;
     private final PermissionService permissionService;
@@ -41,12 +52,13 @@ public class VideoCheckpointService {
     public VideoCheckpointService(SectionVideoCheckpointRepository checkpointRepository,
             VideoCheckpointAnswerRepository answerRepository,
             CourseSectionRepository sectionRepository, QuestionRepository questionRepository,
-            GradingService gradingService, ContextService contextService,
-            PermissionService permissionService) {
+            QuestionService questionService, GradingService gradingService,
+            ContextService contextService, PermissionService permissionService) {
         this.checkpointRepository = checkpointRepository;
         this.answerRepository = answerRepository;
         this.sectionRepository = sectionRepository;
         this.questionRepository = questionRepository;
+        this.questionService = questionService;
         this.gradingService = gradingService;
         this.contextService = contextService;
         this.permissionService = permissionService;
@@ -103,6 +115,55 @@ public class VideoCheckpointService {
         answerRepository.save(entity);
 
         return new CheckpointAnswerResultDto(checkpointId, result.correct(), result.autoGraded());
+    }
+
+    @Transactional(readOnly = true)
+    public CheckpointQuestionDto getPlayerQuestion(Long checkpointId) {
+        SectionVideoCheckpoint checkpoint = checkpointRepository.findById(checkpointId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy checkpoint"));
+        QuestionDetailDto q = questionService.getQuestion(checkpoint.getQuestionId());
+
+        List<PlayerOption> options = List.of();
+        List<PlayerMatchingPair> matchingPairs = List.of();
+        List<PlayerMatchingOption> matchingRightPool = List.of();
+        List<PlayerDragItem> dragItems = List.of();
+        List<PlayerDragZone> dragZones = List.of();
+        List<PlayerClozeSubAnswer> clozeSubAnswers = List.of();
+        JsonNode settings = null;
+
+        switch (q.type()) {
+            case "MULTIPLE_CHOICE", "TRUE_FALSE_NOT_GIVEN" -> options = q.options().stream()
+                    .map(o -> new PlayerOption(o.id(), o.content()))
+                    .toList();
+            case "MATCHING" -> {
+                matchingPairs = q.matchingPairs().stream()
+                        .map(p -> new PlayerMatchingPair(p.id(), p.leftItem(), p.leftImageUrl()))
+                        .toList();
+                List<PlayerMatchingOption> pool = new ArrayList<>(q.matchingPairs().stream()
+                        .map(p -> new PlayerMatchingOption(p.rightItem(), p.rightImageUrl()))
+                        .toList());
+                Collections.shuffle(pool);
+                matchingRightPool = pool;
+            }
+            case "DRAG_DROP_TEXT", "DRAG_DROP_MARKER" -> {
+                dragItems = q.dragItems().stream()
+                        .map(d -> new PlayerDragItem(d.id(), d.content()))
+                        .toList();
+                dragZones = q.dragZones().stream()
+                        .map(z -> new PlayerDragZone(z.id(), z.label(), z.x(), z.y(), z.width(), z.height()))
+                        .toList();
+                settings = q.settings();
+            }
+            case "CLOZE" -> clozeSubAnswers = q.clozeSubAnswers().stream()
+                    .map(c -> new PlayerClozeSubAnswer(c.id(), c.subIndex(), c.subType(), c.options()))
+                    .toList();
+            default -> {
+            }
+        }
+
+        return new CheckpointQuestionDto(checkpoint.getQuestionId(),
+                q.type(), q.name(), q.stem(), settings, options, matchingPairs, matchingRightPool,
+                dragItems, dragZones, clozeSubAnswers, q.audience());
     }
 
     private VideoCheckpointDto toDto(SectionVideoCheckpoint c, boolean answered) {

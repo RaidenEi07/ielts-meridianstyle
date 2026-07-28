@@ -103,6 +103,22 @@ export interface VideoCheckpoint {
   answered: boolean;
 }
 
+export interface CheckpointQuestion {
+  questionId: number;
+  type: string;
+  name: string;
+  stem: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  settings: any;
+  options: PlayerOption[];
+  matchingPairs: PlayerMatchingPair[];
+  matchingRightPool: PlayerMatchingOption[];
+  dragItems: PlayerDragItem[];
+  dragZones: PlayerDragZone[];
+  clozeSubAnswers: PlayerClozeSubAnswer[];
+  audience: Audience | null;
+}
+
 export interface CourseDetail extends CourseSummary {
   examTemplateCode: string | null;
   contextId: number | null;

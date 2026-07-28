@@ -1,6 +1,7 @@
 package com.meridian.checkpoint;
 
 import com.meridian.checkpoint.dto.CheckpointAnswerResultDto;
+import com.meridian.checkpoint.dto.CheckpointQuestionDto;
 import com.meridian.checkpoint.dto.VideoCheckpointDto;
 import com.meridian.checkpoint.dto.VideoCheckpointRequests;
 import com.meridian.security.CurrentUserProvider;
@@ -41,6 +42,11 @@ public class VideoCheckpointController {
     public List<VideoCheckpointDto> replaceForSection(@PathVariable Long id,
             @Valid @RequestBody VideoCheckpointRequests.ReplaceCheckpoints req) {
         return checkpointService.replaceForSection(uid(), id, req.checkpoints());
+    }
+
+    @GetMapping("/checkpoints/{id}/question")
+    public CheckpointQuestionDto getPlayerQuestion(@PathVariable Long id) {
+        return checkpointService.getPlayerQuestion(id);
     }
 
     @PostMapping("/checkpoints/{id}/answer")

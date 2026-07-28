@@ -11,6 +11,7 @@ import com.meridian.catalog.CourseSectionRepository;
 import com.meridian.checkpoint.dto.VideoCheckpointRequests;
 import com.meridian.question.Question;
 import com.meridian.question.QuestionRepository;
+import com.meridian.question.QuestionService;
 import com.meridian.quiz.GradingService;
 import com.meridian.rbac.Context;
 import com.meridian.rbac.ContextService;
@@ -33,6 +34,7 @@ class VideoCheckpointServiceTest {
     @Mock private VideoCheckpointAnswerRepository answerRepository;
     @Mock private CourseSectionRepository sectionRepository;
     @Mock private QuestionRepository questionRepository;
+    @Mock private QuestionService questionService;
     @Mock private GradingService gradingService;
     @Mock private ContextService contextService;
     @Mock private PermissionService permissionService;
@@ -43,7 +45,7 @@ class VideoCheckpointServiceTest {
     @BeforeEach
     void setUp() {
         service = new VideoCheckpointService(checkpointRepository, answerRepository, sectionRepository,
-                questionRepository, gradingService, contextService, permissionService);
+                questionRepository, questionService, gradingService, contextService, permissionService);
     }
 
     private CourseSection sectionWithCourse(Long sectionId, Long courseId) {
@@ -142,5 +144,30 @@ class VideoCheckpointServiceTest {
         assertThat(result.checkpointId()).isEqualTo(5L);
         assertThat(result.correct()).isTrue();
         assertThat(result.autoGraded()).isTrue();
+    }
+
+    @Test
+    void getPlayerQuestionStripsCorrectAnswerFlags() {
+        CourseSection section = sectionWithCourse(20L, 2L);
+        SectionVideoCheckpoint cp = checkpoint(5L, section, 100L);
+        when(checkpointRepository.findById(5L)).thenReturn(Optional.of(cp));
+
+        var options = List.of(
+                new com.meridian.question.dto.QuestionParts.Option(1L, "Paris", true, null, 0),
+                new com.meridian.question.dto.QuestionParts.Option(2L, "London", false, null, 1));
+        var dto = new com.meridian.question.dto.QuestionDetailDto(
+                100L, "MULTIPLE_CHOICE", "Capital of France", "What is the capital of France?",
+                1L, "cat", null, null, null, null, null, java.math.BigDecimal.ONE, null,
+                List.of(), options, List.of(), List.of(), List.of(), List.of(),
+                com.meridian.question.Audience.IELTS);
+        when(questionService.getQuestion(100L)).thenReturn(dto);
+
+        var result = service.getPlayerQuestion(5L);
+
+        assertThat(result.questionId()).isEqualTo(100L);
+        assertThat(result.type()).isEqualTo("MULTIPLE_CHOICE");
+        assertThat(result.options()).hasSize(2);
+        assertThat(result.options().get(0).content()).isEqualTo("Paris");
+        // PlayerOption chỉ có (id, content) — không có field correct nào để lộ đáp án.
     }
 }
