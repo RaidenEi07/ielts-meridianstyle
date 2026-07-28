@@ -24,6 +24,7 @@ import type {
   GradebookRow,
   HomeworkMaterial,
   ImportSummary,
+  TextImportSummary,
   LeaderboardEntry,
   LessonRecording,
   MemoryPair,
@@ -586,6 +587,16 @@ export const questionBankApi = {
     exportCategoryZip(token, categoryId),
 
   importBundle: (token: string, file: File) => importBundleZip(token, file),
+
+  importMcqText: (
+    token: string,
+    req: { categoryId: number; audience?: Audience; text: string },
+  ) =>
+    apiFetch<TextImportSummary>("/api/admin/question-bank/questions/import-text", {
+      method: "POST",
+      body: req,
+      token,
+    }),
 };
 
 // ---- Xuất/nhập ngân hàng câu hỏi (file .zip: manifest.json + ảnh/audio đính kèm) ----

@@ -17,11 +17,16 @@ export function DragDropMarkerForm({
   zones: QuestionDragZone[];
   onZonesChange: (v: QuestionDragZone[]) => void;
 }) {
+  const zoneLabels = zones.map((z) => z.label).filter(Boolean);
+
   function updateItem(i: number, patch: Partial<QuestionDragItem>) {
     onItemsChange(items.map((it, idx) => (idx === i ? { ...it, ...patch } : it)));
   }
   function addItem() {
-    onItemsChange([...items, { id: null, content: "", correctTarget: "", sortOrder: items.length }]);
+    onItemsChange([
+      ...items,
+      { id: null, content: "", correctTarget: zoneLabels[0] ?? "", sortOrder: items.length },
+    ]);
   }
   function removeItem(i: number) {
     onItemsChange(items.filter((_, idx) => idx !== i));
@@ -104,7 +109,7 @@ export function DragDropMarkerForm({
 
       <div>
         <span className="mb-1 block text-xs font-medium text-muted">
-          Các mục kéo-thả ("Nhãn vùng đúng" khớp với nhãn vùng ở trên)
+          Các mục kéo-thả — chọn vùng mà mục này là đáp án đúng, hoặc để làm mồi nhử
         </span>
         {items.map((it, i) => (
           <div key={i} className="mb-1 flex items-center gap-2">
@@ -114,12 +119,23 @@ export function DragDropMarkerForm({
               placeholder="Nội dung mục"
               className="input flex-1 text-sm"
             />
-            <input
+            <select
               value={it.correctTarget}
               onChange={(e) => updateItem(i, { correctTarget: e.target.value })}
-              placeholder="Nhãn vùng đúng (vd: A)"
-              className="input w-40 text-sm"
-            />
+              className="input w-48 text-sm"
+            >
+              <option value="">— Mồi nhử (không dùng) —</option>
+              {zoneLabels.map((label) => (
+                <option key={label} value={label}>
+                  Vùng {label}
+                </option>
+              ))}
+              {it.correctTarget && !zoneLabels.includes(it.correctTarget) && (
+                <option value={it.correctTarget}>
+                  Vùng {it.correctTarget} (không còn trong danh sách vùng)
+                </option>
+              )}
+            </select>
             <button type="button" onClick={() => removeItem(i)} className="text-xs text-red">
               Xóa
             </button>

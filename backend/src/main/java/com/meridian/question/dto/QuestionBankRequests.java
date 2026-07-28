@@ -3,6 +3,7 @@ package com.meridian.question.dto;
 import com.meridian.question.Audience;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 /** Request body cho category/tag/passage của ngân hàng câu hỏi. */
@@ -36,5 +37,11 @@ public final class QuestionBankRequests {
     }
 
     public record BulkQuestionIds(@NotEmpty(message = "ids không được rỗng") List<Long> ids) {
+    }
+
+    public record ImportMcqText(
+            @NotNull(message = "categoryId là bắt buộc") Long categoryId,
+            Audience audience,
+            @NotBlank(message = "text là bắt buộc") String text) {
     }
 }

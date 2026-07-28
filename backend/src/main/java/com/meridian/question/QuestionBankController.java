@@ -8,6 +8,7 @@ import com.meridian.question.dto.QuestionDetailDto;
 import com.meridian.question.dto.QuestionSummaryDto;
 import com.meridian.question.dto.QuestionTagDto;
 import com.meridian.question.dto.QuestionUpsertRequest;
+import com.meridian.question.dto.TextImportSummaryDto;
 import com.meridian.rbac.PermissionService;
 import com.meridian.security.CurrentUserProvider;
 import jakarta.validation.Valid;
@@ -41,15 +42,18 @@ public class QuestionBankController {
     private final QuestionTaxonomyService taxonomyService;
     private final QuestionService questionService;
     private final QuestionBankExportService exportService;
+    private final QuestionTextImportService textImportService;
     private final CurrentUserProvider currentUser;
     private final PermissionService permissionService;
 
     public QuestionBankController(QuestionTaxonomyService taxonomyService,
             QuestionService questionService, QuestionBankExportService exportService,
+            QuestionTextImportService textImportService,
             CurrentUserProvider currentUser, PermissionService permissionService) {
         this.taxonomyService = taxonomyService;
         this.questionService = questionService;
         this.exportService = exportService;
+        this.textImportService = textImportService;
         this.currentUser = currentUser;
         this.permissionService = permissionService;
     }
@@ -215,5 +219,12 @@ public class QuestionBankController {
     public ImportSummaryDto importBundle(@RequestParam("file") MultipartFile file) {
         UUID uid = guard();
         return exportService.importBundle(uid, file);
+    }
+
+    @PostMapping("/questions/import-text")
+    public TextImportSummaryDto importMcqText(
+            @Valid @RequestBody QuestionBankRequests.ImportMcqText req) {
+        UUID uid = guard();
+        return textImportService.importMcqText(uid, req.categoryId(), req.audience(), req.text());
     }
 }

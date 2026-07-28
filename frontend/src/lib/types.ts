@@ -466,6 +466,11 @@ export interface ImportSummary {
   warnings: string[];
 }
 
+export interface TextImportSummary {
+  questionsCreated: number;
+  errors: { blockIndex: number; excerpt: string; reason: string }[];
+}
+
 // ---- Public portal (Giai đoạn 7) ----
 
 export interface TeacherPublic {

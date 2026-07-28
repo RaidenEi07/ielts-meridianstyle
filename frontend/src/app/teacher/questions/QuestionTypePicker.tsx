@@ -31,9 +31,11 @@ export function QuestionTypePicker({
   onSelect: (type: string) => void;
   allowedTypes?: string[];
 }) {
-  const types = allowedTypes
-    ? QUESTION_TYPES.filter((t) => allowedTypes.includes(t.value))
-    : QUESTION_TYPES;
+  // Trả lời ngắn bị ẩn khi TẠO câu hỏi mới — Cloze 1 ô trống đã thay thế được
+  // hoàn toàn, còn câu Trả lời ngắn đã có vẫn sửa/làm bài/chấm điểm bình thường.
+  const types = (
+    allowedTypes ? QUESTION_TYPES.filter((t) => allowedTypes.includes(t.value)) : QUESTION_TYPES
+  ).filter((t) => t.value !== "SHORT_ANSWER");
   return (
     <div className="animate-fade-slide-in">
       <h2 className="mb-1 text-lg font-semibold">Chọn loại câu hỏi</h2>

@@ -6,13 +6,16 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { CategoryTree } from "@/components/CategoryTree";
 import { PageHeader } from "@/components/PageHeader";
+import { SearchableSelect } from "@/components/SearchableSelect";
 import { ApiError, questionBankApi } from "@/lib/api";
+import { categoryOptionLabel } from "@/lib/categoryLabel";
 import { TYPE_META } from "@/lib/questionTypes";
 import type {
   ImportSummary,
   QuestionCategoryNode,
   QuestionDetail,
   QuestionSummary,
+  TextImportSummary,
 } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
@@ -32,6 +35,11 @@ export default function QuestionBankPage() {
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportSummary | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const [textImportOpen, setTextImportOpen] = useState(false);
+  const [textImportCategoryId, setTextImportCategoryId] = useState<number | "">("");
+  const [textImportText, setTextImportText] = useState("");
+  const [textImporting, setTextImporting] = useState(false);
+  const [textImportResult, setTextImportResult] = useState<TextImportSummary | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const confirm = useConfirm();
@@ -190,6 +198,29 @@ export default function QuestionBankPage() {
     }
   }
 
+  async function handleImportText() {
+    if (!accessToken || !textImportCategoryId || !textImportText.trim()) return;
+    setError(null);
+    setTextImportResult(null);
+    setTextImporting(true);
+    try {
+      const result = await questionBankApi.importMcqText(accessToken, {
+        categoryId: textImportCategoryId,
+        audience: "IELTS",
+        text: textImportText,
+      });
+      setTextImportResult(result);
+      if (result.questionsCreated > 0) {
+        setTextImportText("");
+        refresh();
+      }
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Nhập nhanh MCQ thất bại");
+    } finally {
+      setTextImporting(false);
+    }
+  }
+
   if (!hydrated || !ready) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
   }
@@ -264,6 +295,13 @@ export default function QuestionBankPage() {
                 <Upload className="h-4 w-4" />
                 {importing ? "Đang nhập…" : "Nhập"}
               </button>
+              <button
+                type="button"
+                onClick={() => setTextImportOpen((v) => !v)}
+                className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-text"
+              >
+                + Nhập nhanh MCQ
+              </button>
               <Link
                 href="/teacher/questions/new"
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
@@ -310,6 +348,73 @@ export default function QuestionBankPage() {
                       <li key={i}>{w}</li>
                     ))}
                   </ul>
+                </div>
+              )}
+            </div>
+          )}
+          {textImportOpen && (
+            <div className="mb-4 rounded-card border border-border bg-surface p-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="font-semibold">Nhập nhanh MCQ từ văn bản thô</h3>
+                <button
+                  type="button"
+                  onClick={() => setTextImportOpen(false)}
+                  className="text-faint hover:text-text"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+              <p className="mb-3 text-xs text-muted">
+                Mỗi câu hỏi cách nhau bởi 1 dòng trống: đề bài, các dòng đáp án dạng{" "}
+                <code>A. nội dung</code>, rồi 1 dòng <code>ANSWER: &lt;chữ cái&gt;</code>.
+              </p>
+              <label className="mb-3 block">
+                <span className="mb-1 block text-xs font-medium text-muted">Danh mục đích</span>
+                <SearchableSelect
+                  value={textImportCategoryId}
+                  onChange={setTextImportCategoryId}
+                  placeholder="Tìm danh mục…"
+                  options={categories.map((c) => ({
+                    value: c.id,
+                    label: categoryOptionLabel(c, categories),
+                  }))}
+                />
+              </label>
+              <textarea
+                value={textImportText}
+                onChange={(e) => setTextImportText(e.target.value)}
+                rows={10}
+                placeholder={
+                  "What is the capital of France?\nA. Paris\nB. London\nC. Rome\nANSWER: A"
+                }
+                className="input mb-3 w-full font-mono text-sm"
+              />
+              <button
+                type="button"
+                disabled={textImporting || !textImportCategoryId || !textImportText.trim()}
+                onClick={handleImportText}
+                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              >
+                {textImporting ? "Đang nhập…" : "Nhập"}
+              </button>
+              {textImportResult && (
+                <div className="mt-3 border-t border-border pt-3 text-sm">
+                  <p className="font-medium text-text">
+                    Đã tạo {textImportResult.questionsCreated} câu hỏi
+                    {textImportResult.errors.length > 0 &&
+                      `, ${textImportResult.errors.length} block lỗi`}
+                    .
+                  </p>
+                  {textImportResult.errors.length > 0 && (
+                    <ul className="mt-2 space-y-1.5 text-red">
+                      {textImportResult.errors.map((e, i) => (
+                        <li key={i}>
+                          <span className="font-semibold">Block {e.blockIndex}</span>{" "}
+                          (&quot;{e.excerpt}&quot;): {e.reason}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               )}
             </div>
