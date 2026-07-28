@@ -106,9 +106,9 @@ class GradingServiceTest {
     void clozeRequiresAllSubAnswersCorrect() {
         var subs = List.of(
                 new QuestionParts.ClozeSubAnswer(1L, 1, "TEXT",
-                        json.readTree("[\"Paris\"]"), null, 0),
+                        json.readTree("[\"Paris\"]"), null, 0, false),
                 new QuestionParts.ClozeSubAnswer(2L, 2, "SELECT",
-                        json.readTree("[\"a city\"]"), json.readTree("[\"a city\",\"a river\"]"), 1));
+                        json.readTree("[\"a city\"]"), json.readTree("[\"a city\",\"a river\"]"), 1, false));
         stub(dto("CLOZE", null, null, null, null, subs));
 
         var right = gradingService.grade(QID,
@@ -118,6 +118,24 @@ class GradingServiceTest {
 
         assertThat(right.correct()).isTrue();
         assertThat(wrong.correct()).isFalse();
+    }
+
+    @Test
+    void clozeCaseSensitivityIsPerSubAnswer() {
+        var subs = List.of(
+                new QuestionParts.ClozeSubAnswer(1L, 1, "TEXT",
+                        json.readTree("[\"Paris\"]"), null, 0, true),
+                new QuestionParts.ClozeSubAnswer(2L, 2, "TEXT",
+                        json.readTree("[\"paris\"]"), null, 1, false));
+        stub(dto("CLOZE", null, null, null, null, subs));
+
+        var wrongCaseOnStrictSub = gradingService.grade(QID,
+                json.readTree("{\"subs\":{\"1\":\"paris\",\"2\":\"paris\"}}"));
+        var correctCaseOnStrictSub = gradingService.grade(QID,
+                json.readTree("{\"subs\":{\"1\":\"Paris\",\"2\":\"PARIS\"}}"));
+
+        assertThat(wrongCaseOnStrictSub.correct()).isFalse();
+        assertThat(correctCaseOnStrictSub.correct()).isTrue();
     }
 
     @Test

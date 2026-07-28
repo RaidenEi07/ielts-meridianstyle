@@ -404,6 +404,13 @@ export const quizAdminApi = {
       token,
     }),
 
+  updateQuestionMark: (token: string, quizQuestionId: number, mark: number) =>
+    apiFetch<QuizQuestionAdmin>(`/api/admin/quiz-questions/${quizQuestionId}`, {
+      method: "PUT",
+      body: { mark },
+      token,
+    }),
+
   setPage: (
     token: string,
     id: number,

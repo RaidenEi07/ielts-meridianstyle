@@ -222,6 +222,7 @@ public class QuestionService {
                     e.setAcceptedAnswers(toJsonString(c.acceptedAnswers()));
                     e.setOptions(toJsonString(c.options()));
                     e.setSortOrder(c.sortOrder() != 0 ? c.sortOrder() : i++);
+                    e.setCaseSensitive(c.caseSensitive());
                     clozeRepository.save(e);
                 }
             }
@@ -331,7 +332,7 @@ public class QuestionService {
                 .findByQuestionIdOrderBySubIndexAsc(id).stream()
                 .map(e -> new QuestionParts.ClozeSubAnswer(e.getId(), e.getSubIndex(),
                         e.getSubType().name(), parseJson(e.getAcceptedAnswers()),
-                        parseJson(e.getOptions()), e.getSortOrder()))
+                        parseJson(e.getOptions()), e.getSortOrder(), e.isCaseSensitive()))
                 .toList();
 
         return new QuestionDetailDto(

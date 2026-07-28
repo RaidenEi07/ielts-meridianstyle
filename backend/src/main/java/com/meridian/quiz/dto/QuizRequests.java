@@ -53,4 +53,8 @@ public final class QuizRequests {
     public record ReorderQuestions(
             @NotEmpty(message = "quizQuestionIds không được rỗng") List<Long> quizQuestionIds) {
     }
+
+    public record UpdateQuestionMark(
+            @NotNull(message = "mark là bắt buộc") BigDecimal mark) {
+    }
 }

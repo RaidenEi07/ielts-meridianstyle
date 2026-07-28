@@ -131,10 +131,10 @@ public class QuestionBankDataInitializer implements CommandLineRunner {
                 null, null, null, null,
                 List.of(
                         new QuestionParts.ClozeSubAnswer(null, 1, "TEXT",
-                                readJson("[\"Paris\"]"), null, 0),
+                                readJson("[\"Paris\"]"), null, 0, false),
                         new QuestionParts.ClozeSubAnswer(null, 2, "SELECT",
                                 readJson("[\"a city\"]"),
-                                readJson("[\"a city\",\"a river\"]"), 1))));
+                                readJson("[\"a city\",\"a river\"]"), 1, false))));
 
         log.info("Đã seed {} câu hỏi mẫu (8 loại)", questionRepository.count());
     }

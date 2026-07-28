@@ -76,6 +76,12 @@ public class QuizAdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/quiz-questions/{quizQuestionId}")
+    public QuizQuestionDto updateQuestionMark(@PathVariable Long quizQuestionId,
+            @Valid @RequestBody QuizRequests.UpdateQuestionMark req) {
+        return quizService.updateQuestionMark(uid(), quizQuestionId, req.mark());
+    }
+
     @PostMapping("/quizzes/{id}/pages")
     public QuizPageDto setPage(@PathVariable Long id, @Valid @RequestBody QuizRequests.SetPage req) {
         return quizService.setPage(uid(), id, req);

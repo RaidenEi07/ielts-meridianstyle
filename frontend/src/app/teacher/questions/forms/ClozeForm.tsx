@@ -29,6 +29,7 @@ export function ClozeForm({
         acceptedAnswers: [],
         options: null,
         sortOrder: value.length,
+        caseSensitive: false,
       },
     ]);
   }
@@ -80,9 +81,17 @@ export function ClozeForm({
               value={(c.options ?? []).join(", ")}
               onChange={(e) => update(i, { options: splitCsv(e.target.value) })}
               placeholder="Các lựa chọn hiển thị, cách nhau bởi dấu phẩy"
-              className="input w-full text-sm"
+              className="input mb-1 w-full text-sm"
             />
           )}
+          <label className="flex items-center gap-2 text-xs text-muted">
+            <input
+              type="checkbox"
+              checked={c.caseSensitive}
+              onChange={(e) => update(i, { caseSensitive: e.target.checked })}
+            />
+            Phân biệt hoa/thường
+          </label>
         </div>
       ))}
       <button type="button" onClick={addRow} className="text-sm font-semibold text-accent">

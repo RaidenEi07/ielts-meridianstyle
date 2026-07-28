@@ -137,6 +137,21 @@ public class QuizService {
     }
 
     @Transactional
+    public QuizQuestionDto updateQuestionMark(UUID uid, Long quizQuestionId, BigDecimal mark) {
+        QuizQuestion qq = quizQuestionRepository.findById(quizQuestionId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy câu trong quiz"));
+        Quiz quiz = requireQuiz(qq.getQuizId());
+        permissionService.requireCapability(uid, CAP, contextId(quiz.getContext()));
+        qq.setMark(mark);
+        qq = quizQuestionRepository.save(qq);
+        Question q = questionRepository.findById(qq.getQuestionId()).orElse(null);
+        return new QuizQuestionDto(qq.getId(), qq.getQuestionId(),
+                q != null ? q.getType().name() : null,
+                q != null ? q.getName() : "(đã xóa)",
+                qq.getMark(), qq.getPageId(), qq.getSortOrder());
+    }
+
+    @Transactional
     public QuizPageDto setPage(UUID uid, Long quizId, QuizRequests.SetPage req) {
         Quiz quiz = requireQuiz(quizId);
         permissionService.requireCapability(uid, CAP, contextId(quiz.getContext()));

@@ -46,4 +46,7 @@ public class QuestionClozeSubAnswer {
 
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
+
+    @Column(name = "case_sensitive", nullable = false)
+    private boolean caseSensitive;
 }

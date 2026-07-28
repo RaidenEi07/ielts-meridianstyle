@@ -101,7 +101,7 @@ public class GradingService {
             JsonNode accepted = c.acceptedAnswers();
             if (accepted != null && accepted.isArray()) {
                 for (JsonNode a : accepted) {
-                    if (stringEquals(a.asString(""), chosen, false)) { ok = true; break; }
+                    if (stringEquals(a.asString(""), chosen, c.caseSensitive())) { ok = true; break; }
                 }
             }
             if (!ok) return false;

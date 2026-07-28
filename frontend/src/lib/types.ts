@@ -176,6 +176,7 @@ export interface QuestionClozeSubAnswer {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   options: any;
   sortOrder: number;
+  caseSensitive: boolean;
 }
 
 export interface QuestionDetail {

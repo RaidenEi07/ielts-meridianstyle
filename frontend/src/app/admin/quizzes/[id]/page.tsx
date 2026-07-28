@@ -721,6 +721,19 @@ function QuestionsPanel({
     onChanged();
   }
 
+  async function updateMark(quizQuestionId: number, value: string) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed) || parsed < 0) return;
+    try {
+      await quizAdminApi.updateQuestionMark(token, quizQuestionId, parsed);
+      onChanged();
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Sửa điểm câu hỏi thất bại");
+    }
+  }
+
+  const totalMark = detail.questions.reduce((sum, q) => sum + Number(q.mark), 0);
+
   // Reordering only ever happens within one Part's own list (dragging across
   // Parts would silently snap back, since group membership comes from pageId,
   // not from where a row is dropped) — after moving within the group, rebuild
@@ -763,7 +776,14 @@ function QuestionsPanel({
   return (
     <section className="rounded-card border border-border bg-surface p-6">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Câu hỏi ({detail.questions.length})</h2>
+        <div className="flex items-baseline gap-3">
+          <h2 className="text-lg font-semibold">Câu hỏi ({detail.questions.length})</h2>
+          {detail.questions.length > 0 && (
+            <span className="text-sm text-muted">
+              Tổng điểm: <span className="font-semibold text-text">{totalMark}</span>
+            </span>
+          )}
+        </div>
         <button
           type="button"
           onClick={openPicker}
@@ -811,7 +831,18 @@ function QuestionsPanel({
                               {q.type}
                             </span>
                             <span className="flex-1">{q.name}</span>
-                            <span className="font-mono text-xs text-muted">{q.mark} điểm</span>
+                            <span className="flex items-center gap-1 text-xs text-muted">
+                              <input
+                                type="number"
+                                min={0}
+                                step="0.5"
+                                defaultValue={q.mark}
+                                key={`${q.quizQuestionId}-${q.mark}`}
+                                onBlur={(e) => updateMark(q.quizQuestionId, e.target.value)}
+                                className="w-16 rounded border border-border bg-surface px-1.5 py-0.5 text-right font-mono text-xs"
+                              />
+                              điểm
+                            </span>
                             <button
                               type="button"
                               onClick={() => openEdit(q.questionId)}

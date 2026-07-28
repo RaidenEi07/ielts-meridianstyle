@@ -36,6 +36,7 @@ public final class QuestionParts {
             String subType,
             JsonNode acceptedAnswers,
             JsonNode options,
-            int sortOrder) {
+            int sortOrder,
+            boolean caseSensitive) {
     }
 }
