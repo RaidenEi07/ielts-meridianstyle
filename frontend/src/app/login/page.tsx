@@ -19,6 +19,7 @@ export default function AuthPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [fullName, setFullName] = useState("");
+  const [audienceChoice, setAudienceChoice] = useState<"IELTS" | "KIDS">("IELTS");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,10 +31,13 @@ export default function AuthPage() {
     try {
       if (tab === "login") {
         await login(username, password);
+        router.push("/dashboard");
       } else {
         await register(username, email, password, fullName);
+        router.push(
+          audienceChoice === "IELTS" ? "/courses?audienceGroup=IELTS" : "/vao-hoc/tre-em",
+        );
       }
-      router.push("/dashboard");
     } catch (err) {
       setError(
         err instanceof ApiError ? err.message : "Đã xảy ra lỗi không mong muốn",
@@ -133,6 +137,31 @@ export default function AuthPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
+            {tab === "register" && (
+              <Field label="Bạn đang tìm khóa học cho:">
+                <div className="grid grid-cols-2 gap-3">
+                  {(
+                    [
+                      { value: "IELTS", label: "Luyện thi IELTS" },
+                      { value: "KIDS", label: "Trẻ em & Tiểu học" },
+                    ] as const
+                  ).map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      onClick={() => setAudienceChoice(opt.value)}
+                      className={`rounded-lg border px-4 py-3 text-sm font-medium transition-colors ${
+                        audienceChoice === opt.value
+                          ? "border-primary bg-primary-soft text-primary"
+                          : "border-border text-muted hover:text-text"
+                      }`}
+                    >
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+              </Field>
+            )}
             {tab === "register" && (
               <Field label="Họ và tên">
                 <input

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PartyPopper } from "lucide-react";
 import { useEffect, useState } from "react";
 import { CourseCard } from "@/components/CourseCard";
+import { Footer } from "@/components/Footer";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ApiError, catalogApi, configApi, portalApi } from "@/lib/api";
 import type { CourseSummary, PublicStats, TeacherPublic } from "@/lib/types";
@@ -224,43 +225,7 @@ export default function HomePage() {
         <ConsultationForm />
       </section>
 
-      {/* Footer */}
-      <footer style={{ background: "#14110D", color: "#cbbfa9" }}>
-        <div className="mx-auto grid max-w-6xl gap-8 px-6 py-12 sm:grid-cols-2 md:grid-cols-4">
-          <div>
-            <div className="text-lg font-semibold text-white" style={{ fontFamily: "var(--font-serif)" }}>
-              Anh ngữ Meridian
-            </div>
-            <p className="mt-2 text-sm">Luyện thi IELTS theo chuẩn phòng thi máy.</p>
-          </div>
-          <div>
-            <h4 className="mb-3 font-semibold text-white">Khóa học</h4>
-            <ul className="space-y-1.5 text-sm">
-              <li><Link href="/courses" className="hover:text-white">Tất cả khóa học</Link></li>
-              <li>Luyện thi IELTS</li>
-              <li>Tiếng Anh giao tiếp</li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="mb-3 font-semibold text-white">Về chúng tôi</h4>
-            <ul className="space-y-1.5 text-sm">
-              <li>Đội ngũ giáo viên</li>
-              <li>Học viên tiêu biểu</li>
-              <li>Liên hệ</li>
-            </ul>
-          </div>
-          <div>
-            <h4 className="mb-3 font-semibold text-white">Liên hệ</h4>
-            <ul className="space-y-1.5 text-sm">
-              <li>lienhe@meridian.edu.vn</li>
-              <li>Hà Nội · TP.HCM</li>
-            </ul>
-          </div>
-        </div>
-        <div className="border-t border-white/10 py-4 text-center text-xs">
-          © 2026 Anh ngữ Meridian · Nội dung demo
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

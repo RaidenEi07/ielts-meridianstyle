@@ -18,10 +18,28 @@ const sourceSerif = Source_Serif_4({
   display: "swap",
 });
 
+const SITE_NAME = "Anh ngữ Meridian";
+const SITE_DESCRIPTION =
+  "Nền tảng quản lý khóa học và luyện thi IELTS theo chuẩn phòng thi máy (CDT).";
+// Đổi biến môi trường NEXT_PUBLIC_SITE_URL sang domain thật khi triển khai production.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3100";
+
 export const metadata: Metadata = {
-  title: "Anh ngữ Meridian — Hệ thống luyện thi IELTS",
-  description:
-    "Nền tảng quản lý khóa học và luyện thi IELTS theo chuẩn phòng thi máy (CDT).",
+  metadataBase: new URL(SITE_URL),
+  title: `${SITE_NAME} — Hệ thống luyện thi IELTS`,
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    title: `${SITE_NAME} — Hệ thống luyện thi IELTS`,
+    description: SITE_DESCRIPTION,
+    siteName: SITE_NAME,
+    locale: "vi_VN",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: `${SITE_NAME} — Hệ thống luyện thi IELTS`,
+    description: SITE_DESCRIPTION,
+  },
 };
 
 // Đặt class .dark trước first paint để tránh nhấp nháy theme.

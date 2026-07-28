@@ -1,12 +1,30 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { CourseCard } from "@/components/CourseCard";
 import { SiteHeader } from "@/components/SiteHeader";
 import { catalogApi } from "@/lib/api";
-import type { Category, CourseSummary } from "@/lib/types";
+import type { Category, CourseAudienceGroup, CourseSummary } from "@/lib/types";
+
+function isAudienceGroup(value: string | null): value is CourseAudienceGroup {
+  return value === "IELTS" || value === "TRE_EM" || value === "TIEU_HOC";
+}
 
 export default function CoursesPage() {
+  return (
+    <Suspense fallback={<CoursesPageShell loading />}>
+      <CoursesPageInner />
+    </Suspense>
+  );
+}
+
+function CoursesPageInner() {
+  const searchParams = useSearchParams();
+  const audienceGroup = isAudienceGroup(searchParams.get("audienceGroup"))
+    ? (searchParams.get("audienceGroup") as CourseAudienceGroup)
+    : undefined;
+
   const [categories, setCategories] = useState<Category[]>([]);
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [activeCategory, setActiveCategory] = useState<number | null>(null);
@@ -20,11 +38,11 @@ export default function CoursesPage() {
   useEffect(() => {
     setLoading(true);
     catalogApi
-      .courses({ categoryId: activeCategory ?? undefined })
+      .courses({ categoryId: activeCategory ?? undefined, audienceGroup })
       .then(setCourses)
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false));
-  }, [activeCategory]);
+  }, [activeCategory, audienceGroup]);
 
   return (
     <div className="min-h-screen">
@@ -76,6 +94,23 @@ export default function CoursesPage() {
               </div>
             )}
           </main>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function CoursesPageShell({ loading }: { loading?: boolean }) {
+  return (
+    <div className="min-h-screen">
+      <SiteHeader />
+      <div className="mx-auto max-w-6xl px-6 py-10">
+        <h1 className="text-3xl font-bold">Khóa học</h1>
+        <p className="mt-1 text-muted">
+          Chọn lộ trình phù hợp với mục tiêu của bạn.
+        </p>
+        <div className="mt-8">
+          {loading && <p className="text-muted">Đang tải…</p>}
         </div>
       </div>
     </div>
