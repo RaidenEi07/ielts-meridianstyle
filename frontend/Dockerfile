@@ -14,6 +14,9 @@ COPY . .
 # Backend URL cho lúc build (chỉ ảnh hưởng file được prerender tĩnh; runtime đọc lại qua env).
 ARG NEXT_PUBLIC_API_BASE_URL=http://localhost:8090
 ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
+# Domain công khai dùng cho sitemap.xml/robots.txt/metadataBase (OG image URL).
+ARG NEXT_PUBLIC_SITE_URL=http://localhost:3100
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
 RUN npm run build
 
 # ---------- Runtime (Next.js standalone output) ----------
