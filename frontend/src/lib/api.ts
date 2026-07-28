@@ -25,6 +25,7 @@ import type {
   HomeworkMaterial,
   ImportSummary,
   TextImportSummary,
+  VideoCheckpoint,
   LeaderboardEntry,
   LessonRecording,
   MemoryPair,
@@ -442,6 +443,33 @@ export const quizAdminApi = {
       body: { quizQuestionIds },
       token,
     }),
+};
+
+// ---- Checkpoint câu hỏi trong video (khóa học lõi) ----
+
+export const checkpointApi = {
+  // Dùng chung 1 endpoint GET cho cả admin soạn checkpoint (bỏ qua `answered`)
+  // lẫn học viên xem tiến độ — không cần endpoint đọc riêng cho admin.
+  listForSection: (token: string, sectionId: number) =>
+    apiFetch<VideoCheckpoint[]>(`/api/sections/${sectionId}/checkpoints`, { token }),
+
+  replaceForSection: (
+    token: string,
+    sectionId: number,
+    checkpoints: { timestampSec: number; questionId: number; sortOrder: number }[],
+  ) =>
+    apiFetch<VideoCheckpoint[]>(`/api/admin/sections/${sectionId}/checkpoints`, {
+      method: "PUT",
+      body: { checkpoints },
+      token,
+    }),
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  submitAnswer: (token: string, checkpointId: number, answer: any) =>
+    apiFetch<{ checkpointId: number; correct: boolean | null; autoGraded: boolean }>(
+      `/api/checkpoints/${checkpointId}/answer`,
+      { method: "POST", body: { answer }, token },
+    ),
 };
 
 // ---- Enrollment endpoints (authenticated) ----

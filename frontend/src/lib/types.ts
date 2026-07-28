@@ -94,6 +94,15 @@ export interface Section {
   hidden: boolean;
 }
 
+export interface VideoCheckpoint {
+  id: number | null;
+  sectionId: number | null;
+  timestampSec: number;
+  questionId: number;
+  sortOrder: number;
+  answered: boolean;
+}
+
 export interface CourseDetail extends CourseSummary {
   examTemplateCode: string | null;
   contextId: number | null;

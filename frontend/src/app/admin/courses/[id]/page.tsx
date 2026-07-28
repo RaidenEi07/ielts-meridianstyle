@@ -20,6 +20,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { SectionDescriptionField } from "@/components/SectionDescriptionField";
 import { SortableRow } from "@/components/SortableRow";
+import { VideoCheckpointsEditor } from "@/components/VideoCheckpointsEditor";
 import { VideoUploadField } from "@/components/VideoUploadField";
 import { ApiError, catalogAdminApi, catalogApi, childSiteAdminApi, quizAdminApi } from "@/lib/api";
 import type {
@@ -692,6 +693,16 @@ function SectionCard({
       <div className="mb-3">
         <VideoUploadField token={token} value={section.videoUrl} onChange={handleVideoChange} />
       </div>
+
+      {section.videoUrl && (
+        <div className="mb-3">
+          <VideoCheckpointsEditor
+            sectionId={section.id}
+            token={token}
+            audience={isAcademic ? "IELTS" : "KIDS"}
+          />
+        </div>
+      )}
 
       <div className="mb-3">
         <SectionDescriptionField
