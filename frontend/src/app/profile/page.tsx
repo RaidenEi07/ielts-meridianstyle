@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { ApiError, authApi } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
+import { useToast } from "@/store/toast";
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -51,9 +53,12 @@ export default function ProfilePage() {
       setCurrentPassword("");
       setNewPassword("");
       setSuccess(true);
+      toast.success("Đã lưu thay đổi hồ sơ");
       await loadMe();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Cập nhật hồ sơ thất bại");
+      const msg = err instanceof ApiError ? err.message : "Cập nhật hồ sơ thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

@@ -9,11 +9,13 @@ import { ApiError, familyApi } from "@/lib/api";
 import type { ChildProfile } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
+import { useToast } from "@/store/toast";
 
 export default function ParentChildrenPage() {
   const router = useRouter();
   const { user, accessToken, hydrated, loadMe, logout, switchToChild } = useAuthStore();
   const confirm = useConfirm();
+  const toast = useToast();
 
   const [ready, setReady] = useState(false);
   const [children, setChildren] = useState<ChildProfile[] | null>(null);
@@ -62,8 +64,11 @@ export default function ParentChildrenPage() {
       await familyApi.createChild(accessToken, newName.trim());
       setNewName("");
       refresh();
+      toast.success("Đã thêm hồ sơ con");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tạo hồ sơ con thất bại");
+      const msg = err instanceof ApiError ? err.message : "Tạo hồ sơ con thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setCreating(false);
     }
@@ -80,8 +85,11 @@ export default function ParentChildrenPage() {
     try {
       await familyApi.deleteChild(accessToken, child.id);
       refresh();
+      toast.success("Đã xóa hồ sơ con");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa hồ sơ thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa hồ sơ thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -90,9 +98,12 @@ export default function ParentChildrenPage() {
     setError(null);
     try {
       await switchToChild(child.id);
+      toast.success(`Đang vào học cùng ${child.fullName}`);
       router.push("/vao-hoc");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Chuyển sang hồ sơ con thất bại");
+      const msg = err instanceof ApiError ? err.message : "Chuyển sang hồ sơ con thất bại";
+      setError(msg);
+      toast.error(msg);
       setSwitching(null);
     }
   }

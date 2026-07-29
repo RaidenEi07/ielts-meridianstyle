@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ApiError } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
+import { useToast } from "@/store/toast";
 
 export default function ParentRegisterPage() {
   const router = useRouter();
@@ -18,6 +19,7 @@ export default function ParentRegisterPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -25,11 +27,12 @@ export default function ParentRegisterPage() {
     setLoading(true);
     try {
       await registerParent(username, email, password, fullName);
+      toast.success("Đăng ký tài khoản phụ huynh thành công");
       router.push("/parent/children");
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Đã xảy ra lỗi không mong muốn",
-      );
+      const msg = err instanceof ApiError ? err.message : "Đã xảy ra lỗi không mong muốn";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

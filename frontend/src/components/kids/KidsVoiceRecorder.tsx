@@ -6,10 +6,12 @@ import { ApiError, mediaApi, recordingApi } from "@/lib/api";
 import type { LessonRecording } from "@/lib/types";
 import { useAudioRecorder } from "@/lib/useAudioRecorder";
 import { useConfirm } from "@/store/confirm";
+import { useToast } from "@/store/toast";
 
 export function KidsVoiceRecorder({ sectionId, token }: { sectionId: number; token: string }) {
   const { status, errorMessage, start, stop } = useAudioRecorder();
   const confirm = useConfirm();
+  const toast = useToast();
   const [localBlobUrl, setLocalBlobUrl] = useState<string | null>(null);
   const pendingBlobRef = useRef<Blob | null>(null);
   const [saving, setSaving] = useState(false);
@@ -63,8 +65,11 @@ export function KidsVoiceRecorder({ sectionId, token }: { sectionId: number; tok
       URL.revokeObjectURL(localBlobUrl!);
       setLocalBlobUrl(null);
       pendingBlobRef.current = null;
+      toast.success("Đã lưu bản ghi âm");
     } catch (err) {
-      setSaveError(err instanceof ApiError ? err.message : "Lưu bản ghi âm thất bại");
+      const msg = err instanceof ApiError ? err.message : "Lưu bản ghi âm thất bại";
+      setSaveError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

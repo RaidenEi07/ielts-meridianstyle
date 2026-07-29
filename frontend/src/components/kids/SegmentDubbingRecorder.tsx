@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, dubbingApi, mediaApi } from "@/lib/api";
 import type { DubbingRecording, DubbingSegment } from "@/lib/types";
 import { useAudioRecorder } from "@/lib/useAudioRecorder";
+import { useToast } from "@/store/toast";
 
 export function SegmentDubbingRecorder({
   segment,
@@ -26,6 +27,7 @@ export function SegmentDubbingRecorder({
   const pendingBlobRef = useRef<Blob | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     return () => {
@@ -40,7 +42,9 @@ export function SegmentDubbingRecorder({
         await dubbingApi.deleteRecording(token, recording.id);
         onChange();
       } catch (err) {
-        setError(err instanceof ApiError ? err.message : "Không xóa được bản ghi âm");
+        const msg = err instanceof ApiError ? err.message : "Không xóa được bản ghi âm";
+        setError(msg);
+        toast.error(msg);
         return;
       }
     }
@@ -83,8 +87,11 @@ export function SegmentDubbingRecorder({
       setLocalBlobUrl(null);
       pendingBlobRef.current = null;
       onChange();
+      toast.success("Đã lưu bản ghi âm");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lưu bản ghi âm thất bại");
+      const msg = err instanceof ApiError ? err.message : "Lưu bản ghi âm thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

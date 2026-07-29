@@ -28,7 +28,7 @@ import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
 import { KidsMatchingGame } from "@/components/kids/KidsMatchingGame";
 import { PassageDragChip, PassageDropBlank } from "@/components/PassageDragBlank";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
-import { quizApi } from "@/lib/api";
+import { ApiError, quizApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
 import { useToast } from "@/store/toast";
 import type {
@@ -227,10 +227,12 @@ export default function QuizPlayerPage() {
       setResultQuestions(attempt?.questions ?? []);
       setResult(r);
       setAttempt(null);
-    } catch {
+      toast.success("Đã nộp bài");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Nộp bài thất bại, vui lòng thử lại");
       submittingRef.current = false;
     }
-  }, [attemptId, token, attempt]);
+  }, [attemptId, token, attempt, toast]);
 
   useEffect(() => {
     if (!hydrated) return;

@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Logo } from "@/components/Logo";
 import { ApiError } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
+import { useToast } from "@/store/toast";
 
 type Tab = "login" | "register";
 
@@ -23,6 +24,7 @@ export default function AuthPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const toast = useToast();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,17 +33,19 @@ export default function AuthPage() {
     try {
       if (tab === "login") {
         await login(username, password);
+        toast.success("Đăng nhập thành công");
         router.push("/dashboard");
       } else {
         await register(username, email, password, fullName);
+        toast.success("Đăng ký thành công, chào mừng bạn!");
         router.push(
           audienceChoice === "IELTS" ? "/courses?audienceGroup=IELTS" : "/vao-hoc/tre-em",
         );
       }
     } catch (err) {
-      setError(
-        err instanceof ApiError ? err.message : "Đã xảy ra lỗi không mong muốn",
-      );
+      const msg = err instanceof ApiError ? err.message : "Đã xảy ra lỗi không mong muốn";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }

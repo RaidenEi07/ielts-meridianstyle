@@ -9,6 +9,7 @@ import { computeDubWindows, exportDubbedVideo } from "@/lib/dubbingExport";
 import type { CourseDetail, DubbingCharacter, DubbingRecording } from "@/lib/types";
 import { isYoutubeUrl } from "@/lib/youtube";
 import { useAuthStore } from "@/store/auth";
+import { useToast } from "@/store/toast";
 
 export default function CharacterDubbingPage() {
   const params = useParams<{ group: string; courseId: string; sectionId: string }>();
@@ -29,6 +30,7 @@ export default function CharacterDubbingPage() {
   const [canShareFiles, setCanShareFiles] = useState(false);
   const [shareUrl, setShareUrl] = useState<string | null>(null);
   const [shareMessage, setShareMessage] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -108,7 +110,9 @@ export default function CharacterDubbingPage() {
         }
       }
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : "Xuất video thất bại");
+      const msg = err instanceof Error ? err.message : "Xuất video thất bại";
+      setExportError(msg);
+      toast.error(msg);
     } finally {
       setExportStage(null);
     }

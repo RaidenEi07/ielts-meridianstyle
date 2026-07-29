@@ -9,6 +9,7 @@ import { ApiError, catalogApi, enrollmentApi, quizApi } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import type { CourseDetail, QuizSummary } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
+import { useToast } from "@/store/toast";
 
 export default function CourseDetailPage() {
   const params = useParams<{ id: string }>();
@@ -28,6 +29,7 @@ export default function CourseDetailPage() {
   const [quizzes, setQuizzes] = useState<QuizSummary[] | null>(null);
   const [startingQuiz, setStartingQuiz] = useState<number | null>(null);
   const [quizError, setQuizError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (pendingScrollSectionId === null) return;
@@ -69,7 +71,9 @@ export default function CourseDetailPage() {
       const attempt = await quizApi.start(quizId, accessToken);
       router.push(`/quiz/${attempt.attemptId}`);
     } catch (e) {
-      setQuizError(e instanceof ApiError ? e.message : "Không bắt đầu được bài làm");
+      const msg = e instanceof ApiError ? e.message : "Không bắt đầu được bài làm";
+      setQuizError(msg);
+      toast.error(msg);
       setStartingQuiz(null);
     }
   }
@@ -93,13 +97,16 @@ export default function CourseDetailPage() {
       await enrollmentApi.enroll(courseId, accessToken);
       setEnrollState("done");
       setEnrollMsg("Ghi danh thành công! Vào bảng điều khiển để bắt đầu học.");
+      toast.success("Ghi danh thành công!");
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) {
         setEnrollState("already");
         setEnrollMsg("Bạn đã ghi danh khóa học này rồi.");
       } else {
         setEnrollState("idle");
-        setEnrollMsg(err instanceof ApiError ? err.message : "Ghi danh thất bại");
+        const msg = err instanceof ApiError ? err.message : "Ghi danh thất bại";
+        setEnrollMsg(msg);
+        toast.error(msg);
       }
     }
   }

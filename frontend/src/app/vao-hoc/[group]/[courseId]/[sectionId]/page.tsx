@@ -12,6 +12,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { ApiError, catalogApi, checkpointApi, progressApi, quizApi } from "@/lib/api";
 import type { CourseDetail, QuizSummary, Section, VideoCheckpoint } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
+import { useToast } from "@/store/toast";
 
 export default function VaoHocLessonPage() {
   const params = useParams<{ group: string; courseId: string; sectionId: string }>();
@@ -28,6 +29,7 @@ export default function VaoHocLessonPage() {
   const [completing, setCompleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [checkpoints, setCheckpoints] = useState<VideoCheckpoint[]>([]);
+  const toast = useToast();
 
   useEffect(() => {
     if (!Number.isFinite(courseId)) return;
@@ -108,7 +110,9 @@ export default function VaoHocLessonPage() {
       const attempt = await quizApi.start(quizId, accessToken);
       router.push(`/quiz/${attempt.attemptId}`);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Không bắt đầu được bài luyện tập");
+      const msg = e instanceof ApiError ? e.message : "Không bắt đầu được bài luyện tập";
+      setError(msg);
+      toast.error(msg);
       setStarting(null);
     }
   }
@@ -120,8 +124,11 @@ export default function VaoHocLessonPage() {
     try {
       await progressApi.markComplete(sectionId, accessToken);
       loadProgress();
+      toast.success("Đã đánh dấu hoàn thành buổi học");
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Không đánh dấu hoàn thành được");
+      const msg = e instanceof ApiError ? e.message : "Không đánh dấu hoàn thành được";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setCompleting(false);
     }
