@@ -47,6 +47,31 @@
   --info: #38bdf8;
 }
 
+/* Chế độ thi (Academic/IELTS — đọc chia màn, nghe, viết): trắng-đen tuyệt đối
+   theo chuẩn phòng thi thật, bất kể light/dark mode đang bật ở phần còn lại
+   của web. Áp cho khối bọc ngoài màn làm bài (xem quiz/[attemptId]/page.tsx),
+   không áp cho khóa Trẻ em (luôn standalone, không có class này). */
+.exam-mode,
+.dark .exam-mode {
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --card: #ffffff;
+  --soft: #f0f0f0;
+  --border: #cccccc;
+  --text: #000000;
+  --muted: #4d4d4d;
+  --faint: #808080;
+  --primary: #000000;
+  --primary-soft: #e6e6e6;
+  --accent: #000000;
+  --accent-soft: #e6e6e6;
+  --green: #000000;
+  --green-soft: #e6e6e6;
+  --red: #000000;
+  --red-soft: #e6e6e6;
+  --info: #000000;
+}
+
 /* Map tokens -> Tailwind utilities (bg-surface, text-muted, border-border, ...) */
 @theme inline {
   --color-bg: var(--bg);

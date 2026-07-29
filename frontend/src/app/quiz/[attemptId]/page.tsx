@@ -484,10 +484,13 @@ export default function QuizPlayerPage() {
   }
 
   const answeredCount = orderedSlots.filter((s) => isSlotAnswered(s, answers)).length;
+  // Giao diện thi trắng-đen chuẩn phòng thi thật chỉ áp dụng cho Academic/IELTS
+  // (có Part đọc/nghe/viết) — khóa Trẻ em chỉ có step "standalone" nên không đổi màu.
+  const isExamMode = steps.some((s) => s.kind === "reading" || s.kind === "listening" || s.kind === "essay");
 
   return (
     <div
-      className="flex min-h-screen flex-col bg-bg pb-16"
+      className={`flex min-h-screen flex-col bg-bg pb-16 ${isExamMode ? "exam-mode" : ""}`}
       onCopy={(e) => attempt.antiCheatEnabled && e.preventDefault()}
       onPaste={(e) => attempt.antiCheatEnabled && e.preventDefault()}
       onContextMenu={(e) => attempt.antiCheatEnabled && e.preventDefault()}
@@ -518,7 +521,7 @@ export default function QuizPlayerPage() {
 
       {/* Header phòng thi */}
       <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-3"
-        style={{ background: "#262019", color: "#ECE4D8" }}>
+        style={isExamMode ? { background: "#ffffff", color: "#000000", borderBottom: "1px solid #cccccc" } : { background: "#262019", color: "#ECE4D8" }}>
         <div className="flex items-center gap-3">
           <span className="font-semibold">{attempt.quizTitle}</span>
           {attempt.examTemplateCode && (
@@ -526,13 +529,13 @@ export default function QuizPlayerPage() {
               {attempt.examTemplateCode}
             </span>
           )}
-          <span className="flex items-center gap-1 text-xs text-white/50">
+          <span className={`flex items-center gap-1 text-xs ${isExamMode ? "text-black/50" : "text-white/50"}`}>
             <Lock className="h-3.5 w-3.5" /> Chế độ thi
           </span>
         </div>
         <div className="flex items-center gap-4">
           {attempt.antiCheatEnabled && (
-            <span className="text-xs text-white/60">
+            <span className={`text-xs ${isExamMode ? "text-black/60" : "text-white/60"}`}>
               Vi phạm: {violations}/{attempt.maxViolations}
             </span>
           )}
@@ -1091,7 +1094,7 @@ function ReadingSplitPane({
     <DndContext onDragEnd={handleEmbeddedDragEnd}>
     <div>
       <div className="border-b border-border px-6 py-2 text-sm font-medium"
-        style={{ background: "#F1EADF", color: "#26211b" }}>
+        style={{ background: "#f0f0f0", color: "#000000" }}>
         {page.partLabel ?? `Part ${page.pageNumber}`}
       </div>
       <div ref={containerRef} className="flex" style={{ height: "calc(100vh - 108px)" }}>
@@ -1221,7 +1224,7 @@ function ListeningPane({
   return (
     <div id={`q-page-${page.id}`}>
       <div className="border-b border-border px-6 py-2 text-sm font-medium"
-        style={{ background: "#F1EADF", color: "#26211b" }}>
+        style={{ background: "#f0f0f0", color: "#000000" }}>
         {page.partLabel ?? `Part ${page.pageNumber}`} — Listening
       </div>
 
@@ -1359,7 +1362,7 @@ function WritingEditor({
   return (
     <div id={`q-${question.quizQuestionId}`} className="border-t border-border">
       <div className="border-b border-border px-6 py-2 text-sm font-medium"
-        style={{ background: "#F1EADF", color: "#26211b" }}>
+        style={{ background: "#f0f0f0", color: "#000000" }}>
         Writing Task — Câu {index}
       </div>
       <div className="mx-auto grid max-w-6xl gap-4 px-6 py-6 md:grid-cols-2">
