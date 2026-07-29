@@ -4,6 +4,7 @@ import { Upload, X } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
+import { BulkRenameDialog } from "@/components/BulkRenameDialog";
 import { CategoryTree } from "@/components/CategoryTree";
 import { PageHeader } from "@/components/PageHeader";
 import { SearchableSelect } from "@/components/SearchableSelect";
@@ -43,6 +44,7 @@ export default function QuestionBankPage() {
   const [textImportResult, setTextImportResult] = useState<TextImportSummary | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const [showBulkRename, setShowBulkRename] = useState(false);
   const confirm = useConfirm();
   const toast = useToast();
 
@@ -135,6 +137,39 @@ export default function QuestionBankPage() {
     } finally {
       setBulkWorking(false);
     }
+  }
+
+  async function applyBulkRename(renames: { id: number; name: string }[]) {
+    if (!accessToken) return;
+    const count = renames.length;
+    await Promise.all(
+      renames.map(async (r) => {
+        const detail = await questionBankApi.question(accessToken, r.id);
+        await questionBankApi.updateQuestion(accessToken, r.id, {
+          categoryId: detail.categoryId,
+          type: detail.type,
+          name: r.name,
+          stem: detail.stem ?? undefined,
+          passageId: detail.passageId ?? undefined,
+          answerParagraphIndex: detail.answerParagraphIndex ?? undefined,
+          explanation: detail.explanation ?? undefined,
+          defaultMark: detail.defaultMark,
+          settings: detail.settings,
+          tags: detail.tags,
+          options: detail.options,
+          matchingPairs: detail.matchingPairs,
+          dragItems: detail.dragItems,
+          dragZones: detail.dragZones,
+          clozeSubAnswers: detail.clozeSubAnswers,
+          gridColumns: detail.gridColumns,
+          gridRows: detail.gridRows,
+        });
+      }),
+    );
+    setSelected(new Set());
+    setShowBulkRename(false);
+    refresh();
+    toast.success(`Đã đổi tên ${count} câu hỏi`);
   }
 
   async function openPreview(id: number) {
@@ -461,6 +496,14 @@ export default function QuestionBankPage() {
               </button>
               <button
                 type="button"
+                onClick={() => setShowBulkRename(true)}
+                disabled={bulkWorking}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-text disabled:opacity-60"
+              >
+                Đổi tên hàng loạt
+              </button>
+              <button
+                type="button"
                 onClick={bulkDelete}
                 disabled={bulkWorking}
                 className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
@@ -575,6 +618,16 @@ export default function QuestionBankPage() {
 
       {previewing && (
         <PreviewModal question={previewing} onClose={() => setPreviewing(null)} />
+      )}
+
+      {showBulkRename && (
+        <BulkRenameDialog
+          items={questions
+            .filter((q) => selected.has(q.id))
+            .map((q) => ({ id: q.id, label: q.name }))}
+          onApply={applyBulkRename}
+          onClose={() => setShowBulkRename(false)}
+        />
       )}
     </div>
   );
