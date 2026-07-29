@@ -79,7 +79,6 @@ export default function NewKidsQuestionPage() {
           passages={passages}
           tags={tags}
           token={token}
-          allowedTypes={["MATCHING", "DRAG_DROP_TEXT"]}
           lockAudience="KIDS"
           onSaved={() => router.push("/teacher/kids-questions")}
           onCategoriesChanged={refreshCategories}

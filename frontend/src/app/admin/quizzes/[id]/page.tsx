@@ -1041,7 +1041,6 @@ function QuestionsPanel({
                 passages={passages}
                 tags={tags}
                 token={token}
-                allowedTypes={isAcademic ? undefined : ["MATCHING", "DRAG_DROP_TEXT"]}
                 lockAudience={createAudience}
                 onSaved={handleQuestionCreated}
                 onCategoriesChanged={refreshCreateCategories}
