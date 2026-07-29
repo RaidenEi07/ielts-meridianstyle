@@ -1000,6 +1000,8 @@ export const mediaApi = {
     uploadMedia("/api/admin/media/subtitles", "Tải phụ đề thất bại", token, file),
   uploadAudioAsStudent: (token: string, file: File) =>
     uploadMedia("/api/media/audio", "Tải audio thất bại", token, file),
+  uploadVideoAsStudent: (token: string, file: File) =>
+    uploadMedia("/api/media/video", "Tải video thất bại", token, file),
 };
 
 // ---- Phụ huynh & hồ sơ con ----

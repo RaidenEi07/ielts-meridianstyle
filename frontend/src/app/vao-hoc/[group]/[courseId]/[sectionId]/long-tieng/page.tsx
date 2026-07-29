@@ -4,7 +4,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { CharacterDubbingRecorder } from "@/components/kids/CharacterDubbingRecorder";
-import { ApiError, catalogApi, dubbingApi } from "@/lib/api";
+import { ApiError, catalogApi, dubbingApi, mediaApi } from "@/lib/api";
 import { computeDubWindows, exportDubbedVideo } from "@/lib/dubbingExport";
 import type { CourseDetail, DubbingCharacter, DubbingRecording } from "@/lib/types";
 import { isYoutubeUrl } from "@/lib/youtube";
@@ -25,6 +25,10 @@ export default function CharacterDubbingPage() {
   const [exportStage, setExportStage] = useState<string | null>(null);
   const [exportError, setExportError] = useState<string | null>(null);
   const [exportDone, setExportDone] = useState(false);
+  const [videoBlob, setVideoBlob] = useState<Blob | null>(null);
+  const [canShareFiles, setCanShareFiles] = useState(false);
+  const [shareUrl, setShareUrl] = useState<string | null>(null);
+  const [shareMessage, setShareMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -76,6 +80,8 @@ export default function CharacterDubbingPage() {
     if (!section?.videoUrl || !characters) return;
     setExportError(null);
     setExportDone(false);
+    setShareUrl(null);
+    setVideoBlob(null);
     try {
       const windows = computeDubWindows(characters, recordings);
       const blob = await exportDubbedVideo(section.videoUrl, windows, setExportStage);
@@ -86,10 +92,49 @@ export default function CharacterDubbingPage() {
       a.click();
       URL.revokeObjectURL(url);
       setExportDone(true);
+      setVideoBlob(blob);
+
+      // Bảng chia sẻ hệ điều hành (vd. Zalo) cần 1 File thật, không phải Blob suông.
+      const file = new File([blob], "long-tieng.mp4", { type: "video/mp4" });
+      const nav = navigator as Navigator & { canShare?: (data: { files: File[] }) => boolean };
+      setCanShareFiles(typeof nav.canShare === "function" && nav.canShare({ files: [file] }));
+
+      if (accessToken) {
+        try {
+          const { url: uploadedUrl } = await mediaApi.uploadVideoAsStudent(accessToken, file);
+          setShareUrl(uploadedUrl);
+        } catch {
+          // Không chặn học viên nếu lưu để chia sẻ sau thất bại — vẫn đã tải xuống được ở trên.
+        }
+      }
     } catch (err) {
       setExportError(err instanceof Error ? err.message : "Xuất video thất bại");
     } finally {
       setExportStage(null);
+    }
+  }
+
+  async function handleShare() {
+    if (!videoBlob) return;
+    const file = new File([videoBlob], "long-tieng.mp4", { type: "video/mp4" });
+    try {
+      await navigator.share({
+        files: [file],
+        title: "Thành phẩm lồng tiếng",
+        text: "Nghe bé lồng tiếng nè!",
+      });
+    } catch {
+      // Người dùng hủy chia sẻ hoặc trình duyệt từ chối — không cần báo lỗi.
+    }
+  }
+
+  async function handleCopyLink() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setShareMessage("Đã sao chép link! Dán vào Zalo để gửi.");
+    } catch {
+      setShareMessage(`Sao chép tự động thất bại — copy link: ${shareUrl}`);
     }
   }
 
@@ -155,6 +200,30 @@ export default function CharacterDubbingPage() {
                   {exportStage ?? "🎬 Xuất video"}
                 </button>
                 {exportDone && <p className="mt-2 text-sm text-green">🎉 Đã xuất video!</p>}
+                {exportDone && (canShareFiles || shareUrl) && (
+                  <div className="mt-3 flex flex-col items-center gap-1.5">
+                    {canShareFiles ? (
+                      <button
+                        type="button"
+                        onClick={handleShare}
+                        className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-text"
+                      >
+                        📤 Chia sẻ (vd. Zalo)
+                      </button>
+                    ) : (
+                      shareUrl && (
+                        <button
+                          type="button"
+                          onClick={handleCopyLink}
+                          className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-text"
+                        >
+                          🔗 Sao chép link để chia sẻ
+                        </button>
+                      )
+                    )}
+                    {shareMessage && <p className="text-xs text-muted">{shareMessage}</p>}
+                  </div>
+                )}
                 {exportError && <p className="mt-2 text-sm text-red">{exportError}</p>}
               </div>
             )}

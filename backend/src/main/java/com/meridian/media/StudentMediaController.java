@@ -27,4 +27,11 @@ public class StudentMediaController {
         String url = mediaService.storeAudio(file);
         return Map.of("url", url);
     }
+
+    /** Lưu thành phẩm lồng tiếng (video MP4 đã mux xong ở trình duyệt) để chia sẻ lại sau. */
+    @PostMapping("/video")
+    public Map<String, String> uploadVideo(@RequestParam("file") MultipartFile file) {
+        String url = mediaService.storeVideo(file);
+        return Map.of("url", url);
+    }
 }
