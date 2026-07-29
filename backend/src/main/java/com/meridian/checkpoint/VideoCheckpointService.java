@@ -14,6 +14,8 @@ import com.meridian.quiz.GradingService;
 import com.meridian.quiz.dto.AttemptDtos.PlayerClozeSubAnswer;
 import com.meridian.quiz.dto.AttemptDtos.PlayerDragItem;
 import com.meridian.quiz.dto.AttemptDtos.PlayerDragZone;
+import com.meridian.quiz.dto.AttemptDtos.PlayerGridColumn;
+import com.meridian.quiz.dto.AttemptDtos.PlayerGridRow;
 import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingOption;
 import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingPair;
 import com.meridian.quiz.dto.AttemptDtos.PlayerOption;
@@ -129,6 +131,8 @@ public class VideoCheckpointService {
         List<PlayerDragItem> dragItems = List.of();
         List<PlayerDragZone> dragZones = List.of();
         List<PlayerClozeSubAnswer> clozeSubAnswers = List.of();
+        List<PlayerGridColumn> gridColumns = List.of();
+        List<PlayerGridRow> gridRows = List.of();
         JsonNode settings = null;
 
         switch (q.type()) {
@@ -160,13 +164,21 @@ public class VideoCheckpointService {
             case "CLOZE" -> clozeSubAnswers = q.clozeSubAnswers().stream()
                     .map(c -> new PlayerClozeSubAnswer(c.id(), c.subIndex(), c.subType(), c.options()))
                     .toList();
+            case "GRID_MATCHING" -> {
+                gridColumns = q.gridColumns().stream()
+                        .map(c -> new PlayerGridColumn(c.label()))
+                        .toList();
+                gridRows = q.gridRows().stream()
+                        .map(r -> new PlayerGridRow(r.id(), r.rowText()))
+                        .toList();
+            }
             default -> {
             }
         }
 
         return new CheckpointQuestionDto(checkpoint.getQuestionId(),
                 q.type(), q.name(), q.stem(), settings, options, matchingPairs, matchingRightPool,
-                dragItems, dragZones, clozeSubAnswers, q.audience());
+                dragItems, dragZones, clozeSubAnswers, gridColumns, gridRows, q.audience());
     }
 
     private VideoCheckpointDto toDto(SectionVideoCheckpoint c, boolean answered) {

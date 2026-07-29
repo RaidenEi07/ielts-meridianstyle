@@ -82,4 +82,15 @@ export const QUESTION_GUIDES: Record<string, QuestionGuide> = {
     ],
     example: "\"Thủ đô Pháp là {1}.\" → ô 1: Nhập chữ, đáp án \"Paris\".",
   },
+  GRID_MATCHING: {
+    title: "Trắc nghiệm dạng lưới",
+    purpose:
+      "Học viên chọn 1 cột đúng cho mỗi hàng trong bảng — dùng cho Matching Features hoặc dán nhãn sơ đồ kiểu bảng.",
+    steps: [
+      "Khai báo các cột dùng chung (vd: A, B, C).",
+      "Thêm từng hàng và chọn đúng 1 cột là đáp án cho hàng đó.",
+      "Học viên sẽ thấy bảng thật với 1 ô chọn (radio) mỗi hàng × cột.",
+    ],
+    example: "Cột: Nhật Bản / Anh. Hàng: \"Trà xanh\" → đúng cột Nhật Bản.",
+  },
 };

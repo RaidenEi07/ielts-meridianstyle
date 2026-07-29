@@ -29,6 +29,8 @@ public class QuestionService {
     private final QuestionDragDropItemRepository dragItemRepository;
     private final QuestionDragDropZoneRepository dragZoneRepository;
     private final QuestionClozeSubAnswerRepository clozeRepository;
+    private final QuestionGridColumnRepository gridColumnRepository;
+    private final QuestionGridRowRepository gridRowRepository;
     private final QuestionTaxonomyService taxonomyService;
     private final ObjectMapper json;
 
@@ -38,6 +40,8 @@ public class QuestionService {
             QuestionDragDropItemRepository dragItemRepository,
             QuestionDragDropZoneRepository dragZoneRepository,
             QuestionClozeSubAnswerRepository clozeRepository,
+            QuestionGridColumnRepository gridColumnRepository,
+            QuestionGridRowRepository gridRowRepository,
             QuestionTaxonomyService taxonomyService,
             ObjectMapper json) {
         this.questionRepository = questionRepository;
@@ -46,6 +50,8 @@ public class QuestionService {
         this.dragItemRepository = dragItemRepository;
         this.dragZoneRepository = dragZoneRepository;
         this.clozeRepository = clozeRepository;
+        this.gridColumnRepository = gridColumnRepository;
+        this.gridRowRepository = gridRowRepository;
         this.taxonomyService = taxonomyService;
         this.json = json;
     }
@@ -127,7 +133,7 @@ public class QuestionService {
                 src.passageId(), src.answerParagraphIndex(), src.explanation(),
                 src.defaultMark(), src.settings(), src.tags(),
                 src.options(), src.matchingPairs(), src.dragItems(), src.dragZones(),
-                src.clozeSubAnswers());
+                src.clozeSubAnswers(), src.gridColumns(), src.gridRows());
         return createQuestion(userId, req);
     }
 
@@ -167,6 +173,8 @@ public class QuestionService {
         dragItemRepository.deleteByQuestionId(questionId);
         dragZoneRepository.deleteByQuestionId(questionId);
         clozeRepository.deleteByQuestionId(questionId);
+        gridColumnRepository.deleteByQuestionId(questionId);
+        gridRowRepository.deleteByQuestionId(questionId);
     }
 
     private void saveChildren(Long qid, QuestionType type, QuestionUpsertRequest req) {
@@ -228,6 +236,25 @@ public class QuestionService {
             }
             case SHORT_ANSWER, ESSAY -> {
                 // Không có bảng con — cấu hình nằm trong settings (acceptedAnswers/rubric).
+            }
+            case GRID_MATCHING -> {
+                int i = 0;
+                for (QuestionParts.GridColumn c : nz(req.gridColumns())) {
+                    QuestionGridColumn e = new QuestionGridColumn();
+                    e.setQuestionId(qid);
+                    e.setLabel(c.label());
+                    e.setSortOrder(c.sortOrder() != 0 ? c.sortOrder() : i++);
+                    gridColumnRepository.save(e);
+                }
+                int j = 0;
+                for (QuestionParts.GridRow r : nz(req.gridRows())) {
+                    QuestionGridRow e = new QuestionGridRow();
+                    e.setQuestionId(qid);
+                    e.setRowText(r.rowText());
+                    e.setCorrectColumnLabel(r.correctColumnLabel());
+                    e.setSortOrder(r.sortOrder() != 0 ? r.sortOrder() : j++);
+                    gridRowRepository.save(e);
+                }
             }
         }
     }
@@ -300,6 +327,26 @@ public class QuestionService {
             case ESSAY -> {
                 // Essay không tự chấm — không bắt buộc cấu hình.
             }
+            case GRID_MATCHING -> {
+                List<QuestionParts.GridColumn> columns = nz(req.gridColumns());
+                List<QuestionParts.GridRow> rows = nz(req.gridRows());
+                if (columns.size() < 2) {
+                    throw ApiException.badRequest("Grid Matching cần ít nhất 2 cột");
+                }
+                if (rows.isEmpty()) {
+                    throw ApiException.badRequest("Grid Matching cần ít nhất 1 hàng");
+                }
+                Set<String> columnLabels = new LinkedHashSet<>();
+                for (QuestionParts.GridColumn c : columns) {
+                    columnLabels.add(c.label());
+                }
+                for (QuestionParts.GridRow r : rows) {
+                    if (!columnLabels.contains(r.correctColumnLabel())) {
+                        throw ApiException.badRequest(
+                                "Mỗi hàng cần chọn đúng 1 cột đã khai báo ở trên");
+                    }
+                }
+            }
         }
     }
 
@@ -340,6 +387,15 @@ public class QuestionService {
                         e.getSubType().name(), parseJson(e.getAcceptedAnswers()),
                         parseJson(e.getOptions()), e.getSortOrder(), e.isCaseSensitive()))
                 .toList();
+        List<QuestionParts.GridColumn> gridColumns = gridColumnRepository
+                .findByQuestionIdOrderBySortOrderAsc(id).stream()
+                .map(e -> new QuestionParts.GridColumn(e.getId(), e.getLabel(), e.getSortOrder()))
+                .toList();
+        List<QuestionParts.GridRow> gridRows = gridRowRepository
+                .findByQuestionIdOrderBySortOrderAsc(id).stream()
+                .map(e -> new QuestionParts.GridRow(e.getId(), e.getRowText(),
+                        e.getCorrectColumnLabel(), e.getSortOrder()))
+                .toList();
 
         return new QuestionDetailDto(
                 id, q.getType().name(), q.getName(), q.getStem(),
@@ -349,7 +405,8 @@ public class QuestionService {
                 q.getPassage() != null ? q.getPassage().getContent() : null,
                 q.getAnswerParagraphIndex(), q.getExplanation(),
                 q.getDefaultMark(), parseJson(q.getSettings()), tagNames(q),
-                options, pairs, items, zones, cloze, q.getCategory().getAudience());
+                options, pairs, items, zones, cloze, gridColumns, gridRows,
+                q.getCategory().getAudience());
     }
 
     private List<String> tagNames(Question q) {

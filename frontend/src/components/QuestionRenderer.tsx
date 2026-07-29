@@ -204,6 +204,48 @@ export function QuestionRenderer({
       );
     }
 
+    case "GRID_MATCHING": {
+      const choices: Record<string, string> = answer?.choices ?? {};
+      return (
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr>
+                <th className="border-b border-border p-2 text-left" />
+                {question.gridColumns.map((c) => (
+                  <th
+                    key={c.label}
+                    className="border-b border-border p-2 text-center font-medium"
+                  >
+                    {c.label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {question.gridRows.map((row) => (
+                <tr key={row.id}>
+                  <td className="border-b border-border p-2 font-medium">{row.rowText}</td>
+                  {question.gridColumns.map((c) => (
+                    <td key={c.label} className="border-b border-border p-2 text-center">
+                      <input
+                        type="radio"
+                        name={`grid-${question.quizQuestionId}-${row.id}`}
+                        checked={choices[String(row.id)] === c.label}
+                        onChange={() =>
+                          onChange({ choices: { ...choices, [String(row.id)]: c.label } })
+                        }
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+    }
+
     default:
       return null;
   }

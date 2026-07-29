@@ -39,4 +39,12 @@ public final class QuestionParts {
             int sortOrder,
             boolean caseSensitive) {
     }
+
+    /** Grid Matching: cột dùng chung cho mọi hàng. */
+    public record GridColumn(Long id, String label, int sortOrder) {
+    }
+
+    /** Grid Matching: một hàng — đúng khi khớp correctColumnLabel. */
+    public record GridRow(Long id, String rowText, String correctColumnLabel, int sortOrder) {
+    }
 }

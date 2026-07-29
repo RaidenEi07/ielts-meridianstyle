@@ -2,6 +2,7 @@
 
 import {
   FileText,
+  Grid3x3,
   Link as LinkIcon,
   ListChecks,
   Map,
@@ -22,6 +23,7 @@ const TYPE_ICONS: Record<string, LucideIcon> = {
   DRAG_DROP_TEXT: Puzzle,
   DRAG_DROP_MARKER: Map,
   CLOZE: TextCursorInput,
+  GRID_MATCHING: Grid3x3,
 };
 
 export function QuestionTypePicker({

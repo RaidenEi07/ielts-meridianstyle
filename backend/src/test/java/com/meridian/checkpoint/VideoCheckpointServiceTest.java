@@ -159,7 +159,7 @@ class VideoCheckpointServiceTest {
                 100L, "MULTIPLE_CHOICE", "Capital of France", "What is the capital of France?",
                 1L, "cat", null, null, null, null, null, java.math.BigDecimal.ONE, null,
                 List.of(), options, List.of(), List.of(), List.of(), List.of(),
-                com.meridian.question.Audience.IELTS);
+                List.of(), List.of(), com.meridian.question.Audience.IELTS);
         when(questionService.getQuestion(100L)).thenReturn(dto);
 
         var result = service.getPlayerQuestion(5L);

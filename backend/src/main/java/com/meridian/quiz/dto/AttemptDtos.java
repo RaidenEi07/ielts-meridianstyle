@@ -38,6 +38,14 @@ public final class AttemptDtos {
     public record PlayerClozeSubAnswer(Long id, int subIndex, String subType, JsonNode options) {
     }
 
+    /** Cột dùng chung của câu hỏi Grid Matching. */
+    public record PlayerGridColumn(String label) {
+    }
+
+    /** Một hàng của Grid Matching — KHÔNG kèm cột đúng. */
+    public record PlayerGridRow(Long id, String rowText) {
+    }
+
     /** Câu hỏi cho thí sinh — đã loại bỏ mọi thông tin đáp án. */
     public record PlayerQuestion(
             Long quizQuestionId,
@@ -54,6 +62,8 @@ public final class AttemptDtos {
             List<PlayerDragItem> dragItems,
             List<PlayerDragZone> dragZones,
             List<PlayerClozeSubAnswer> clozeSubAnswers,
+            List<PlayerGridColumn> gridColumns,
+            List<PlayerGridRow> gridRows,
             Audience audience) {
     }
 

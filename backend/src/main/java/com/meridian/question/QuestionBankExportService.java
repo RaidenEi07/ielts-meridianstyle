@@ -258,7 +258,7 @@ public class QuestionBankExportService {
                     passageId, qb.answerParagraphIndex(), detokenize(qb.explanation(), tokenToUrl),
                     qb.defaultMark(), detokenizeSettings(qb.settings(), tokenToUrl), qb.tags(),
                     qb.options(), qb.matchingPairs(), qb.dragItems(), qb.dragZones(),
-                    qb.clozeSubAnswers());
+                    qb.clozeSubAnswers(), null, null);
             try {
                 questionService.createQuestion(userId, req);
                 questionsCreated++;

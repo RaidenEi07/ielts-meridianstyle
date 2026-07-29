@@ -4,6 +4,8 @@ import com.meridian.question.Audience;
 import com.meridian.quiz.dto.AttemptDtos.PlayerClozeSubAnswer;
 import com.meridian.quiz.dto.AttemptDtos.PlayerDragItem;
 import com.meridian.quiz.dto.AttemptDtos.PlayerDragZone;
+import com.meridian.quiz.dto.AttemptDtos.PlayerGridColumn;
+import com.meridian.quiz.dto.AttemptDtos.PlayerGridRow;
 import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingOption;
 import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingPair;
 import com.meridian.quiz.dto.AttemptDtos.PlayerOption;
@@ -27,5 +29,7 @@ public record CheckpointQuestionDto(
         List<PlayerDragItem> dragItems,
         List<PlayerDragZone> dragZones,
         List<PlayerClozeSubAnswer> clozeSubAnswers,
+        List<PlayerGridColumn> gridColumns,
+        List<PlayerGridRow> gridRows,
         Audience audience) {
 }

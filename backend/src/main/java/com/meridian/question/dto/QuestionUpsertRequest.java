@@ -25,5 +25,7 @@ public record QuestionUpsertRequest(
         List<QuestionParts.MatchingPair> matchingPairs,
         List<QuestionParts.DragItem> dragItems,
         List<QuestionParts.DragZone> dragZones,
-        List<QuestionParts.ClozeSubAnswer> clozeSubAnswers) {
+        List<QuestionParts.ClozeSubAnswer> clozeSubAnswers,
+        List<QuestionParts.GridColumn> gridColumns,
+        List<QuestionParts.GridRow> gridRows) {
 }

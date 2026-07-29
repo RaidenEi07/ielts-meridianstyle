@@ -12,5 +12,6 @@ public enum QuestionType {
     ESSAY,
     DRAG_DROP_TEXT,
     DRAG_DROP_MARKER,
-    CLOZE
+    CLOZE,
+    GRID_MATCHING
 }

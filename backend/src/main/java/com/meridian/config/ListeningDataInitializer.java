@@ -109,21 +109,24 @@ public class ListeningDataInitializer implements CommandLineRunner {
                 "Ghi chú: Weekly rent: £ _____",
                 null, null, null, BigDecimal.ONE,
                 json.readTree("{\"acceptedAnswers\":[\"120\",\"£120\"],\"caseSensitive\":false}"),
-                List.of("listening", "note-completion"), null, null, null, null, null));
+                List.of("listening", "note-completion"), null, null, null, null, null,
+                null, null));
 
         var q2 = questionService.createQuestion(uid, new QuestionUpsertRequest(
                 category.id(), "SHORT_ANSWER", "Contract length",
                 "Ghi chú: Minimum contract length: _____ months",
                 null, null, null, BigDecimal.ONE,
                 json.readTree("{\"acceptedAnswers\":[\"6\",\"six\"],\"caseSensitive\":false}"),
-                List.of("listening", "note-completion"), null, null, null, null, null));
+                List.of("listening", "note-completion"), null, null, null, null, null,
+                null, null));
 
         var q3 = questionService.createQuestion(uid, new QuestionUpsertRequest(
                 category.id(), "SHORT_ANSWER", "Included facility",
                 "Ghi chú: Facility included free of charge: _____",
                 null, null, null, BigDecimal.ONE,
                 json.readTree("{\"acceptedAnswers\":[\"wifi\",\"wi-fi\"],\"caseSensitive\":false}"),
-                List.of("listening", "note-completion"), null, null, null, null, null));
+                List.of("listening", "note-completion"), null, null, null, null, null,
+                null, null));
 
         quizService.importQuestions(uid, quiz.quiz().id(), new QuizRequests.ImportQuestions(
                 List.of(q1.id(), q2.id(), q3.id()), page.id(), BigDecimal.ONE));

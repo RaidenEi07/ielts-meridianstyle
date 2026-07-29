@@ -13,6 +13,7 @@ export const QUESTION_TYPES: QuestionTypeMeta[] = [
   { value: "DRAG_DROP_TEXT", label: "Kéo thả văn bản", cls: "bg-primary-soft text-primary" },
   { value: "DRAG_DROP_MARKER", label: "Kéo thả ảnh", cls: "bg-accent-soft text-accent" },
   { value: "CLOZE", label: "Điền khuyết", cls: "bg-green-soft text-green" },
+  { value: "GRID_MATCHING", label: "Trắc nghiệm dạng lưới", cls: "bg-info/15 text-info" },
 ];
 
 export const TYPE_META: Record<string, QuestionTypeMeta> = Object.fromEntries(

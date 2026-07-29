@@ -16,6 +16,8 @@ import com.meridian.quiz.dto.AttemptDtos.LogDto;
 import com.meridian.quiz.dto.AttemptDtos.PlayerClozeSubAnswer;
 import com.meridian.quiz.dto.AttemptDtos.PlayerDragItem;
 import com.meridian.quiz.dto.AttemptDtos.PlayerDragZone;
+import com.meridian.quiz.dto.AttemptDtos.PlayerGridColumn;
+import com.meridian.quiz.dto.AttemptDtos.PlayerGridRow;
 import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingOption;
 import com.meridian.quiz.dto.AttemptDtos.PlayerMatchingPair;
 import com.meridian.quiz.dto.AttemptDtos.PlayerOption;
@@ -386,6 +388,8 @@ public class AttemptService {
                             List<PlayerDragItem> dragItems = List.of();
                             List<PlayerDragZone> dragZones = List.of();
                             List<PlayerClozeSubAnswer> clozeSubAnswers = List.of();
+                            List<PlayerGridColumn> gridColumns = List.of();
+                            List<PlayerGridRow> gridRows = List.of();
                             JsonNode settings = null;
                             switch (q.type()) {
                                 case "MULTIPLE_CHOICE", "TRUE_FALSE_NOT_GIVEN" -> {
@@ -421,13 +425,21 @@ public class AttemptService {
                                         .map(c -> new PlayerClozeSubAnswer(c.id(), c.subIndex(),
                                                 c.subType(), c.options()))
                                         .toList();
+                                case "GRID_MATCHING" -> {
+                                    gridColumns = q.gridColumns().stream()
+                                            .map(c -> new PlayerGridColumn(c.label()))
+                                            .toList();
+                                    gridRows = q.gridRows().stream()
+                                            .map(r -> new PlayerGridRow(r.id(), r.rowText()))
+                                            .toList();
+                                }
                                 default -> {
                                 }
                             }
                             return new PlayerQuestion(qq.getId(), qq.getQuestionId(), q.type(),
                                     q.name(), q.stem(), qq.getMark(), qq.getPageId(), settings,
                                     options, matchingPairs, matchingRightPool, dragItems,
-                                    dragZones, clozeSubAnswers, q.audience());
+                                    dragZones, clozeSubAnswers, gridColumns, gridRows, q.audience());
                         }).toList();
 
         List<PagePlayer> pages = pageRepository.findByQuizIdOrderByPageNumberAsc(quiz.getId())

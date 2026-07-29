@@ -104,7 +104,7 @@ public class QuestionTextImportService {
 
         QuestionUpsertRequest req = new QuestionUpsertRequest(
                 categoryId, "MULTIPLE_CHOICE", name, stem, null, null, null,
-                BigDecimal.ONE, null, List.of(), options, null, null, null, null);
+                BigDecimal.ONE, null, List.of(), options, null, null, null, null, null, null);
         questionService.createQuestion(userId, req);
     }
 

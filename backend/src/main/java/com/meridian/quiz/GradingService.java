@@ -41,6 +41,7 @@ public class GradingService {
             case "MATCHING" -> GradeResult.of(gradeMatching(q, response));
             case "CLOZE" -> GradeResult.of(gradeCloze(q, response));
             case "DRAG_DROP_TEXT", "DRAG_DROP_MARKER" -> GradeResult.of(gradeDrag(q, response));
+            case "GRID_MATCHING" -> GradeResult.of(gradeGrid(q, response));
             case "ESSAY" -> GradeResult.manual();
             default -> GradeResult.manual();
         };
@@ -115,6 +116,16 @@ public class GradingService {
         for (QuestionParts.DragItem d : q.dragItems()) {
             String chosen = placements.path(String.valueOf(d.id())).asString("");
             if (!stringEquals(chosen, d.correctTarget(), false)) return false;
+        }
+        return true;
+    }
+
+    private boolean gradeGrid(QuestionDetailDto q, JsonNode r) {
+        JsonNode choices = r == null ? null : r.get("choices");
+        if (choices == null || q.gridRows().isEmpty()) return false;
+        for (QuestionParts.GridRow row : q.gridRows()) {
+            String chosen = choices.path(String.valueOf(row.id())).asString("");
+            if (!stringEquals(chosen, row.correctColumnLabel(), false)) return false;
         }
         return true;
     }

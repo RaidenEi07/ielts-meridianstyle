@@ -197,7 +197,8 @@ public class CourseImportService {
                 QuestionUpsertRequest req = new QuestionUpsertRequest(
                         categoryId, qb.type(), qb.name(), qb.stem(), passageId, qb.answerParagraphIndex(),
                         qb.explanation(), qb.defaultMark(), qb.settings(), qb.tags(), qb.options(),
-                        qb.matchingPairs(), qb.dragItems(), qb.dragZones(), qb.clozeSubAnswers());
+                        qb.matchingPairs(), qb.dragItems(), qb.dragZones(), qb.clozeSubAnswers(),
+                        null, null);
                 QuestionDetailDto created = questionService.createQuestion(actorId, req);
                 questionIdByRef.put(qb.refId(), created.id());
                 questionsCreated++;

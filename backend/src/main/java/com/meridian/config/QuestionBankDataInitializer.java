@@ -134,7 +134,8 @@ public class QuestionBankDataInitializer implements CommandLineRunner {
                                 readJson("[\"Paris\"]"), null, 0, false),
                         new QuestionParts.ClozeSubAnswer(null, 2, "SELECT",
                                 readJson("[\"a city\"]"),
-                                readJson("[\"a city\",\"a river\"]"), 1, false))));
+                                readJson("[\"a city\",\"a river\"]"), 1, false)),
+                null, null));
 
         log.info("Đã seed {} câu hỏi mẫu (8 loại)", questionRepository.count());
     }
@@ -147,14 +148,15 @@ public class QuestionBankDataInitializer implements CommandLineRunner {
             List<QuestionParts.DragItem> items, List<QuestionParts.DragZone> zones,
             List<QuestionParts.ClozeSubAnswer> cloze) {
         return new QuestionUpsertRequest(catId, type, name, stem, passageId, null, null,
-                BigDecimal.ONE, settings, tags, options, pairs, items, zones, cloze);
+                BigDecimal.ONE, settings, tags, options, pairs, items, zones, cloze, null, null);
     }
 
     private QuestionUpsertRequest qDrag(Long catId, String type, String name,
             JsonNode settings, List<QuestionParts.DragItem> items,
             List<QuestionParts.DragZone> zones) {
         return new QuestionUpsertRequest(catId, type, name, null, null, null, null,
-                BigDecimal.ONE, settings, List.of("drag-drop"), null, null, items, zones, null);
+                BigDecimal.ONE, settings, List.of("drag-drop"), null, null, items, zones, null,
+                null, null);
     }
 
     private QuestionParts.Option opt(String content, boolean correct) {

@@ -22,6 +22,8 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
     dragItems: [],
     dragZones: [],
     clozeSubAnswers: [],
+    gridColumns: [],
+    gridRows: [],
     audience: q.audience,
   };
 
@@ -68,6 +70,10 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
         subType: c.subType,
         options: c.options,
       }));
+      break;
+    case "GRID_MATCHING":
+      base.gridColumns = q.gridColumns.map((c) => ({ label: c.label }));
+      base.gridRows = q.gridRows.map((r) => ({ id: r.id ?? 0, rowText: r.rowText }));
       break;
     default:
       break;

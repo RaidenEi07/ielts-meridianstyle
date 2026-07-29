@@ -122,6 +122,8 @@ export interface CheckpointQuestion {
   dragItems: PlayerDragItem[];
   dragZones: PlayerDragZone[];
   clozeSubAnswers: PlayerClozeSubAnswer[];
+  gridColumns: PlayerGridColumn[];
+  gridRows: PlayerGridRow[];
   audience: Audience | null;
 }
 
@@ -210,6 +212,19 @@ export interface QuestionClozeSubAnswer {
   caseSensitive: boolean;
 }
 
+export interface QuestionGridColumn {
+  id: number | null;
+  label: string;
+  sortOrder: number;
+}
+
+export interface QuestionGridRow {
+  id: number | null;
+  rowText: string;
+  correctColumnLabel: string;
+  sortOrder: number;
+}
+
 export interface QuestionDetail {
   id: number;
   type: string;
@@ -231,6 +246,8 @@ export interface QuestionDetail {
   dragItems: QuestionDragItem[];
   dragZones: QuestionDragZone[];
   clozeSubAnswers: QuestionClozeSubAnswer[];
+  gridColumns: QuestionGridColumn[];
+  gridRows: QuestionGridRow[];
   audience: Audience | null;
 }
 
@@ -251,6 +268,8 @@ export interface QuestionUpsertRequest {
   dragItems?: QuestionDragItem[];
   dragZones?: QuestionDragZone[];
   clozeSubAnswers?: QuestionClozeSubAnswer[];
+  gridColumns?: QuestionGridColumn[];
+  gridRows?: QuestionGridRow[];
 }
 
 export interface QuestionTag {
@@ -350,6 +369,15 @@ export interface PlayerClozeSubAnswer {
   options: any;
 }
 
+export interface PlayerGridColumn {
+  label: string;
+}
+
+export interface PlayerGridRow {
+  id: number;
+  rowText: string;
+}
+
 export interface PlayerQuestion {
   quizQuestionId: number;
   questionId: number;
@@ -366,6 +394,8 @@ export interface PlayerQuestion {
   dragItems: PlayerDragItem[];
   dragZones: PlayerDragZone[];
   clozeSubAnswers: PlayerClozeSubAnswer[];
+  gridColumns: PlayerGridColumn[];
+  gridRows: PlayerGridRow[];
   audience: Audience | null;
 }
 

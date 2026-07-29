@@ -29,6 +29,8 @@ function toPlayerQuestion(q: CheckpointQuestion): PlayerQuestion {
     dragItems: q.dragItems,
     dragZones: q.dragZones,
     clozeSubAnswers: q.clozeSubAnswers,
+    gridColumns: q.gridColumns,
+    gridRows: q.gridRows,
     audience: q.audience,
   };
 }

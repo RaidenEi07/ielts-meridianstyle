@@ -14,6 +14,8 @@ import type {
   QuestionDetail,
   QuestionDragItem,
   QuestionDragZone,
+  QuestionGridColumn,
+  QuestionGridRow,
   QuestionMatchingPair,
   QuestionOption,
   QuestionTag,
@@ -22,6 +24,7 @@ import { ClozeForm } from "./forms/ClozeForm";
 import { DragDropMarkerForm } from "./forms/DragDropMarkerForm";
 import { DragDropTextForm } from "./forms/DragDropTextForm";
 import { EssayForm } from "./forms/EssayForm";
+import { GridMatchingForm } from "./forms/GridMatchingForm";
 import { MatchingForm } from "./forms/MatchingForm";
 import { OptionListForm } from "./forms/OptionListForm";
 import { ShortAnswerForm } from "./forms/ShortAnswerForm";
@@ -117,6 +120,10 @@ export function QuestionForm({
   const [clozeSubAnswers, setClozeSubAnswers] = useState<QuestionClozeSubAnswer[]>(
     initial?.clozeSubAnswers ?? [],
   );
+  const [gridColumns, setGridColumns] = useState<QuestionGridColumn[]>(
+    initial?.gridColumns ?? [],
+  );
+  const [gridRows, setGridRows] = useState<QuestionGridRow[]>(initial?.gridRows ?? []);
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -177,6 +184,8 @@ export function QuestionForm({
             : undefined,
         dragZones: type === "DRAG_DROP_MARKER" ? withSortOrder(dragZones) : undefined,
         clozeSubAnswers: type === "CLOZE" ? withSortOrder(clozeSubAnswers) : undefined,
+        gridColumns: type === "GRID_MATCHING" ? withSortOrder(gridColumns) : undefined,
+        gridRows: type === "GRID_MATCHING" ? withSortOrder(gridRows) : undefined,
       };
       const saved =
         mode === "create"
@@ -430,6 +439,14 @@ export function QuestionForm({
             />
           )}
           {type === "CLOZE" && <ClozeForm value={clozeSubAnswers} onChange={setClozeSubAnswers} />}
+          {type === "GRID_MATCHING" && (
+            <GridMatchingForm
+              columns={gridColumns}
+              onColumnsChange={setGridColumns}
+              rows={gridRows}
+              onRowsChange={setGridRows}
+            />
+          )}
         </section>
 
         {error && <p className="text-sm text-red">{error}</p>}

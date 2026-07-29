@@ -38,9 +38,16 @@ class GradingServiceTest {
     private QuestionDetailDto dto(String type, JsonNode settings,
             List<QuestionParts.Option> options, List<QuestionParts.MatchingPair> pairs,
             List<QuestionParts.DragItem> items, List<QuestionParts.ClozeSubAnswer> cloze) {
+        return dto(type, settings, options, pairs, items, cloze, List.of());
+    }
+
+    private QuestionDetailDto dto(String type, JsonNode settings,
+            List<QuestionParts.Option> options, List<QuestionParts.MatchingPair> pairs,
+            List<QuestionParts.DragItem> items, List<QuestionParts.ClozeSubAnswer> cloze,
+            List<QuestionParts.GridRow> gridRows) {
         return new QuestionDetailDto(QID, type, "Q", "stem", 1L, "cat", null, null, null, null,
                 null, BigDecimal.ONE, settings, List.of(), options, pairs, items, List.of(), cloze,
-                null);
+                List.of(), gridRows, null);
     }
 
     @Test
@@ -152,6 +159,22 @@ class GradingServiceTest {
 
         assertThat(right.correct()).isTrue();
         assertThat(wrong.correct()).isFalse();
+    }
+
+    @Test
+    void gridMatchingRequiresAllRowsCorrect() {
+        var rows = List.of(
+                new QuestionParts.GridRow(1L, "Cat", "A", 0),
+                new QuestionParts.GridRow(2L, "Dog", "B", 1));
+        stub(dto("GRID_MATCHING", null, null, null, null, null, rows));
+
+        var allCorrect = gradingService.grade(QID,
+                json.readTree("{\"choices\":{\"1\":\"A\",\"2\":\"B\"}}"));
+        var oneWrong = gradingService.grade(QID,
+                json.readTree("{\"choices\":{\"1\":\"B\",\"2\":\"B\"}}"));
+
+        assertThat(allCorrect.correct()).isTrue();
+        assertThat(oneWrong.correct()).isFalse();
     }
 
     @Test
