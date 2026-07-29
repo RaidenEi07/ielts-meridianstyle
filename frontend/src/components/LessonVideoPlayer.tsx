@@ -22,6 +22,7 @@ function toPlayerQuestion(q: CheckpointQuestion): PlayerQuestion {
     stem: q.stem,
     mark: 0,
     pageId: null,
+    passageId: null,
     settings: q.settings,
     options: q.options,
     matchingPairs: q.matchingPairs,

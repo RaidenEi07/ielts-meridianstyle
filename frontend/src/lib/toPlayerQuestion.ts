@@ -15,6 +15,7 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
     stem: q.stem,
     mark: q.defaultMark,
     pageId: null,
+    passageId: q.passageId,
     settings: null,
     options: [],
     matchingPairs: [],

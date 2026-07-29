@@ -55,6 +55,7 @@ public final class AttemptDtos {
             String stem,
             BigDecimal mark,
             Long pageId,
+            Long passageId,
             JsonNode settings,
             List<PlayerOption> options,
             List<PlayerMatchingPair> matchingPairs,

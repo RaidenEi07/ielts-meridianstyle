@@ -386,6 +386,7 @@ export interface PlayerQuestion {
   stem: string | null;
   mark: number;
   pageId: number | null;
+  passageId: number | null;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   settings: any;
   options: PlayerOption[];

@@ -437,8 +437,8 @@ public class AttemptService {
                                 }
                             }
                             return new PlayerQuestion(qq.getId(), qq.getQuestionId(), q.type(),
-                                    q.name(), q.stem(), qq.getMark(), qq.getPageId(), settings,
-                                    options, matchingPairs, matchingRightPool, dragItems,
+                                    q.name(), q.stem(), qq.getMark(), qq.getPageId(), q.passageId(),
+                                    settings, options, matchingPairs, matchingRightPool, dragItems,
                                     dragZones, clozeSubAnswers, gridColumns, gridRows, q.audience());
                         }).toList();
 

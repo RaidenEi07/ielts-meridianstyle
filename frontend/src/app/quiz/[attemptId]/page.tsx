@@ -22,9 +22,11 @@ import {
   X,
   XCircle,
 } from "lucide-react";
+import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
 import { KidsMatchingGame } from "@/components/kids/KidsMatchingGame";
+import { PassageDragChip, PassageDropBlank } from "@/components/PassageDragBlank";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
 import { quizApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
@@ -1051,7 +1053,47 @@ function ReadingSplitPane({
   const questionsChoice = questionsSel.stage.kind === "choice" ? questionsSel.stage : null;
   const questionsCompose = questionsSel.stage.kind === "compose" ? questionsSel.stage : null;
 
+  // Kéo-thả vào đoạn văn (Matching Heading): 1 câu DRAG_DROP_TEXT có passageId
+  // trùng đoạn văn đang hiện -> marker [[n]] nằm ngay trong passageContent thay
+  // vì trong settings.template riêng của câu hỏi. Xem Lát 17.
+  const embeddedQuestion = useMemo(
+    () =>
+      questions.find(
+        (q) => q.type === "DRAG_DROP_TEXT" && page.passageId != null && q.passageId === page.passageId,
+      ) ?? null,
+    [questions, page.passageId],
+  );
+  const embeddedPlacements: Record<string, string> = embeddedQuestion
+    ? (answers[embeddedQuestion.quizQuestionId]?.placements ?? {})
+    : {};
+  const embeddedUsedItemIds = new Set(Object.keys(embeddedPlacements));
+
+  function clearEmbeddedBlank(targetLabel: string) {
+    if (!embeddedQuestion) return;
+    const next = { ...embeddedPlacements };
+    Object.keys(next).forEach((id) => {
+      if (next[id] === targetLabel) delete next[id];
+    });
+    onAnswer(embeddedQuestion, { placements: next });
+  }
+
+  function handleEmbeddedDragEnd(event: DragEndEvent) {
+    if (!embeddedQuestion) return;
+    const { active, over } = event;
+    if (!over) return;
+    const itemId = active.data.current?.itemId as string | undefined;
+    if (!itemId) return;
+    const targetLabel = String(over.id).replace("passage-blank-", "");
+    const next = { ...embeddedPlacements };
+    Object.keys(next).forEach((id) => {
+      if (next[id] === targetLabel) delete next[id];
+    });
+    next[itemId] = targetLabel;
+    onAnswer(embeddedQuestion, { placements: next });
+  }
+
   return (
+    <DndContext onDragEnd={handleEmbeddedDragEnd}>
     <div>
       <div className="border-b border-border px-6 py-2 text-sm font-medium"
         style={{ background: "#F1EADF", color: "#26211b" }}>
@@ -1066,11 +1108,34 @@ function ReadingSplitPane({
             </span>
             <span className="text-xs text-muted">Bôi đen văn bản để highlight hoặc ghi chú</span>
           </div>
-          <div ref={passageRef} onMouseUp={passageSel.handleMouseUp} className="select-text px-6 py-4">
-            <div ref={passageContentRef} data-highlightable="true"
-              className="prose prose-sm dark:prose-invert max-w-none"
-              style={{ fontFamily: "var(--font-serif)", fontSize: "15.5px", lineHeight: 1.85 }}
-            />
+          <div ref={passageRef} onMouseUp={passageSel.handleMouseUp} className="select-text px-6 py-4"
+            style={{ fontFamily: "var(--font-serif)", fontSize: "15.5px", lineHeight: 1.85 }}>
+            {embeddedQuestion ? (
+              <HtmlWithBlanks
+                html={page.passageContent ?? ""}
+                markerPattern={/\[\[(\d+)\]\]/g}
+                className="prose prose-sm dark:prose-invert max-w-none"
+                renderBlank={(targetLabel) => {
+                  const itemId = Object.keys(embeddedPlacements).find(
+                    (id) => embeddedPlacements[id] === targetLabel,
+                  );
+                  const filledItem = itemId
+                    ? (embeddedQuestion.dragItems.find((d) => String(d.id) === itemId) ?? null)
+                    : null;
+                  return (
+                    <PassageDropBlank
+                      targetLabel={targetLabel}
+                      filledItem={filledItem}
+                      onClear={() => clearEmbeddedBlank(targetLabel)}
+                    />
+                  );
+                }}
+              />
+            ) : (
+              <div ref={passageContentRef} data-highlightable="true"
+                className="prose prose-sm dark:prose-invert max-w-none"
+              />
+            )}
           </div>
           <SelectionMenu state={passageChoice} onHighlight={passageSel.applyHighlight}
             onNote={passageSel.openNoteCompose} onClose={passageSel.closeMenu} />
@@ -1089,13 +1154,21 @@ function ReadingSplitPane({
         <div ref={questionsRef} onMouseUp={questionsSel.handleMouseUp}
           className="relative flex-1 select-text overflow-y-auto px-6 py-4" style={{ width: `${100 - leftPct}%` }}>
           <div className="space-y-4">
-            {questions.map((q) => (
-              <QuestionCard key={q.quizQuestionId} index={cardLabel(q, order)}
-                question={q} answer={answers[q.quizQuestionId]} flagged={flagged.has(q.quizQuestionId)}
-                order={order}
-                focused={isFocusedQuestion(focusedId, q.quizQuestionId)}
-                onChange={(r) => onAnswer(q, r)} onFlag={() => onFlag(q.quizQuestionId)} />
-            ))}
+            {questions.map((q) =>
+              q === embeddedQuestion ? (
+                <EmbeddedDragPoolCard key={q.quizQuestionId} index={cardLabel(q, order)}
+                  question={q} usedItemIds={embeddedUsedItemIds}
+                  flagged={flagged.has(q.quizQuestionId)}
+                  focused={isFocusedQuestion(focusedId, q.quizQuestionId)}
+                  onFlag={() => onFlag(q.quizQuestionId)} />
+              ) : (
+                <QuestionCard key={q.quizQuestionId} index={cardLabel(q, order)}
+                  question={q} answer={answers[q.quizQuestionId]} flagged={flagged.has(q.quizQuestionId)}
+                  order={order}
+                  focused={isFocusedQuestion(focusedId, q.quizQuestionId)}
+                  onChange={(r) => onAnswer(q, r)} onFlag={() => onFlag(q.quizQuestionId)} />
+              ),
+            )}
           </div>
           <SelectionMenu state={questionsChoice} onHighlight={questionsSel.applyHighlight}
             onNote={questionsSel.openNoteCompose} onClose={questionsSel.closeMenu} />
@@ -1104,6 +1177,7 @@ function ReadingSplitPane({
         </div>
       </div>
     </div>
+    </DndContext>
   );
 }
 
@@ -1371,6 +1445,46 @@ function QuestionCard({
         ) : (
           <QuestionRenderer question={question} answer={answer} onChange={onChange} blankOrder={order} />
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Pool các mục kéo-thả cho câu DRAG_DROP_TEXT nhúng vào đoạn văn (Lát 17) — ô
+ * trống thật sự nằm bên đoạn văn cột trái, thẻ này chỉ hiện các mục chưa dùng. */
+function EmbeddedDragPoolCard({
+  index, question, usedItemIds, flagged, focused, onFlag,
+}: {
+  index: number | string;
+  question: PlayerQuestion;
+  usedItemIds: Set<string>;
+  flagged: boolean;
+  focused?: boolean;
+  onFlag: () => void;
+}) {
+  return (
+    <div id={`q-${question.quizQuestionId}`}
+      className={`rounded-card border bg-surface p-4 transition-colors ${
+        focused ? "border-primary ring-2 ring-primary/30" : "border-border"
+      }`}>
+      <div className="mb-3 flex items-start gap-3">
+        <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold text-primary" style={{ minWidth: "1.75rem" }}>
+          {index}
+        </span>
+        <p className="flex-1 text-sm text-muted">
+          Kéo các mục bên dưới thả vào chỗ trống trong đoạn văn bên trái.
+        </p>
+        <button type="button" onClick={onFlag} title="Đánh dấu"
+          className={flagged ? "text-accent" : "text-faint hover:text-accent"}>
+          <Flag className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="flex flex-wrap gap-3 pl-10">
+        {question.dragItems
+          .filter((item) => !usedItemIds.has(String(item.id)))
+          .map((item) => (
+            <PassageDragChip key={item.id} item={item} />
+          ))}
       </div>
     </div>
   );
