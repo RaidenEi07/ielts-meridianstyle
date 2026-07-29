@@ -56,6 +56,7 @@ export default function AdminCourseDetailPage() {
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sectionSearch, setSectionSearch] = useState("");
+  const [quizRefreshTick, setQuizRefreshTick] = useState(0);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -71,11 +72,13 @@ export default function AdminCourseDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, accessToken]);
 
-  const refresh = () =>
-    catalogApi
+  const refresh = () => {
+    setQuizRefreshTick((t) => t + 1);
+    return catalogApi
       .course(courseId)
       .then(setCourse)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Không tải được khóa học"));
+  };
 
   useEffect(() => {
     if (!allowed) return;
@@ -167,7 +170,18 @@ export default function AdminCourseDetailPage() {
           ) : (
             <>
               <CourseEditForm course={course} token={token} onSaved={refresh} />
-              <SectionsPanel course={course} token={token} onChanged={refresh} />
+              <CourseQuizzesPanel
+                course={course}
+                token={token}
+                refreshTick={quizRefreshTick}
+                onChanged={refresh}
+              />
+              <SectionsPanel
+                course={course}
+                token={token}
+                quizRefreshTick={quizRefreshTick}
+                onChanged={refresh}
+              />
             </>
           )}
         </main>
@@ -502,13 +516,217 @@ function DistributeCourseButton({ courseId, token }: { courseId: number; token: 
   );
 }
 
-function SectionsPanel({
+interface QuizWithSection {
+  quiz: QuizSummary;
+  sectionTitle: string;
+}
+
+function CourseQuizzesPanel({
   course,
   token,
+  refreshTick,
   onChanged,
 }: {
   course: CourseDetail;
   token: string;
+  refreshTick: number;
+  onChanged: () => void;
+}) {
+  const [quizGroups, setQuizGroups] = useState<QuizWithSection[] | null>(null);
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
+  const [showBulkRename, setShowBulkRename] = useState(false);
+  const confirm = useConfirm();
+  const toast = useToast();
+
+  function loadQuizzes() {
+    Promise.all(
+      course.sections.map((s) =>
+        quizAdminApi
+          .listBySection(token, s.id)
+          .then((quizzes) => quizzes.map((quiz) => ({ quiz, sectionTitle: s.title }))),
+      ),
+    )
+      .then((groups) => setQuizGroups(groups.flat()))
+      .catch(() => setQuizGroups([]));
+  }
+
+  useEffect(() => {
+    loadQuizzes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [course.sections.map((s) => s.id).join(","), refreshTick]);
+
+  if (!quizGroups || quizGroups.length === 0) return null;
+
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) =>
+      prev.size === quizGroups!.length ? new Set() : new Set(quizGroups!.map((g) => g.quiz.id)),
+    );
+  }
+
+  async function bulkPublish() {
+    const targets = quizGroups!.filter((g) => selected.has(g.quiz.id) && g.quiz.status === "DRAFT");
+    if (targets.length === 0) {
+      toast.error("Không có quiz Bản nháp nào trong số đã chọn để xuất bản");
+      return;
+    }
+    setBulkWorking(true);
+    try {
+      await Promise.all(
+        targets.map((g) => quizAdminApi.update(token, g.quiz.id, { status: "PUBLISHED" })),
+      );
+      setSelected(new Set());
+      loadQuizzes();
+      onChanged();
+      toast.success(`Đã xuất bản ${targets.length} quiz`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Xuất bản hàng loạt thất bại");
+    } finally {
+      setBulkWorking(false);
+    }
+  }
+
+  async function bulkDelete() {
+    if (selected.size === 0) return;
+    if (!(await confirm(`Xóa ${selected.size} quiz đã chọn? Hành động này không thể hoàn tác.`))) {
+      return;
+    }
+    setBulkWorking(true);
+    try {
+      const count = selected.size;
+      await Promise.all([...selected].map((id) => quizAdminApi.remove(token, id)));
+      setSelected(new Set());
+      loadQuizzes();
+      onChanged();
+      toast.success(`Đã xóa ${count} quiz`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Xóa hàng loạt thất bại");
+    } finally {
+      setBulkWorking(false);
+    }
+  }
+
+  async function applyBulkRename(renames: { id: number; name: string }[]) {
+    const count = renames.length;
+    await Promise.all(renames.map((r) => quizAdminApi.update(token, r.id, { title: r.name })));
+    setSelected(new Set());
+    setShowBulkRename(false);
+    loadQuizzes();
+    onChanged();
+    toast.success(`Đã đổi tên ${count} quiz`);
+  }
+
+  return (
+    <section className="rounded-card border border-border bg-surface p-6">
+      <div className="mb-4 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Quiz toàn khóa ({quizGroups.length})</h2>
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={selected.size === quizGroups.length}
+            onChange={toggleSelectAll}
+          />
+          Chọn tất cả
+        </label>
+      </div>
+
+      {selected.size > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-primary-soft p-3 text-sm">
+          <span className="font-medium text-primary">{selected.size} quiz đã chọn</span>
+          <button
+            type="button"
+            onClick={bulkPublish}
+            disabled={bulkWorking}
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-text disabled:opacity-60"
+          >
+            Publish hàng loạt
+          </button>
+          <button
+            type="button"
+            onClick={() => setShowBulkRename(true)}
+            disabled={bulkWorking}
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-text disabled:opacity-60"
+          >
+            Đổi tên hàng loạt
+          </button>
+          <button
+            type="button"
+            onClick={bulkDelete}
+            disabled={bulkWorking}
+            className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            Xóa ({selected.size})
+          </button>
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-lg border border-border">
+        <table className="w-full text-left text-sm">
+          <thead className="bg-soft text-muted">
+            <tr>
+              <th className="w-8 px-3 py-2" />
+              <th className="px-3 py-2 font-medium">Tên quiz</th>
+              <th className="px-3 py-2 font-medium">Section</th>
+              <th className="px-3 py-2 font-medium">Trạng thái</th>
+            </tr>
+          </thead>
+          <tbody>
+            {quizGroups.map(({ quiz, sectionTitle }) => {
+              const meta = STATUS_META[quiz.status] ?? { label: quiz.status, cls: "bg-soft text-muted" };
+              return (
+                <tr key={quiz.id} className="border-t border-border">
+                  <td className="px-3 py-2">
+                    <input
+                      type="checkbox"
+                      checked={selected.has(quiz.id)}
+                      onChange={() => toggleSelected(quiz.id)}
+                    />
+                  </td>
+                  <td className="px-3 py-2 font-medium">{quiz.title}</td>
+                  <td className="px-3 py-2 text-muted">{sectionTitle}</td>
+                  <td className="px-3 py-2">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${meta.cls}`}>
+                      {meta.label}
+                    </span>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {showBulkRename && (
+        <BulkRenameDialog
+          items={quizGroups
+            .filter((g) => selected.has(g.quiz.id))
+            .map((g) => ({ id: g.quiz.id, label: g.quiz.title }))}
+          onApply={applyBulkRename}
+          onClose={() => setShowBulkRename(false)}
+        />
+      )}
+    </section>
+  );
+}
+
+function SectionsPanel({
+  course,
+  token,
+  quizRefreshTick,
+  onChanged,
+}: {
+  course: CourseDetail;
+  token: string;
+  quizRefreshTick: number;
   onChanged: () => void;
 }) {
   const [newTitle, setNewTitle] = useState("");
@@ -689,6 +907,7 @@ function SectionsPanel({
                         section={s}
                         audienceGroup={course.audienceGroup}
                         token={token}
+                        quizRefreshTick={quizRefreshTick}
                         onRemove={() => removeSection(s.id)}
                         onChanged={onChanged}
                       />
@@ -718,12 +937,14 @@ function SectionCard({
   section,
   audienceGroup,
   token,
+  quizRefreshTick,
   onRemove,
   onChanged,
 }: {
   section: Section;
   audienceGroup: CourseAudienceGroup;
   token: string;
+  quizRefreshTick: number;
   onRemove: () => void;
   onChanged: () => void;
 }) {
@@ -743,7 +964,7 @@ function SectionCard({
   useEffect(() => {
     loadQuizzes();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [section.id]);
+  }, [section.id, quizRefreshTick]);
 
   async function createQuiz(e: React.FormEvent) {
     e.preventDefault();
@@ -754,6 +975,7 @@ function SectionCard({
       setTitle("");
       setCreating(false);
       loadQuizzes();
+      onChanged();
       toast.success("Đã tạo quiz");
     } catch (err) {
       const msg = err instanceof ApiError ? err.message : "Tạo quiz thất bại";
