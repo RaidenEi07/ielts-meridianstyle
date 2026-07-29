@@ -9,6 +9,7 @@ import { ApiError, catalogAdminApi, catalogApi } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import type { Category, CourseAudienceGroup, CourseSummary } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
+import { useToast } from "@/store/toast";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   DRAFT: { label: "Bản nháp", cls: "bg-soft text-muted" },
@@ -169,6 +170,7 @@ function CategoryPanel({
   const [examTemplateCode, setExamTemplateCode] = useState("");
   const [audienceGroup, setAudienceGroup] = useState<CourseAudienceGroup>("IELTS");
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -186,8 +188,11 @@ function CategoryPanel({
       setAudienceGroup("IELTS");
       setCreating(false);
       onChanged();
+      toast.success("Đã tạo danh mục");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tạo danh mục thất bại");
+      const msg = err instanceof ApiError ? err.message : "Tạo danh mục thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -317,6 +322,7 @@ function CreateCourseForm({
   const [price, setPrice] = useState("");
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (defaultCategoryId != null) setCategoryId(defaultCategoryId);
@@ -346,8 +352,11 @@ function CreateCourseForm({
       setCoverImageUrl(null);
       setOpen(false);
       onCreated();
+      toast.success("Đã tạo khóa học (bản nháp)");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tạo khóa học thất bại");
+      const msg = err instanceof ApiError ? err.message : "Tạo khóa học thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 

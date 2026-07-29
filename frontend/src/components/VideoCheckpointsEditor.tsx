@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { ApiError, checkpointApi, questionBankApi } from "@/lib/api";
 import type { Audience, QuestionSummary } from "@/lib/types";
+import { useToast } from "@/store/toast";
 
 function secondsToClock(sec: number): string {
   const m = Math.floor(sec / 60);
@@ -46,6 +47,7 @@ export function VideoCheckpointsEditor({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const toast = useToast();
 
   useEffect(() => {
     checkpointApi
@@ -83,7 +85,9 @@ export function VideoCheckpointsEditor({
     for (const row of draft) {
       const sec = clockToSeconds(row.clock);
       if (sec === null || !row.questionId) {
-        setError("Mỗi checkpoint cần mốc thời gian hợp lệ (vd 1:05) và 1 câu hỏi đã chọn.");
+        const msg = "Mỗi checkpoint cần mốc thời gian hợp lệ (vd 1:05) và 1 câu hỏi đã chọn.";
+        setError(msg);
+        toast.error(msg);
         return;
       }
       items.push({ timestampSec: sec, questionId: row.questionId, sortOrder: items.length });
@@ -92,8 +96,11 @@ export function VideoCheckpointsEditor({
     try {
       await checkpointApi.replaceForSection(token, sectionId, items);
       setSaved(true);
+      toast.success("Đã lưu checkpoint");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lưu checkpoint thất bại");
+      const msg = err instanceof ApiError ? err.message : "Lưu checkpoint thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

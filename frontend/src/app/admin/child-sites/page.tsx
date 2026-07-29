@@ -8,6 +8,7 @@ import { ApiError, childSiteAdminApi } from "@/lib/api";
 import type { ChildSite } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
+import { useToast } from "@/store/toast";
 
 export default function ChildSitesPage() {
   const router = useRouter();
@@ -21,6 +22,7 @@ export default function ChildSitesPage() {
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const confirm = useConfirm();
+  const toast = useToast();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -51,8 +53,11 @@ export default function ChildSitesPage() {
     try {
       await childSiteAdminApi.update(token, site.id, { active: !site.active });
       refresh();
+      toast.success(site.active ? "Đã tạm dừng web con" : "Đã kích hoạt web con");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Đổi trạng thái thất bại");
+      const msg = err instanceof ApiError ? err.message : "Đổi trạng thái thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -62,16 +67,20 @@ export default function ChildSitesPage() {
     try {
       await childSiteAdminApi.remove(token, site.id);
       refresh();
+      toast.success("Đã xóa web con");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
   async function copyKey(apiKey: string) {
     try {
       await navigator.clipboard.writeText(apiKey);
+      toast.success("Đã sao chép API key");
     } catch {
-      /* trình duyệt không hỗ trợ clipboard — bỏ qua, người dùng tự chọn text */
+      toast.error("Sao chép thất bại — trình duyệt không hỗ trợ clipboard");
     }
   }
 
@@ -231,6 +240,7 @@ function CreateChildSiteForm({
   const [baseUrl, setBaseUrl] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -239,8 +249,11 @@ function CreateChildSiteForm({
     try {
       await childSiteAdminApi.create(token, { name, baseUrl });
       onCreated();
+      toast.success("Đã thêm web con");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Thêm web con thất bại");
+      const msg = err instanceof ApiError ? err.message : "Thêm web con thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -304,6 +317,7 @@ function EditChildSiteRow({
   const [baseUrl, setBaseUrl] = useState(site.baseUrl);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function save() {
     setSaving(true);
@@ -311,8 +325,11 @@ function EditChildSiteRow({
     try {
       await childSiteAdminApi.update(token, site.id, { name, baseUrl });
       onDone();
+      toast.success("Đã lưu web con");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lưu thất bại");
+      const msg = err instanceof ApiError ? err.message : "Lưu thất bại";
+      setError(msg);
+      toast.error(msg);
       setSaving(false);
     }
   }

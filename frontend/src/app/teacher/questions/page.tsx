@@ -19,6 +19,7 @@ import type {
 } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
+import { useToast } from "@/store/toast";
 import { PreviewModal } from "./PreviewModal";
 
 export default function QuestionBankPage() {
@@ -43,6 +44,7 @@ export default function QuestionBankPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const confirm = useConfirm();
+  const toast = useToast();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -102,11 +104,15 @@ export default function QuestionBankPage() {
     setError(null);
     setBulkWorking(true);
     try {
+      const count = selected.size;
       await questionBankApi.bulkDeleteQuestions(accessToken, [...selected]);
       setSelected(new Set());
       refresh();
+      toast.success(`Đã xóa ${count} câu hỏi`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa hàng loạt thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa hàng loạt thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBulkWorking(false);
     }
@@ -117,11 +123,15 @@ export default function QuestionBankPage() {
     setError(null);
     setBulkWorking(true);
     try {
+      const count = selected.size;
       await questionBankApi.bulkDuplicateQuestions(accessToken, [...selected]);
       setSelected(new Set());
       refresh();
+      toast.success(`Đã nhân đôi ${count} câu hỏi`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Nhân đôi hàng loạt thất bại");
+      const msg = err instanceof ApiError ? err.message : "Nhân đôi hàng loạt thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBulkWorking(false);
     }
@@ -145,8 +155,11 @@ export default function QuestionBankPage() {
     try {
       await questionBankApi.deleteQuestion(accessToken, id);
       refresh();
+      toast.success("Đã xóa câu hỏi");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa câu hỏi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -156,8 +169,11 @@ export default function QuestionBankPage() {
     try {
       await questionBankApi.duplicateQuestion(accessToken, id);
       refresh();
+      toast.success("Đã nhân bản câu hỏi");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Nhân bản câu hỏi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Nhân bản câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -174,8 +190,11 @@ export default function QuestionBankPage() {
       a.click();
       a.remove();
       URL.revokeObjectURL(url);
+      toast.success("Đã xuất file .zip");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xuất câu hỏi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xuất câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -191,8 +210,11 @@ export default function QuestionBankPage() {
       setImportResult(result);
       refresh();
       questionBankApi.categories(accessToken, "IELTS").then(setCategories).catch(() => {});
+      toast.success(`Đã nhập ${result.questionsCreated} câu hỏi từ file .zip`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Nhập câu hỏi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Nhập câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setImporting(false);
     }
@@ -214,8 +236,15 @@ export default function QuestionBankPage() {
         setTextImportText("");
         refresh();
       }
+      if (result.errors.length > 0) {
+        toast.error(`Đã tạo ${result.questionsCreated} câu hỏi, ${result.errors.length} block lỗi`);
+      } else {
+        toast.success(`Đã tạo ${result.questionsCreated} câu hỏi`);
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Nhập nhanh MCQ thất bại");
+      const msg = err instanceof ApiError ? err.message : "Nhập nhanh MCQ thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setTextImporting(false);
     }

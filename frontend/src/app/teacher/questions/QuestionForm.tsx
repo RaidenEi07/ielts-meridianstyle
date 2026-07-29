@@ -20,6 +20,7 @@ import type {
   QuestionOption,
   QuestionTag,
 } from "@/lib/types";
+import { useToast } from "@/store/toast";
 import { ClozeForm } from "./forms/ClozeForm";
 import { DragDropMarkerForm } from "./forms/DragDropMarkerForm";
 import { DragDropTextForm } from "./forms/DragDropTextForm";
@@ -127,6 +128,7 @@ export function QuestionForm({
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   function buildSettings(): unknown {
     switch (type) {
@@ -192,8 +194,11 @@ export function QuestionForm({
           ? await questionBankApi.createQuestion(token, req)
           : await questionBankApi.updateQuestion(token, initial!.id, req);
       onSaved(saved);
+      toast.success(mode === "create" ? "Đã tạo câu hỏi" : "Đã lưu câu hỏi");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lưu câu hỏi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Lưu câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

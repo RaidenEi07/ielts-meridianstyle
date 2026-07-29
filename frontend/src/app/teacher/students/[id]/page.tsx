@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { ApiError, catalogAdminApi, catalogApi, gradebookApi, rosterApi } from "@/lib/api";
 import type { CourseSummary, GradebookRow, StudentSummary } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
+import { useToast } from "@/store/toast";
 
 export default function TeacherStudentDetailPage() {
   const params = useParams<{ id: string }>();
@@ -25,6 +26,7 @@ export default function TeacherStudentDetailPage() {
   const [enrolling, setEnrolling] = useState(false);
   const [enrollMessage, setEnrollMessage] = useState<string | null>(null);
   const [enrollError, setEnrollError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -81,8 +83,11 @@ export default function TeacherStudentDetailPage() {
     try {
       await rosterApi.enrollStudent(token, params.id, Number(selectedCourseId));
       setEnrollMessage("Đã cấp quyền truy cập khóa học cho học sinh.");
+      toast.success("Đã cấp quyền truy cập khóa học cho học sinh.");
     } catch (err) {
-      setEnrollError(err instanceof ApiError ? err.message : "Không thể cấp quyền truy cập");
+      const msg = err instanceof ApiError ? err.message : "Không thể cấp quyền truy cập";
+      setEnrollError(msg);
+      toast.error(msg);
     } finally {
       setEnrolling(false);
     }

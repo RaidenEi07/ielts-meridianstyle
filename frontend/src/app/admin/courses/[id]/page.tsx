@@ -35,6 +35,7 @@ import type {
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useEditModeStore } from "@/store/editMode";
+import { useToast } from "@/store/toast";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
   DRAFT: { label: "Bản nháp", cls: "bg-soft text-muted" },
@@ -197,6 +198,7 @@ function CourseEditForm({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   function addObjective() {
     if (!newObjective.trim()) return;
@@ -226,8 +228,11 @@ function CourseEditForm({
       setMsg("Đã lưu");
       setTimeout(() => setMsg(null), 2000);
       onSaved();
+      toast.success("Đã lưu thay đổi khóa học");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lưu thất bại");
+      const errMsg = err instanceof ApiError ? err.message : "Lưu thất bại";
+      setError(errMsg);
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }
@@ -236,8 +241,13 @@ function CourseEditForm({
   async function remove() {
     if (!(await confirm(`Xóa khóa học "${course.title}"? Hành động này không thể hoàn tác.`)))
       return;
-    await catalogAdminApi.deleteCourse(token, course.id);
-    router.push("/admin/courses");
+    try {
+      await catalogAdminApi.deleteCourse(token, course.id);
+      toast.success("Đã xóa khóa học");
+      router.push("/admin/courses");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Xóa khóa học thất bại");
+    }
   }
 
   const st = STATUS_META[course.status] ?? STATUS_META.DRAFT;
@@ -384,6 +394,7 @@ function DistributeCourseButton({ courseId, token }: { courseId: number; token: 
   const [sending, setSending] = useState(false);
   const [results, setResults] = useState<DistributeResult[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   if (!isMaster || !hasCapability("course:distribute")) {
     return null;
@@ -407,8 +418,16 @@ function DistributeCourseButton({ courseId, token }: { courseId: number; token: 
     try {
       const res = await catalogAdminApi.distribute(token, courseId, selected);
       setResults(res);
+      const okCount = res.filter((r) => r.success).length;
+      if (okCount === res.length) {
+        toast.success(`Đã gửi tới ${okCount} web con`);
+      } else {
+        toast.error(`Gửi thành công ${okCount}/${res.length} web con — xem chi tiết bên dưới`);
+      }
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gửi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Gửi thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSending(false);
     }
@@ -496,6 +515,7 @@ function SectionsPanel({
   const editMode = useEditModeStore((s) => s.enabled);
   const sensors = useSensors(useSensor(PointerSensor));
   const confirm = useConfirm();
+  const toast = useToast();
 
   async function addSection(e: React.FormEvent) {
     e.preventDefault();
@@ -508,15 +528,23 @@ function SectionsPanel({
       });
       setNewTitle("");
       onChanged();
+      toast.success("Đã thêm section");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tạo section thất bại");
+      const msg = err instanceof ApiError ? err.message : "Tạo section thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
   async function removeSection(id: number) {
     if (!(await confirm("Xóa section này? Mọi quiz bên trong cũng sẽ bị xóa."))) return;
-    await catalogAdminApi.deleteSection(token, id);
-    onChanged();
+    try {
+      await catalogAdminApi.deleteSection(token, id);
+      onChanged();
+      toast.success("Đã xóa section");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Xóa section thất bại");
+    }
   }
 
   async function handleDragEnd(event: DragEndEvent) {
@@ -530,7 +558,9 @@ function SectionsPanel({
       await catalogAdminApi.reorderSections(token, course.id, reordered.map((s) => s.id));
       onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Sắp xếp section thất bại");
+      const msg = err instanceof ApiError ? err.message : "Sắp xếp section thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -604,6 +634,7 @@ function SectionCard({
   const [error, setError] = useState<string | null>(null);
   const editMode = useEditModeStore((s) => s.enabled);
   const sensors = useSensors(useSensor(PointerSensor));
+  const toast = useToast();
 
   function loadQuizzes() {
     quizAdminApi.listBySection(token, section.id).then(setQuizzes).catch(() => setQuizzes([]));
@@ -623,8 +654,11 @@ function SectionCard({
       setTitle("");
       setCreating(false);
       loadQuizzes();
+      toast.success("Đã tạo quiz");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tạo quiz thất bại");
+      const msg = err instanceof ApiError ? err.message : "Tạo quiz thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -632,8 +666,11 @@ function SectionCard({
     try {
       await catalogAdminApi.updateSection(token, section.id, { videoUrl: url ?? "" });
       onChanged();
+      toast.success("Đã cập nhật video");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Cập nhật video thất bại");
+      const msg = err instanceof ApiError ? err.message : "Cập nhật video thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -642,8 +679,11 @@ function SectionCard({
     try {
       await catalogAdminApi.updateSection(token, section.id, { hidden: !section.hidden });
       onChanged();
+      toast.success(section.hidden ? "Đã hiện section" : "Đã ẩn section");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Đổi trạng thái ẩn/hiện thất bại");
+      const msg = err instanceof ApiError ? err.message : "Đổi trạng thái ẩn/hiện thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -658,7 +698,9 @@ function SectionCard({
     try {
       await quizAdminApi.reorderQuizzes(token, reordered.map((q) => q.id));
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Sắp xếp quiz thất bại");
+      const msg = err instanceof ApiError ? err.message : "Sắp xếp quiz thất bại";
+      setError(msg);
+      toast.error(msg);
       loadQuizzes();
     }
   }

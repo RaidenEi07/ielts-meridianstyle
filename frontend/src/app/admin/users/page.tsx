@@ -8,6 +8,7 @@ import { ApiError, rosterApi, usersAdminApi } from "@/lib/api";
 import type { AdminUser, RoleOption, StudentSummary } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
+import { useToast } from "@/store/toast";
 
 type RoleTab = "all" | "student" | "teacher";
 
@@ -33,6 +34,7 @@ export default function AdminUsersPage() {
   const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const confirm = useConfirm();
+  const toast = useToast();
 
   const [search, setSearch] = useState("");
   const [tab, setTab] = useState<RoleTab>("all");
@@ -108,6 +110,7 @@ export default function AdminUsersPage() {
     setAssigning(true);
     try {
       await rosterApi.assign(token, assignTeacherId, [...selected]);
+      const count = selected.size;
       setSelected(new Set());
       setRosters((prev) => {
         const next = { ...prev };
@@ -115,8 +118,11 @@ export default function AdminUsersPage() {
         return next;
       });
       setAssignTeacherId("");
+      toast.success(`Đã gán ${count} học sinh cho giáo viên`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gán học sinh thất bại");
+      const msg = err instanceof ApiError ? err.message : "Gán học sinh thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setAssigning(false);
     }
@@ -131,8 +137,11 @@ export default function AdminUsersPage() {
         ...prev,
         [teacherId]: (prev[teacherId] ?? []).filter((s) => s.id !== studentId),
       }));
+      toast.success("Đã gỡ học sinh khỏi giáo viên");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gỡ học sinh thất bại");
+      const msg = err instanceof ApiError ? err.message : "Gỡ học sinh thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -142,8 +151,11 @@ export default function AdminUsersPage() {
     try {
       await usersAdminApi.revokeRole(token, assignmentId);
       refresh();
+      toast.success("Đã thu hồi vai trò");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Thu hồi vai trò thất bại");
+      const msg = err instanceof ApiError ? err.message : "Thu hồi vai trò thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -153,8 +165,11 @@ export default function AdminUsersPage() {
     try {
       await usersAdminApi.assignRole(token, { userId, roleShortname });
       refresh();
+      toast.success("Đã gán vai trò");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gán vai trò thất bại");
+      const msg = err instanceof ApiError ? err.message : "Gán vai trò thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -459,6 +474,7 @@ function EditUserForm({
   const [newPassword, setNewPassword] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -472,8 +488,11 @@ function EditUserForm({
         newPassword: newPassword || undefined,
       });
       onSaved();
+      toast.success("Đã cập nhật tài khoản");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Cập nhật tài khoản thất bại");
+      const msg = err instanceof ApiError ? err.message : "Cập nhật tài khoản thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -554,6 +573,7 @@ function CreateUserForm({
   const [roleShortname, setRoleShortname] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -568,8 +588,11 @@ function CreateUserForm({
         roleShortname: roleShortname || undefined,
       });
       onCreated();
+      toast.success("Đã tạo tài khoản");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tạo tài khoản thất bại");
+      const msg = err instanceof ApiError ? err.message : "Tạo tài khoản thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

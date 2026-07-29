@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError, dubbingAdminApi, dubbingApi } from "@/lib/api";
 import type { DubbingCharacter } from "@/lib/types";
+import { useToast } from "@/store/toast";
 import { isYoutubeUrl } from "@/lib/youtube";
 
 export function CharacterDubbingEditor({
@@ -19,6 +20,7 @@ export function CharacterDubbingEditor({
   const [newName, setNewName] = useState("");
   const [segmentDrafts, setSegmentDrafts] = useState<Record<number, { start: string; end: string }>>({});
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   function load() {
     dubbingApi
@@ -39,8 +41,11 @@ export function CharacterDubbingEditor({
       await dubbingAdminApi.createCharacter(token, sectionId, newName.trim());
       setNewName("");
       load();
+      toast.success("Đã thêm nhân vật");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Thêm nhân vật thất bại");
+      const msg = err instanceof ApiError ? err.message : "Thêm nhân vật thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -49,8 +54,11 @@ export function CharacterDubbingEditor({
     try {
       await dubbingAdminApi.deleteCharacter(token, id);
       load();
+      toast.success("Đã xóa nhân vật");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa nhân vật thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa nhân vật thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -64,8 +72,11 @@ export function CharacterDubbingEditor({
       await dubbingAdminApi.addSegment(token, characterId, start, end);
       setSegmentDrafts((prev) => ({ ...prev, [characterId]: { start: "", end: "" } }));
       load();
+      toast.success("Đã thêm đoạn thoại");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Thêm đoạn thoại thất bại");
+      const msg = err instanceof ApiError ? err.message : "Thêm đoạn thoại thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -74,8 +85,11 @@ export function CharacterDubbingEditor({
     try {
       await dubbingAdminApi.deleteSegment(token, id);
       load();
+      toast.success("Đã xóa đoạn thoại");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa đoạn thoại thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa đoạn thoại thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 

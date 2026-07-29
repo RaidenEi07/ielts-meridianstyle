@@ -5,6 +5,7 @@ import { SearchableSelect } from "@/components/SearchableSelect";
 import { ApiError, questionBankApi } from "@/lib/api";
 import { categoryOptionLabel } from "@/lib/categoryLabel";
 import type { Audience, QuestionCategoryNode } from "@/lib/types";
+import { useToast } from "@/store/toast";
 
 export function CategoryForm({
   token,
@@ -25,6 +26,7 @@ export function CategoryForm({
   const [audience, setAudience] = useState<Audience>(lockAudience ?? "IELTS");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function save() {
     setSaving(true);
@@ -37,8 +39,11 @@ export function CategoryForm({
         audience,
       });
       onSaved(saved);
+      toast.success("Đã tạo danh mục");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Tạo danh mục thất bại");
+      const msg = err instanceof ApiError ? err.message : "Tạo danh mục thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }

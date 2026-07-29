@@ -6,12 +6,14 @@ import { AudioUploadField } from "@/components/AudioUploadField";
 import { VideoUploadField } from "@/components/VideoUploadField";
 import { ApiError, homeworkAdminApi, homeworkApi } from "@/lib/api";
 import type { HomeworkMaterial } from "@/lib/types";
+import { useToast } from "@/store/toast";
 
 export function HomeworkMaterialsEditor({ sectionId, token }: { sectionId: number; token: string }) {
   const [materials, setMaterials] = useState<HomeworkMaterial[] | null>(null);
   const [addType, setAddType] = useState<"AUDIO" | "VIDEO" | null>(null);
   const [label, setLabel] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   function load() {
     homeworkApi
@@ -33,8 +35,11 @@ export function HomeworkMaterialsEditor({ sectionId, token }: { sectionId: numbe
       setAddType(null);
       setLabel("");
       load();
+      toast.success("Đã thêm tài liệu");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Thêm tài liệu thất bại");
+      const msg = err instanceof ApiError ? err.message : "Thêm tài liệu thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -43,8 +48,11 @@ export function HomeworkMaterialsEditor({ sectionId, token }: { sectionId: numbe
     try {
       await homeworkAdminApi.remove(token, id);
       load();
+      toast.success("Đã xóa tài liệu");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa tài liệu thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa tài liệu thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 

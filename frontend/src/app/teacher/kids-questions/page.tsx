@@ -10,6 +10,7 @@ import { TYPE_META } from "@/lib/questionTypes";
 import type { QuestionCategoryNode, QuestionDetail, QuestionSummary } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
+import { useToast } from "@/store/toast";
 import { PreviewModal } from "../questions/PreviewModal";
 
 /**
@@ -30,6 +31,7 @@ export default function KidsQuestionBankPage() {
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const confirm = useConfirm();
+  const toast = useToast();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -86,11 +88,15 @@ export default function KidsQuestionBankPage() {
     setError(null);
     setBulkWorking(true);
     try {
+      const count = selected.size;
       await questionBankApi.bulkDeleteQuestions(accessToken, [...selected]);
       setSelected(new Set());
       refresh();
+      toast.success(`Đã xóa ${count} câu hỏi`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa hàng loạt thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa hàng loạt thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBulkWorking(false);
     }
@@ -101,11 +107,15 @@ export default function KidsQuestionBankPage() {
     setError(null);
     setBulkWorking(true);
     try {
+      const count = selected.size;
       await questionBankApi.bulkDuplicateQuestions(accessToken, [...selected]);
       setSelected(new Set());
       refresh();
+      toast.success(`Đã nhân đôi ${count} câu hỏi`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Nhân đôi hàng loạt thất bại");
+      const msg = err instanceof ApiError ? err.message : "Nhân đôi hàng loạt thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBulkWorking(false);
     }
@@ -129,8 +139,11 @@ export default function KidsQuestionBankPage() {
     try {
       await questionBankApi.deleteQuestion(accessToken, id);
       refresh();
+      toast.success("Đã xóa câu hỏi");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa câu hỏi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import {
+  ApiError,
   adminUserApi,
   announcementApi,
   configApi,
@@ -13,6 +14,7 @@ import {
 import type { Announcement } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
+import { useToast } from "@/store/toast";
 
 const LABELS: Record<string, string> = {
   SITE_NAME: "Tên hiển thị",
@@ -47,6 +49,7 @@ export default function AdminSettingsPage() {
   const [config, setConfig] = useState<Record<string, string>>({});
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [anns, setAnns] = useState<Announcement[]>([]);
+  const toast = useToast();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -69,10 +72,15 @@ export default function AdminSettingsPage() {
   }, [allowed, token]);
 
   async function saveConfig() {
-    const updated = await configApi.update(token, config);
-    setConfig(updated);
-    setSavedMsg("Đã lưu cấu hình");
-    setTimeout(() => setSavedMsg(null), 2500);
+    try {
+      const updated = await configApi.update(token, config);
+      setConfig(updated);
+      setSavedMsg("Đã lưu cấu hình");
+      setTimeout(() => setSavedMsg(null), 2500);
+      toast.success("Đã lưu cấu hình");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Lưu cấu hình thất bại");
+    }
   }
 
   if (!hydrated || !ready) {
@@ -222,6 +230,7 @@ function HomepageInfoCardsSection({
   const [cards, setCards] = useState<HomepageInfoCard[]>(DEFAULT_INFO_CARDS);
   const [loaded, setLoaded] = useState(false);
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     if (loaded || rawValue === undefined) return;
@@ -239,11 +248,16 @@ function HomepageInfoCardsSection({
   }
 
   async function save() {
-    const value = JSON.stringify(cards);
-    await configApi.update(token, { HOMEPAGE_INFO_CARDS: value });
-    onSaved(value);
-    setSavedMsg("Đã lưu");
-    setTimeout(() => setSavedMsg(null), 2500);
+    try {
+      const value = JSON.stringify(cards);
+      await configApi.update(token, { HOMEPAGE_INFO_CARDS: value });
+      onSaved(value);
+      setSavedMsg("Đã lưu");
+      setTimeout(() => setSavedMsg(null), 2500);
+      toast.success("Đã lưu 4 thẻ thông tin trang chủ");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Lưu thất bại");
+    }
   }
 
   return (
@@ -308,18 +322,29 @@ function AnnouncementSection({
   const [body, setBody] = useState("");
   const [level, setLevel] = useState("INFO");
   const confirm = useConfirm();
+  const toast = useToast();
 
   async function create() {
     if (!title.trim()) return;
-    const a = await announcementApi.create(token, { title, body, level, active: true });
-    setAnns([a, ...anns]);
-    setTitle("");
-    setBody("");
+    try {
+      const a = await announcementApi.create(token, { title, body, level, active: true });
+      setAnns([a, ...anns]);
+      setTitle("");
+      setBody("");
+      toast.success("Đã đăng thông báo");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Đăng thông báo thất bại");
+    }
   }
   async function remove(id: number) {
     if (!(await confirm("Xóa thông báo này?"))) return;
-    await announcementApi.remove(token, id);
-    setAnns(anns.filter((a) => a.id !== id));
+    try {
+      await announcementApi.remove(token, id);
+      setAnns(anns.filter((a) => a.id !== id));
+      toast.success("Đã xóa thông báo");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Xóa thông báo thất bại");
+    }
   }
 
   return (
@@ -372,14 +397,20 @@ function BroadcastSection({ token }: { token: string }) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [msg, setMsg] = useState<string | null>(null);
+  const toast = useToast();
 
   async function send() {
     if (!title.trim()) return;
-    const r = await notificationApi.broadcast(token, { title, body });
-    setMsg(`Đã gửi tới ${r.recipients} người dùng`);
-    setTitle("");
-    setBody("");
-    setTimeout(() => setMsg(null), 3000);
+    try {
+      const r = await notificationApi.broadcast(token, { title, body });
+      setMsg(`Đã gửi tới ${r.recipients} người dùng`);
+      setTitle("");
+      setBody("");
+      setTimeout(() => setMsg(null), 3000);
+      toast.success(`Đã gửi thông báo tới ${r.recipients} người dùng`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Gửi thông báo thất bại");
+    }
   }
 
   return (
@@ -400,6 +431,7 @@ function BroadcastSection({ token }: { token: string }) {
 function BulkImportSection({ token }: { token: string }) {
   const [text, setText] = useState("");
   const [result, setResult] = useState<string | null>(null);
+  const toast = useToast();
 
   async function importUsers() {
     const users = text
@@ -411,8 +443,17 @@ function BulkImportSection({ token }: { token: string }) {
         return { email: email.trim(), fullName: name.join(",").trim() };
       });
     if (users.length === 0) return;
-    const r = await adminUserApi.bulk(token, users);
-    setResult(`Tạo ${r.created}, bỏ qua ${r.skipped}${r.errors.length ? `, lỗi ${r.errors.length}` : ""}`);
+    try {
+      const r = await adminUserApi.bulk(token, users);
+      setResult(`Tạo ${r.created}, bỏ qua ${r.skipped}${r.errors.length ? `, lỗi ${r.errors.length}` : ""}`);
+      if (r.errors.length > 0) {
+        toast.error(`Import xong: tạo ${r.created}, bỏ qua ${r.skipped}, lỗi ${r.errors.length}`);
+      } else {
+        toast.success(`Đã tạo ${r.created} tài khoản, bỏ qua ${r.skipped}`);
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Import thất bại");
+    }
   }
 
   return (

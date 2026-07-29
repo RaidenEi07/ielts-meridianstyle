@@ -2,12 +2,14 @@
 
 import { Star } from "lucide-react";
 import { useEffect, useState } from "react";
-import { recordingAdminApi } from "@/lib/api";
+import { ApiError, recordingAdminApi } from "@/lib/api";
 import type { AdminLessonRecording } from "@/lib/types";
+import { useToast } from "@/store/toast";
 
 export function RecordingsGradingPanel({ sectionId, token }: { sectionId: number; token: string }) {
   const [recordings, setRecordings] = useState<AdminLessonRecording[] | null>(null);
   const [savingId, setSavingId] = useState<number | null>(null);
+  const toast = useToast();
 
   function refresh() {
     recordingAdminApi.listForSection(token, sectionId).then(setRecordings).catch(() => setRecordings([]));
@@ -25,6 +27,9 @@ export function RecordingsGradingPanel({ sectionId, token }: { sectionId: number
       setRecordings((prev) =>
         prev ? prev.map((r) => (r.id === recordingId ? { ...r, starRating: stars } : r)) : prev,
       );
+      toast.success(`Đã chấm ${stars} sao`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Chấm sao thất bại");
     } finally {
       setSavingId(null);
     }

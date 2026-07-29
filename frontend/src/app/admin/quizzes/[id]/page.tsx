@@ -31,6 +31,7 @@ import type {
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useEditModeStore } from "@/store/editMode";
+import { useToast } from "@/store/toast";
 import { QuestionForm } from "@/app/teacher/questions/QuestionForm";
 import { PassageForm } from "./PassageForm";
 
@@ -187,6 +188,7 @@ function QuizSettingsForm({
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   useEffect(() => {
     setTitle(q.title);
@@ -220,8 +222,11 @@ function QuizSettingsForm({
       setMsg("Đã lưu");
       setTimeout(() => setMsg(null), 2000);
       onSaved();
+      toast.success("Đã lưu thay đổi quiz");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lưu thất bại");
+      const msg = err instanceof ApiError ? err.message : "Lưu thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -229,8 +234,13 @@ function QuizSettingsForm({
 
   async function remove() {
     if (!(await confirm(`Xóa quiz "${q.title}"? Hành động này không thể hoàn tác.`))) return;
-    await quizAdminApi.remove(token, q.id);
-    router.push(`/admin/courses/${q.courseId}`);
+    try {
+      await quizAdminApi.remove(token, q.id);
+      toast.success("Đã xóa quiz");
+      router.push(`/admin/courses/${q.courseId}`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Xóa quiz thất bại");
+    }
   }
 
   const st = STATUS_META[q.status] ?? STATUS_META.DRAFT;
@@ -377,6 +387,7 @@ function PagesPanel({
   const [creatingPassage, setCreatingPassage] = useState(false);
   const [editingPassage, setEditingPassage] = useState<PassageSummary | null>(null);
   const confirm = useConfirm();
+  const toast = useToast();
 
   if (detail.quiz.audienceGroup !== "IELTS") {
     return null;
@@ -398,8 +409,11 @@ function PagesPanel({
       setPassageId("");
       setAdding(false);
       onChanged();
+      toast.success("Đã lưu Part");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lưu trang thất bại");
+      const msg = err instanceof ApiError ? err.message : "Lưu trang thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -422,8 +436,11 @@ function PagesPanel({
     try {
       await quizAdminApi.deletePage(token, pageId);
       onChanged();
+      toast.success("Đã xóa Part");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Xóa Part thất bại");
+      const msg = err instanceof ApiError ? err.message : "Xóa Part thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -604,6 +621,7 @@ function QuestionsPanel({
   const editMode = useEditModeStore((s) => s.enabled);
   const sensors = useSensors(useSensor(PointerSensor));
   const confirm = useConfirm();
+  const toast = useToast();
   const isAcademic = detail.quiz.audienceGroup === "IELTS";
 
   const attachedIds = new Set(detail.questions.map((q) => q.questionId));
@@ -684,8 +702,11 @@ function QuestionsPanel({
       setPicking(false);
       setPickerTab("bank");
       onChanged();
+      toast.success("Đã tạo và gán câu hỏi vào quiz");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Gán câu hỏi vừa tạo thất bại");
+      const msg = err instanceof ApiError ? err.message : "Gán câu hỏi vừa tạo thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -710,15 +731,23 @@ function QuestionsPanel({
       setSelected(new Set());
       setPicking(false);
       onChanged();
+      toast.success(`Đã thêm ${selected.size} câu hỏi vào quiz`);
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Thêm câu hỏi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Thêm câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
   async function removeQuestion(quizQuestionId: number) {
     if (!(await confirm("Gỡ câu hỏi này khỏi quiz?"))) return;
-    await quizAdminApi.removeQuestion(token, quizQuestionId);
-    onChanged();
+    try {
+      await quizAdminApi.removeQuestion(token, quizQuestionId);
+      onChanged();
+      toast.success("Đã gỡ câu hỏi khỏi quiz");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Gỡ câu hỏi thất bại");
+    }
   }
 
   async function updateMark(quizQuestionId: number, value: string) {
@@ -727,8 +756,11 @@ function QuestionsPanel({
     try {
       await quizAdminApi.updateQuestionMark(token, quizQuestionId, parsed);
       onChanged();
+      toast.success("Đã cập nhật điểm câu hỏi");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Sửa điểm câu hỏi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Sửa điểm câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 
@@ -754,7 +786,9 @@ function QuestionsPanel({
       );
       onChanged();
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Sắp xếp câu hỏi thất bại");
+      const msg = err instanceof ApiError ? err.message : "Sắp xếp câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
     }
   }
 

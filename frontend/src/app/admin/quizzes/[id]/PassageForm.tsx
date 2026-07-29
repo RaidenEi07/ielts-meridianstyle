@@ -5,6 +5,7 @@ import { AudioUploadField } from "@/components/AudioUploadField";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { ApiError, questionBankApi } from "@/lib/api";
 import type { PassageSummary } from "@/lib/types";
+import { useToast } from "@/store/toast";
 
 export function PassageForm({
   token,
@@ -23,6 +24,7 @@ export function PassageForm({
   const [audioUrl, setAudioUrl] = useState(initial?.audioUrl ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const toast = useToast();
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -39,8 +41,11 @@ export function PassageForm({
         ? await questionBankApi.updatePassage(token, initial.id, req)
         : await questionBankApi.createPassage(token, req);
       onSaved(saved);
+      toast.success(initial ? "Đã lưu passage" : "Đã tạo passage");
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : "Lưu passage thất bại");
+      const msg = err instanceof ApiError ? err.message : "Lưu passage thất bại";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
