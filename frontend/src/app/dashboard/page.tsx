@@ -15,11 +15,12 @@ import {
   TrendingUp,
   Users,
 } from "lucide-react";
+import { CourseCard } from "@/components/CourseCard";
 import { Logo } from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import Link from "next/link";
-import { announcementApi, apiFetch, enrollmentApi, reportApi } from "@/lib/api";
-import type { Announcement, Enrollment, SystemAnalytics, User } from "@/lib/types";
+import { announcementApi, apiFetch, enrollmentApi, recommendationApi, reportApi } from "@/lib/api";
+import type { Announcement, Enrollment, RecommendedCourses, SystemAnalytics, User } from "@/lib/types";
 import { NotificationBell } from "@/components/NotificationBell";
 import { useAuthStore } from "@/store/auth";
 
@@ -231,6 +232,9 @@ export default function DashboardPage() {
         {/* Khóa học của tôi */}
         {accessToken && <MyEnrollments token={accessToken} />}
 
+        {/* Gợi ý khóa học (bản đơn giản, v1) */}
+        {accessToken && <RecommendedCoursesSection token={accessToken} />}
+
         {/* Khu vực admin — chỉ hiện khi có quyền user:manage */}
         {hasCapability("user:manage") && accessToken && (
           <AdminUsers token={accessToken} />
@@ -305,6 +309,35 @@ function MyEnrollments({ token }: { token: string }) {
           })}
         </ul>
       )}
+    </section>
+  );
+}
+
+function RecommendedCoursesSection({ token }: { token: string }) {
+  const [data, setData] = useState<RecommendedCourses | null>(null);
+
+  useEffect(() => {
+    recommendationApi.forMe(token).then(setData).catch(() => setData(null));
+  }, [token]);
+
+  if (!data || data.courses.length === 0) return null;
+
+  return (
+    <section className="rounded-lg border border-border bg-surface p-6">
+      <div className="mb-1 flex items-center justify-between">
+        <h2 className="text-lg font-semibold">Khóa học gợi ý cho bạn</h2>
+        {data.averageBandScore != null && (
+          <span className="text-sm text-muted">
+            Điểm trung bình gần đây: <span className="font-semibold text-text">{data.averageBandScore}</span>
+          </span>
+        )}
+      </div>
+      <p className="mb-4 text-sm text-muted">{data.note}</p>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {data.courses.map((c) => (
+          <CourseCard key={c.id} course={c} />
+        ))}
+      </div>
     </section>
   );
 }

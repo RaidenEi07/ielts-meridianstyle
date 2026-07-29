@@ -103,6 +103,12 @@ export interface VideoCheckpoint {
   answered: boolean;
 }
 
+export interface RecommendedCourses {
+  courses: CourseSummary[];
+  averageBandScore: number | null;
+  note: string;
+}
+
 export interface CheckpointQuestion {
   questionId: number;
   type: string;

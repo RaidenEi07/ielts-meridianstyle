@@ -26,6 +26,7 @@ import type {
   ImportSummary,
   TextImportSummary,
   CheckpointQuestion,
+  RecommendedCourses,
   VideoCheckpoint,
   LeaderboardEntry,
   LessonRecording,
@@ -490,6 +491,13 @@ export const enrollmentApi = {
 
   forStudentAsAdmin: (token: string, userId: string) =>
     apiFetch<Enrollment[]>(`/api/enrollments/admin/${userId}`, { token }),
+};
+
+// ---- Gợi ý khóa học (bản đơn giản, v1) ----
+
+export const recommendationApi = {
+  forMe: (token: string) =>
+    apiFetch<RecommendedCourses>("/api/students/me/recommended-courses", { token }),
 };
 
 // ---- Question bank (staff, cần question:manage) ----
