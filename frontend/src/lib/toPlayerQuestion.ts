@@ -29,6 +29,7 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
     case "MULTIPLE_CHOICE":
     case "TRUE_FALSE_NOT_GIVEN":
       base.options = q.options.map((o) => ({ id: o.id ?? 0, content: o.content }));
+      base.settings = q.settings;
       break;
     case "MATCHING": {
       base.matchingPairs = q.matchingPairs.map((p) => ({

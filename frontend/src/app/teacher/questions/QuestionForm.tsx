@@ -99,6 +99,7 @@ export function QuestionForm({
       : "",
   );
   const [caseSensitive, setCaseSensitive] = useState(Boolean(initSettings?.caseSensitive));
+  const [singleAnswer, setSingleAnswer] = useState(Boolean(initSettings?.singleAnswer));
   const [essayWordLimit, setEssayWordLimit] = useState(
     initSettings?.wordLimit != null ? String(initSettings.wordLimit) : "",
   );
@@ -122,6 +123,8 @@ export function QuestionForm({
 
   function buildSettings(): unknown {
     switch (type) {
+      case "MULTIPLE_CHOICE":
+        return { singleAnswer };
       case "SHORT_ANSWER":
         return { acceptedAnswers: splitCsv(shortAnswerAccepted), caseSensitive };
       case "ESSAY":
@@ -373,7 +376,14 @@ export function QuestionForm({
 
         <section className="rounded-card border border-border bg-surface p-6">
           <h2 className="mb-4 text-lg font-semibold">Nội dung theo loại câu hỏi</h2>
-          {type === "MULTIPLE_CHOICE" && <OptionListForm value={options} onChange={setOptions} />}
+          {type === "MULTIPLE_CHOICE" && (
+            <OptionListForm
+              value={options}
+              onChange={setOptions}
+              singleAnswer={singleAnswer}
+              onSingleAnswerChange={setSingleAnswer}
+            />
+          )}
           {type === "TRUE_FALSE_NOT_GIVEN" && (
             <TrueFalseForm value={options} onChange={setOptions} />
           )}

@@ -253,6 +253,12 @@ public class QuestionService {
                 if (nz(req.options()).stream().noneMatch(QuestionParts.Option::correct)) {
                     throw ApiException.badRequest("Cần ít nhất 1 đáp án đúng");
                 }
+                boolean singleAnswer = req.settings() != null
+                        && req.settings().path("singleAnswer").asBoolean(false);
+                if (singleAnswer
+                        && nz(req.options()).stream().filter(QuestionParts.Option::correct).count() != 1) {
+                    throw ApiException.badRequest("Chế độ 1 đáp án cần đúng 1 đáp án đúng");
+                }
             }
             case TRUE_FALSE_NOT_GIVEN -> {
                 if (nz(req.options()).isEmpty()) {

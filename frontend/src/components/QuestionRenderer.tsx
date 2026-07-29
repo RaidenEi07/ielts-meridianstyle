@@ -26,6 +26,9 @@ export function QuestionRenderer({
 }) {
   switch (question.type) {
     case "MULTIPLE_CHOICE": {
+      const singleAnswer = Boolean(
+        (question.settings as { singleAnswer?: boolean } | null)?.singleAnswer,
+      );
       const selected: number[] = answer?.selectedOptionIds ?? [];
       return (
         <div className="space-y-2">
@@ -34,13 +37,16 @@ export function QuestionRenderer({
             return (
               <label key={o.id} className="flex cursor-pointer items-center gap-2 text-sm">
                 <input
-                  type="checkbox"
+                  type={singleAnswer ? "radio" : "checkbox"}
+                  name={singleAnswer ? `q${question.quizQuestionId}-single` : undefined}
                   checked={checked}
                   onChange={() =>
                     onChange({
-                      selectedOptionIds: checked
-                        ? selected.filter((x) => x !== o.id)
-                        : [...selected, o.id],
+                      selectedOptionIds: singleAnswer
+                        ? [o.id]
+                        : checked
+                          ? selected.filter((x) => x !== o.id)
+                          : [...selected, o.id],
                     })
                   }
                 />

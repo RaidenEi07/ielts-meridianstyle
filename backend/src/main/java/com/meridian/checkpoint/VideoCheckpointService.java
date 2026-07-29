@@ -132,9 +132,12 @@ public class VideoCheckpointService {
         JsonNode settings = null;
 
         switch (q.type()) {
-            case "MULTIPLE_CHOICE", "TRUE_FALSE_NOT_GIVEN" -> options = q.options().stream()
-                    .map(o -> new PlayerOption(o.id(), o.content()))
-                    .toList();
+            case "MULTIPLE_CHOICE", "TRUE_FALSE_NOT_GIVEN" -> {
+                options = q.options().stream()
+                        .map(o -> new PlayerOption(o.id(), o.content()))
+                        .toList();
+                settings = q.settings();
+            }
             case "MATCHING" -> {
                 matchingPairs = q.matchingPairs().stream()
                         .map(p -> new PlayerMatchingPair(p.id(), p.leftItem(), p.leftImageUrl()))
