@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Source_Serif_4 } from "next/font/google";
 import { BubbleNav } from "@/components/BubbleNav";
 import { ConfirmDialogHost } from "@/components/ConfirmDialogHost";
+import { ToastHost } from "@/components/ToastHost";
 import "./globals.css";
 
 const beVietnam = Be_Vietnam_Pro({
@@ -72,6 +73,7 @@ export default function RootLayout({
         {children}
         <BubbleNav />
         <ConfirmDialogHost />
+        <ToastHost />
       </body>
     </html>
   );

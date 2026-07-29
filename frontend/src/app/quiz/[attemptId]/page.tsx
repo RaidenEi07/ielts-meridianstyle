@@ -30,6 +30,7 @@ import { PassageDragChip, PassageDropBlank } from "@/components/PassageDragBlank
 import { QuestionRenderer } from "@/components/QuestionRenderer";
 import { quizApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
+import { useToast } from "@/store/toast";
 import type {
   AttemptPlayer,
   AttemptResult,
@@ -176,7 +177,7 @@ export default function QuizPlayerPage() {
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
   const [remaining, setRemaining] = useState<number | null>(null);
   const [violations, setViolations] = useState(0);
-  const [toast, setToast] = useState<string | null>(null);
+  const toast = useToast();
   const [loading, setLoading] = useState(true);
   const [stepIndex, setStepIndex] = useState(0);
   const [focusId, setFocusId] = useState<string | null>(null);
@@ -278,8 +279,7 @@ export default function QuizPlayerPage() {
       try {
         const res = await quizApi.logEvent(attemptId, "TAB_SWITCH", "rời khỏi bài thi", token);
         setViolations(res.violations);
-        setToast(`⚠ Cảnh báo chuyển tab (${res.violations}/${attempt.maxViolations})`);
-        setTimeout(() => setToast(null), 3000);
+        toast.error(`⚠ Cảnh báo chuyển tab (${res.violations}/${attempt.maxViolations})`);
         if (res.autoSubmitted) doSubmit();
       } catch {
         /* ignore */
@@ -292,7 +292,7 @@ export default function QuizPlayerPage() {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("blur", report);
     };
-  }, [attempt, attemptId, token, doSubmit]);
+  }, [attempt, attemptId, token, doSubmit, toast]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const setAnswer = useCallback((q: PlayerQuestion, response: any) => {
@@ -682,13 +682,6 @@ export default function QuizPlayerPage() {
           </button>
         </div>
       </div>
-
-      {toast && (
-        <div className="fixed bottom-40 right-6 z-30 rounded-lg px-4 py-3 text-sm font-medium text-white shadow-lg"
-          style={{ background: "#3a2220" }}>
-          {toast}
-        </div>
-      )}
     </div>
   );
 }

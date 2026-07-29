@@ -13,7 +13,7 @@ import { useAuthStore } from "@/store/auth";
 export default function VaoHocCoursePage() {
   const params = useParams<{ group: string; courseId: string }>();
   const courseId = Number(params.courseId);
-  const { accessToken, hydrated } = useAuthStore();
+  const { accessToken, hydrated, loadMe, hasCapability } = useAuthStore();
 
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [completedSectionIds, setCompletedSectionIds] = useState<Set<number>>(new Set());
@@ -36,6 +36,13 @@ export default function VaoHocCoursePage() {
       if (e instanceof ApiError && e.status === 409) return; // đã ghi danh rồi, bỏ qua
     });
   }, [hydrated, accessToken, courseId]);
+
+  // Nạp systemCapabilities để biết có nên hiện nút "Chỉnh sửa khóa học" (admin/giáo viên) không.
+  useEffect(() => {
+    if (!hydrated || !accessToken) return;
+    loadMe().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, accessToken]);
 
   function loadProgress() {
     if (!accessToken || !Number.isFinite(courseId)) return;
@@ -116,9 +123,19 @@ export default function VaoHocCoursePage() {
       />
 
       <div className="mx-auto max-w-3xl px-6 py-10">
-        <Link href={`/vao-hoc/${params.group}`} className="text-sm text-accent">
-          ← {groupLabel(params.group)}
-        </Link>
+        <div className="flex items-center justify-between gap-3">
+          <Link href={`/vao-hoc/${params.group}`} className="text-sm text-accent">
+            ← {groupLabel(params.group)}
+          </Link>
+          {hasCapability("course:manage") && (
+            <Link
+              href={`/admin/courses/${courseId}`}
+              className="text-sm font-medium text-accent hover:underline"
+            >
+              ✏️ Chỉnh sửa khóa học
+            </Link>
+          )}
+        </div>
         <h1 className="mt-2 text-3xl font-bold">{course.title}</h1>
         {course.summary && <p className="mt-2 text-muted">{course.summary}</p>}
 
