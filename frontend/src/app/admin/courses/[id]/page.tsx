@@ -13,6 +13,7 @@ import {
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { BulkRenameDialog } from "@/components/BulkRenameDialog";
 import { CharacterDubbingEditor } from "@/components/CharacterDubbingEditor";
 import { HomeworkMaterialsEditor } from "@/components/HomeworkMaterialsEditor";
 import { ImageUploadField } from "@/components/ImageUploadField";
@@ -516,6 +517,54 @@ function SectionsPanel({
   const sensors = useSensors(useSensor(PointerSensor));
   const confirm = useConfirm();
   const toast = useToast();
+  const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [bulkWorking, setBulkWorking] = useState(false);
+  const [showBulkRename, setShowBulkRename] = useState(false);
+
+  const sortedSections = [...course.sections].sort((a, b) => a.sortOrder - b.sortOrder);
+
+  function toggleSelected(id: number) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleSelectAll() {
+    setSelected((prev) =>
+      prev.size === sortedSections.length ? new Set() : new Set(sortedSections.map((s) => s.id)),
+    );
+  }
+
+  async function bulkDeleteSections() {
+    if (selected.size === 0) return;
+    if (!(await confirm(`Xóa ${selected.size} section đã chọn? Mọi quiz bên trong cũng sẽ bị xóa.`))) {
+      return;
+    }
+    setBulkWorking(true);
+    try {
+      const count = selected.size;
+      await Promise.all([...selected].map((id) => catalogAdminApi.deleteSection(token, id)));
+      setSelected(new Set());
+      onChanged();
+      toast.success(`Đã xóa ${count} section`);
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Xóa hàng loạt thất bại");
+    } finally {
+      setBulkWorking(false);
+    }
+  }
+
+  async function applyBulkRename(renames: { id: number; name: string }[]) {
+    const count = renames.length;
+    await Promise.all(renames.map((r) => catalogAdminApi.updateSection(token, r.id, { title: r.name })));
+    setSelected(new Set());
+    setShowBulkRename(false);
+    onChanged();
+    toast.success(`Đã đổi tên ${count} section`);
+  }
 
   async function addSection(e: React.FormEvent) {
     e.preventDefault();
@@ -584,6 +633,39 @@ function SectionsPanel({
       </form>
       {error && <p className="mb-3 text-sm text-red">{error}</p>}
 
+      {course.sections.length > 0 && (
+        <label className="mb-2 flex items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={selected.size === sortedSections.length}
+            onChange={toggleSelectAll}
+          />
+          Chọn tất cả
+        </label>
+      )}
+
+      {selected.size > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-primary-soft p-3 text-sm">
+          <span className="font-medium text-primary">{selected.size} section đã chọn</span>
+          <button
+            type="button"
+            onClick={() => setShowBulkRename(true)}
+            disabled={bulkWorking}
+            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-text disabled:opacity-60"
+          >
+            Đổi tên hàng loạt
+          </button>
+          <button
+            type="button"
+            onClick={bulkDeleteSections}
+            disabled={bulkWorking}
+            className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+          >
+            Xóa ({selected.size})
+          </button>
+        </div>
+      )}
+
       <div className="space-y-4">
         {course.sections.length === 0 ? (
           <p className="text-sm text-muted">Chưa có section nào.</p>
@@ -594,22 +676,40 @@ function SectionsPanel({
               strategy={verticalListSortingStrategy}
             >
               {course.sections.map((s) => (
-                <div key={s.id} id={`admin-section-${s.id}`} className="scroll-mt-24">
-                  <SortableRow id={s.id} editMode={editMode}>
-                    <SectionCard
-                      section={s}
-                      audienceGroup={course.audienceGroup}
-                      token={token}
-                      onRemove={() => removeSection(s.id)}
-                      onChanged={onChanged}
-                    />
-                  </SortableRow>
+                <div key={s.id} id={`admin-section-${s.id}`} className="flex items-start gap-2 scroll-mt-24">
+                  <input
+                    type="checkbox"
+                    checked={selected.has(s.id)}
+                    onChange={() => toggleSelected(s.id)}
+                    className="mt-4 shrink-0"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <SortableRow id={s.id} editMode={editMode}>
+                      <SectionCard
+                        section={s}
+                        audienceGroup={course.audienceGroup}
+                        token={token}
+                        onRemove={() => removeSection(s.id)}
+                        onChanged={onChanged}
+                      />
+                    </SortableRow>
+                  </div>
                 </div>
               ))}
             </SortableContext>
           </DndContext>
         )}
       </div>
+
+      {showBulkRename && (
+        <BulkRenameDialog
+          items={sortedSections
+            .filter((s) => selected.has(s.id))
+            .map((s) => ({ id: s.id, label: s.title }))}
+          onApply={applyBulkRename}
+          onClose={() => setShowBulkRename(false)}
+        />
+      )}
     </section>
   );
 }
