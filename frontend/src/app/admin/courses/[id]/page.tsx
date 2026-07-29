@@ -17,6 +17,7 @@ import { CharacterDubbingEditor } from "@/components/CharacterDubbingEditor";
 import { HomeworkMaterialsEditor } from "@/components/HomeworkMaterialsEditor";
 import { ImageUploadField } from "@/components/ImageUploadField";
 import { PageHeader } from "@/components/PageHeader";
+import { RecordingsGradingPanel } from "@/components/RecordingsGradingPanel";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { SectionDescriptionField } from "@/components/SectionDescriptionField";
 import { SortableRow } from "@/components/SortableRow";
@@ -716,6 +717,12 @@ function SectionCard({
       {!isAcademic && (
         <div className="mb-3">
           <HomeworkMaterialsEditor sectionId={section.id} token={token} />
+        </div>
+      )}
+
+      {!isAcademic && (
+        <div className="mb-3">
+          <RecordingsGradingPanel sectionId={section.id} token={token} />
         </div>
       )}
 

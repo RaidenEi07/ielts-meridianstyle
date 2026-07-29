@@ -1,4 +1,5 @@
 import type {
+  AdminLessonRecording,
   AdminUser,
   Announcement,
   AppNotification,
@@ -1054,6 +1055,20 @@ export const recordingApi = {
 
   remove: (recordingId: number, token: string) =>
     apiFetch<void>(`/api/recordings/${recordingId}`, { method: "DELETE", token }),
+};
+
+// ---- Giáo viên chấm sao bản ghi âm luyện nói ----
+
+export const recordingAdminApi = {
+  listForSection: (token: string, sectionId: number) =>
+    apiFetch<AdminLessonRecording[]>(`/api/admin/recordings/sections/${sectionId}`, { token }),
+
+  rate: (token: string, recordingId: number, starRating: number) =>
+    apiFetch<void>(`/api/admin/recordings/${recordingId}/rating`, {
+      method: "PUT",
+      body: { starRating },
+      token,
+    }),
 };
 
 // ---- Tài liệu bài tập về nhà (Phase 21) ----

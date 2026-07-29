@@ -1,6 +1,6 @@
 "use client";
 
-import { Mic, Square, Trash2 } from "lucide-react";
+import { Mic, Square, Star, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, mediaApi, recordingApi } from "@/lib/api";
 import type { LessonRecording } from "@/lib/types";
@@ -150,6 +150,18 @@ export function KidsVoiceRecorder({ sectionId, token }: { sectionId: number; tok
           {recordings.map((r) => (
             <div key={r.id} className="flex items-center gap-2 rounded-xl border border-border px-3 py-2">
               <audio src={r.audioUrl} controls className="h-9 flex-1" />
+              {r.starRating != null && (
+                <span className="flex shrink-0 items-center gap-0.5" title={`${r.starRating}/5 sao`}>
+                  {[1, 2, 3, 4, 5].map((n) => (
+                    <Star
+                      key={n}
+                      className={`h-3.5 w-3.5 ${
+                        n <= r.starRating! ? "fill-accent text-accent" : "text-border"
+                      }`}
+                    />
+                  ))}
+                </span>
+              )}
               <button
                 type="button"
                 onClick={() => handleDelete(r)}

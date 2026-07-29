@@ -8,5 +8,7 @@ public interface LessonRecordingRepository extends JpaRepository<LessonRecording
 
     List<LessonRecording> findByUserIdAndSection_IdOrderByCreatedAtDesc(UUID userId, Long sectionId);
 
+    List<LessonRecording> findBySection_IdOrderByCreatedAtDesc(Long sectionId);
+
     void deleteByIdAndUserId(Long id, UUID userId);
 }

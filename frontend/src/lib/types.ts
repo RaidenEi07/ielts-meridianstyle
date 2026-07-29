@@ -629,5 +629,15 @@ export interface DubbingRecording {
 export interface LessonRecording {
   id: number;
   audioUrl: string;
+  starRating: number | null;
+  createdAt: string;
+}
+
+export interface AdminLessonRecording {
+  id: number;
+  userId: string;
+  userFullName: string;
+  audioUrl: string;
+  starRating: number | null;
   createdAt: string;
 }

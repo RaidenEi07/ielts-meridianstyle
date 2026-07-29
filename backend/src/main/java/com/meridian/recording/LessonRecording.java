@@ -44,6 +44,9 @@ public class LessonRecording {
     @Column(name = "audio_url", nullable = false, length = 500)
     private String audioUrl;
 
+    @Column(name = "star_rating")
+    private Integer starRating;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
