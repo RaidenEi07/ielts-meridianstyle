@@ -314,15 +314,14 @@ export default function QuizPlayerPage() {
   }, []);
 
   // Mỗi Part (reading/listening), nhóm câu-không-passage, và mỗi Essay là 1 "trang" riêng.
+  // Sắp theo pageNumber xuyên suốt reading+listening (không nhóm theo kind trước) để
+  // Part 1 luôn hiện trước Part 2/3 dù 2 loại trang bị trộn lẫn trong cùng 1 quiz.
   const steps: Step[] = useMemo(() => {
     if (!attempt) return [];
-    const readingPages = attempt.pages
-      .filter((p) => p.passageKind === "READING")
+    const passagePages = attempt.pages
+      .filter((p) => p.passageKind === "READING" || p.passageKind === "LISTENING")
       .sort((a, b) => a.pageNumber - b.pageNumber);
-    const listeningPages = attempt.pages
-      .filter((p) => p.passageKind === "LISTENING")
-      .sort((a, b) => a.pageNumber - b.pageNumber);
-    const passagePageIds = new Set([...readingPages, ...listeningPages].map((p) => p.id));
+    const passagePageIds = new Set(passagePages.map((p) => p.id));
     const questionsForPage = (pageId: number) =>
       attempt.questions.filter((q) => q.pageId === pageId && q.type !== "ESSAY");
     const essayQuestions = attempt.questions.filter((q) => q.type === "ESSAY");
@@ -331,18 +330,9 @@ export default function QuizPlayerPage() {
     );
 
     const list: Step[] = [];
-    readingPages.forEach((page) =>
+    passagePages.forEach((page) =>
       list.push({
-        kind: "reading",
-        key: `page-${page.id}`,
-        label: page.partLabel ?? `Part ${page.pageNumber}`,
-        page,
-        questions: questionsForPage(page.id),
-      }),
-    );
-    listeningPages.forEach((page) =>
-      list.push({
-        kind: "listening",
+        kind: page.passageKind === "LISTENING" ? "listening" : "reading",
         key: `page-${page.id}`,
         label: page.partLabel ?? `Part ${page.pageNumber}`,
         page,
