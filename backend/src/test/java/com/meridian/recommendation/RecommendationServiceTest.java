@@ -103,9 +103,9 @@ class RecommendationServiceTest {
         when(enrollmentRepository.findByUserIdOrderByEnrolledAtDesc(userId)).thenReturn(List.of());
 
         var row1 = new GradebookRow(1L, "Quiz 1", 5L, "Khóa đã làm bài",
-                BigDecimal.TEN, BigDecimal.TEN, new BigDecimal("6.0"), "GRADED", 1, null);
+                BigDecimal.TEN, BigDecimal.TEN, new BigDecimal("6.0"), "GRADED", 1, null, List.of());
         var row2 = new GradebookRow(2L, "Quiz 2", 5L, "Khóa đã làm bài",
-                BigDecimal.TEN, BigDecimal.TEN, new BigDecimal("7.0"), "GRADED", 1, null);
+                BigDecimal.TEN, BigDecimal.TEN, new BigDecimal("7.0"), "GRADED", 1, null, List.of());
         when(reportService.gradebookForUser(userId, null)).thenReturn(List.of(row1, row2));
         when(courseRepository.findById(5L)).thenReturn(java.util.Optional.of(attemptedCourse));
         when(courseRepository.findByCategory_AudienceGroupAndStatusOrderByCreatedAtDesc(

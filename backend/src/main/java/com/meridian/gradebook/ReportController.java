@@ -6,6 +6,7 @@ import com.meridian.gradebook.dto.GradeHistoryDto;
 import com.meridian.gradebook.dto.ReportDtos.GradebookRow;
 import com.meridian.gradebook.dto.ReportDtos.QuizReport;
 import com.meridian.gradebook.dto.ReportDtos.SystemAnalytics;
+import com.meridian.gradebook.dto.ReportDtos.TypeBreakdown;
 import com.meridian.quiz.dto.AttemptDtos.AttemptResult;
 import com.meridian.security.CurrentUserProvider;
 import jakarta.validation.Valid;
@@ -53,6 +54,11 @@ public class ReportController {
     public List<GradebookRow> studentGradebook(@PathVariable UUID userId,
             @RequestParam(required = false) Long courseId) {
         return reportService.adminStudentGradebook(uid(), userId, courseId);
+    }
+
+    @GetMapping("/students/{userId}/wrong-answer-types")
+    public List<TypeBreakdown> studentWrongAnswerTypes(@PathVariable UUID userId) {
+        return reportService.adminWrongAnswerTypes(uid(), userId);
     }
 
     @GetMapping("/attempts/{attemptId}/answers")

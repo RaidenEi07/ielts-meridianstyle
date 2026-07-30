@@ -4,16 +4,24 @@ import com.meridian.catalog.Enrollment;
 import com.meridian.catalog.EnrollmentRepository;
 import com.meridian.catalog.CourseRepository;
 import com.meridian.common.ApiException;
+import com.meridian.gradebook.dto.ReportDtos.AttemptSummary;
 import com.meridian.gradebook.dto.ReportDtos.GradebookRow;
 import com.meridian.gradebook.dto.ReportDtos.MonthlyPoint;
 import com.meridian.gradebook.dto.ReportDtos.QuizReport;
 import com.meridian.gradebook.dto.ReportDtos.QuizReportRow;
 import com.meridian.gradebook.dto.ReportDtos.QuizReportStats;
 import com.meridian.gradebook.dto.ReportDtos.SystemAnalytics;
+import com.meridian.gradebook.dto.ReportDtos.TypeBreakdown;
+import com.meridian.quiz.AttemptStatus;
 import com.meridian.quiz.Quiz;
 import com.meridian.quiz.QuizAttempt;
+import com.meridian.quiz.QuizAttemptAnswer;
+import com.meridian.quiz.QuizAttemptAnswerRepository;
 import com.meridian.quiz.QuizAttemptRepository;
+import com.meridian.quiz.QuizQuestion;
+import com.meridian.quiz.QuizQuestionRepository;
 import com.meridian.quiz.QuizRepository;
+import com.meridian.question.QuestionService;
 import com.meridian.rbac.Context;
 import com.meridian.rbac.ContextService;
 import com.meridian.rbac.PermissionService;
@@ -42,11 +50,15 @@ public class ReportService {
     private final UserRepository userRepository;
     private final PermissionService permissionService;
     private final ContextService contextService;
+    private final QuizAttemptAnswerRepository answerRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
+    private final QuestionService questionService;
 
     public ReportService(QuizAttemptRepository attemptRepository, QuizRepository quizRepository,
             EnrollmentRepository enrollmentRepository, CourseRepository courseRepository,
             UserRepository userRepository, PermissionService permissionService,
-            ContextService contextService) {
+            ContextService contextService, QuizAttemptAnswerRepository answerRepository,
+            QuizQuestionRepository quizQuestionRepository, QuestionService questionService) {
         this.attemptRepository = attemptRepository;
         this.quizRepository = quizRepository;
         this.enrollmentRepository = enrollmentRepository;
@@ -54,6 +66,9 @@ public class ReportService {
         this.userRepository = userRepository;
         this.permissionService = permissionService;
         this.contextService = contextService;
+        this.answerRepository = answerRepository;
+        this.quizQuestionRepository = quizQuestionRepository;
+        this.questionService = questionService;
     }
 
     // ---- Student gradebook (điểm của tôi) ----
@@ -114,13 +129,75 @@ public class ReportService {
                     .max(Comparator.comparing(a -> a.getRawScore() != null
                             ? a.getRawScore() : BigDecimal.valueOf(-1)))
                     .orElse(attempts.get(0));
+            List<AttemptSummary> attemptList = attempts.stream()
+                    .sorted(Comparator.comparing(QuizAttempt::getStartedAt).reversed())
+                    .map(a -> new AttemptSummary(a.getId(), a.getAttemptNumber(),
+                            a.getStatus().name(), a.getSubmittedAt(), a.getRawScore(),
+                            a.getMaxScore(), a.getBandScore()))
+                    .toList();
             rows.add(new GradebookRow(quiz.getId(), quiz.getTitle(), course.getId(),
                     course.getTitle(), best.getRawScore(), best.getMaxScore(),
                     best.getBandScore(), best.getStatus().name(), attempts.size(),
-                    best.getSubmittedAt()));
+                    best.getSubmittedAt(), attemptList));
         }
         rows.sort(Comparator.comparing(GradebookRow::courseName));
         return rows;
+    }
+
+    /**
+     * Admin xem thống kê "dạng câu hỏi hay sai" của bất kỳ học sinh nào — gộp
+     * toàn bộ lịch sử làm bài (mọi quiz/khóa học), không tách riêng từng quiz.
+     */
+    @Transactional(readOnly = true)
+    public List<TypeBreakdown> adminWrongAnswerTypes(UUID adminUid, UUID targetUserId) {
+        permissionService.requireSystemCapability(adminUid, "user:manage");
+        return wrongAnswerTypesForUser(targetUserId);
+    }
+
+    /**
+     * Gộp toàn bộ câu trả lời (mọi lượt làm, mọi quiz) của 1 user, đếm số câu
+     * đúng/sai theo từng dạng câu hỏi — bỏ qua câu chưa chấm (correct = null,
+     * ví dụ Essay chưa được giáo viên chấm tay). Caller chịu trách nhiệm kiểm
+     * tra quyền trước khi gọi, giống {@link #gradebookForUser}.
+     */
+    @Transactional(readOnly = true)
+    public List<TypeBreakdown> wrongAnswerTypesForUser(UUID targetUserId) {
+        List<Long> gradedAttemptIds = attemptRepository.findByUserIdOrderByStartedAtDesc(targetUserId)
+                .stream()
+                .filter(a -> a.getStatus() == AttemptStatus.GRADED)
+                .map(QuizAttempt::getId)
+                .toList();
+        if (gradedAttemptIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, long[]> tally = new LinkedHashMap<>(); // [correctCount, wrongCount]
+        for (QuizAttemptAnswer answer : answerRepository.findByAttemptIdIn(gradedAttemptIds)) {
+            if (answer.getCorrect() == null) {
+                continue;
+            }
+            QuizQuestion qq = quizQuestionRepository.findById(answer.getQuizQuestionId()).orElse(null);
+            if (qq == null || !quizRepository.existsById(qq.getQuizId())) {
+                continue;
+            }
+            String type;
+            try {
+                type = questionService.getQuestion(qq.getQuestionId()).type();
+            } catch (RuntimeException e) {
+                continue;
+            }
+            long[] counts = tally.computeIfAbsent(type, t -> new long[2]);
+            if (answer.getCorrect()) {
+                counts[0]++;
+            } else {
+                counts[1]++;
+            }
+        }
+
+        return tally.entrySet().stream()
+                .map(e -> new TypeBreakdown(e.getKey(), e.getValue()[0], e.getValue()[1]))
+                .sorted(Comparator.comparingLong(TypeBreakdown::wrongCount).reversed())
+                .toList();
     }
 
     // ---- Teacher quiz report ----

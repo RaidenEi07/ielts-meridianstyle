@@ -22,7 +22,23 @@ public final class ReportDtos {
             BigDecimal bandScore,
             String status,
             int attempts,
-            Instant lastSubmittedAt) {
+            Instant lastSubmittedAt,
+            List<AttemptSummary> attemptList) {
+    }
+
+    /** Tóm tắt 1 lượt làm bài cụ thể — dùng để admin/giáo viên xem chi tiết. */
+    public record AttemptSummary(
+            Long attemptId,
+            int attemptNumber,
+            String status,
+            Instant submittedAt,
+            BigDecimal rawScore,
+            BigDecimal maxScore,
+            BigDecimal bandScore) {
+    }
+
+    /** Số câu đúng/sai theo từng dạng câu hỏi, gộp toàn bộ lịch sử làm bài của 1 học viên. */
+    public record TypeBreakdown(String type, long correctCount, long wrongCount) {
     }
 
     public record QuizReportStats(

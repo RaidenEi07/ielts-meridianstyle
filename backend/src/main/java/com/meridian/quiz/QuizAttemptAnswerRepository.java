@@ -8,6 +8,8 @@ public interface QuizAttemptAnswerRepository extends JpaRepository<QuizAttemptAn
 
     List<QuizAttemptAnswer> findByAttemptId(Long attemptId);
 
+    List<QuizAttemptAnswer> findByAttemptIdIn(List<Long> attemptIds);
+
     Optional<QuizAttemptAnswer> findByAttemptIdAndQuizQuestionId(
             Long attemptId, Long quizQuestionId);
 }

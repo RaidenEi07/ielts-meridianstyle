@@ -5,6 +5,7 @@ import com.meridian.catalog.dto.EnrollmentDto;
 import com.meridian.common.ApiException;
 import com.meridian.gradebook.ReportService;
 import com.meridian.gradebook.dto.ReportDtos.GradebookRow;
+import com.meridian.gradebook.dto.ReportDtos.TypeBreakdown;
 import com.meridian.roster.dto.EnrollStudentRequest;
 import com.meridian.roster.dto.StudentSummaryDto;
 import com.meridian.security.CurrentUserProvider;
@@ -56,6 +57,15 @@ public class TeacherRosterController {
             throw ApiException.forbidden("Học sinh này không thuộc quyền quản lý của bạn");
         }
         return reportService.gradebookForUser(studentId, courseId);
+    }
+
+    @GetMapping("/students/{studentId}/wrong-answer-types")
+    public List<TypeBreakdown> studentWrongAnswerTypes(@PathVariable UUID studentId) {
+        UUID teacherId = currentUser.require().id();
+        if (!rosterService.isAssigned(teacherId, studentId)) {
+            throw ApiException.forbidden("Học sinh này không thuộc quyền quản lý của bạn");
+        }
+        return reportService.wrongAnswerTypesForUser(studentId);
     }
 
     @PostMapping("/students/{studentId}/enroll")
