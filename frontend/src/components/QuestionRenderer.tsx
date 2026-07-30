@@ -207,15 +207,15 @@ export function QuestionRenderer({
     case "GRID_MATCHING": {
       const choices: Record<string, string> = answer?.choices ?? {};
       return (
-        <div className="overflow-x-auto">
-          <table className="w-full border-collapse text-sm">
+        <div className="overflow-x-auto rounded-card border border-border">
+          <table className="w-full min-w-max border-collapse text-sm">
             <thead>
-              <tr>
-                <th className="border-b border-border p-2 text-left" />
+              <tr className="bg-soft">
+                <th className="border-b border-border p-3 text-left font-semibold text-text" />
                 {question.gridColumns.map((c) => (
                   <th
                     key={c.label}
-                    className="border-b border-border p-2 text-center font-medium"
+                    className="min-w-14 border-b border-l border-border p-3 text-center font-semibold text-text"
                   >
                     {c.label}
                   </th>
@@ -223,21 +223,27 @@ export function QuestionRenderer({
               </tr>
             </thead>
             <tbody>
-              {question.gridRows.map((row) => (
-                <tr key={row.id}>
-                  <td className="border-b border-border p-2 font-medium">{row.rowText}</td>
-                  {question.gridColumns.map((c) => (
-                    <td key={c.label} className="border-b border-border p-2 text-center">
-                      <input
-                        type="radio"
-                        name={`grid-${question.quizQuestionId}-${row.id}`}
-                        checked={choices[String(row.id)] === c.label}
-                        onChange={() =>
-                          onChange({ choices: { ...choices, [String(row.id)]: c.label } })
-                        }
-                      />
-                    </td>
-                  ))}
+              {question.gridRows.map((row, idx) => (
+                <tr key={row.id} className={idx % 2 === 1 ? "bg-soft/40" : undefined}>
+                  <td className="border-b border-border p-3 font-medium">{row.rowText}</td>
+                  {question.gridColumns.map((c) => {
+                    const checked = choices[String(row.id)] === c.label;
+                    return (
+                      <td key={c.label} className="border-b border-l border-border p-0 text-center">
+                        <label className="flex h-full w-full cursor-pointer items-center justify-center p-3 hover:bg-primary-soft">
+                          <input
+                            type="radio"
+                            className="h-4 w-4 accent-current"
+                            name={`grid-${question.quizQuestionId}-${row.id}`}
+                            checked={checked}
+                            onChange={() =>
+                              onChange({ choices: { ...choices, [String(row.id)]: c.label } })
+                            }
+                          />
+                        </label>
+                      </td>
+                    );
+                  })}
                 </tr>
               ))}
             </tbody>
