@@ -70,6 +70,25 @@
   --red: #000000;
   --red-soft: #e6e6e6;
   --info: #000000;
+  /* --radius-md/--radius-sm/--radius-xl vẫn dùng var() thật (Tailwind mặc
+     định, dự án không override) nên bị làm phẳng qua biến bên trên là đủ. */
+  --radius-md: 0px;
+  --radius-sm: 0px;
+  --radius-xl: 0px;
+}
+
+/* --radius-card/--radius-lg đã bị dự án override bằng giá trị cố định ngay
+   trong khối @theme inline (12px/18px) — Tailwind v4 "inline" bản chất là
+   in thẳng giá trị đó vào từng class lúc build (`.rounded-lg{border-radius:
+   18px}`), KHÔNG qua CSS variable thật, nên override --radius-lg ở trên vô
+   dụng. rounded-full cũng vậy (Tailwind luôn dùng giá trị cố định, không có
+   token riêng). Cả 3 trường hợp này phải override thẳng bằng attribute
+   selector — specificity của nó (2 lớp) đã cao hơn 1 class đơn nên tự
+   thắng, không cần !important. */
+.exam-mode [class*="rounded-full"],
+.exam-mode [class*="rounded-card"],
+.exam-mode [class*="rounded-lg"] {
+  border-radius: 0;
 }
 
 /* Map tokens -> Tailwind utilities (bg-surface, text-muted, border-border, ...) */
