@@ -536,6 +536,8 @@ function CourseQuizzesPanel({
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
   const [showBulkRename, setShowBulkRename] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [search, setSearch] = useState("");
   const confirm = useConfirm();
   const toast = useToast();
 
@@ -558,6 +560,14 @@ function CourseQuizzesPanel({
 
   if (!quizGroups || quizGroups.length === 0) return null;
 
+  const filteredGroups = search.trim()
+    ? quizGroups.filter(
+        (g) =>
+          g.quiz.title.toLowerCase().includes(search.trim().toLowerCase()) ||
+          g.sectionTitle.toLowerCase().includes(search.trim().toLowerCase()),
+      )
+    : quizGroups;
+
   function toggleSelected(id: number) {
     setSelected((prev) => {
       const next = new Set(prev);
@@ -569,7 +579,9 @@ function CourseQuizzesPanel({
 
   function toggleSelectAll() {
     setSelected((prev) =>
-      prev.size === quizGroups!.length ? new Set() : new Set(quizGroups!.map((g) => g.quiz.id)),
+      filteredGroups.every((g) => prev.has(g.quiz.id))
+        ? new Set([...prev].filter((id) => !filteredGroups.some((g) => g.quiz.id === id)))
+        : new Set([...prev, ...filteredGroups.map((g) => g.quiz.id)]),
     );
   }
 
@@ -626,84 +638,136 @@ function CourseQuizzesPanel({
   }
 
   return (
-    <section className="rounded-card border border-border bg-surface p-6">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Quiz toàn khóa ({quizGroups.length})</h2>
-        <label className="flex items-center gap-2 text-sm text-muted">
-          <input
-            type="checkbox"
-            checked={selected.size === quizGroups.length}
-            onChange={toggleSelectAll}
-          />
-          Chọn tất cả
-        </label>
+    <div className="flex justify-end">
+      <div className="flex items-center gap-3 rounded-card border border-border bg-surface px-4 py-3 text-sm">
+        <span className="text-muted">{quizGroups.length} quiz trong khóa học</span>
+        <button
+          type="button"
+          onClick={() => setShowModal(true)}
+          className="font-semibold text-accent hover:underline"
+        >
+          Quản lý hàng loạt →
+        </button>
       </div>
 
-      {selected.size > 0 && (
-        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-primary-soft p-3 text-sm">
-          <span className="font-medium text-primary">{selected.size} quiz đã chọn</span>
-          <button
-            type="button"
-            onClick={bulkPublish}
-            disabled={bulkWorking}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-text disabled:opacity-60"
+      {showModal && (
+        <div
+          className="fixed inset-0 z-[100] grid place-items-center bg-black/40 px-4"
+          onClick={() => setShowModal(false)}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-card border border-border bg-surface p-6 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
           >
-            Publish hàng loạt
-          </button>
-          <button
-            type="button"
-            onClick={() => setShowBulkRename(true)}
-            disabled={bulkWorking}
-            className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-text disabled:opacity-60"
-          >
-            Đổi tên hàng loạt
-          </button>
-          <button
-            type="button"
-            onClick={bulkDelete}
-            disabled={bulkWorking}
-            className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            Xóa ({selected.size})
-          </button>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Quiz toàn khóa ({quizGroups.length})</h2>
+              <button
+                type="button"
+                onClick={() => setShowModal(false)}
+                className="text-faint hover:text-text"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="relative mb-3">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
+              <input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Tìm theo tên quiz hoặc section…"
+                className="input w-full py-2 pl-8 text-sm"
+              />
+            </div>
+
+            <label className="mb-3 flex items-center gap-2 text-sm text-muted">
+              <input
+                type="checkbox"
+                checked={filteredGroups.length > 0 && filteredGroups.every((g) => selected.has(g.quiz.id))}
+                onChange={toggleSelectAll}
+              />
+              Chọn tất cả{search.trim() ? " (đang lọc)" : ""}
+            </label>
+
+            {selected.size > 0 && (
+              <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg bg-primary-soft p-3 text-sm">
+                <span className="font-medium text-primary">{selected.size} quiz đã chọn</span>
+                <button
+                  type="button"
+                  onClick={bulkPublish}
+                  disabled={bulkWorking}
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-text disabled:opacity-60"
+                >
+                  Publish hàng loạt
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowBulkRename(true)}
+                  disabled={bulkWorking}
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-text disabled:opacity-60"
+                >
+                  Đổi tên hàng loạt
+                </button>
+                <button
+                  type="button"
+                  onClick={bulkDelete}
+                  disabled={bulkWorking}
+                  className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+                >
+                  Xóa ({selected.size})
+                </button>
+              </div>
+            )}
+
+            <div className="overflow-hidden rounded-lg border border-border">
+              <table className="w-full text-left text-sm">
+                <thead className="bg-soft text-muted">
+                  <tr>
+                    <th className="w-8 px-3 py-2" />
+                    <th className="px-3 py-2 font-medium">Tên quiz</th>
+                    <th className="px-3 py-2 font-medium">Section</th>
+                    <th className="px-3 py-2 font-medium">Trạng thái</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredGroups.length === 0 ? (
+                    <tr>
+                      <td colSpan={4} className="px-3 py-6 text-center text-muted">
+                        Không tìm thấy quiz nào.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredGroups.map(({ quiz, sectionTitle }) => {
+                      const meta = STATUS_META[quiz.status] ?? {
+                        label: quiz.status,
+                        cls: "bg-soft text-muted",
+                      };
+                      return (
+                        <tr key={quiz.id} className="border-t border-border">
+                          <td className="px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={selected.has(quiz.id)}
+                              onChange={() => toggleSelected(quiz.id)}
+                            />
+                          </td>
+                          <td className="px-3 py-2 font-medium">{quiz.title}</td>
+                          <td className="px-3 py-2 text-muted">{sectionTitle}</td>
+                          <td className="px-3 py-2">
+                            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${meta.cls}`}>
+                              {meta.label}
+                            </span>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
         </div>
       )}
-
-      <div className="overflow-hidden rounded-lg border border-border">
-        <table className="w-full text-left text-sm">
-          <thead className="bg-soft text-muted">
-            <tr>
-              <th className="w-8 px-3 py-2" />
-              <th className="px-3 py-2 font-medium">Tên quiz</th>
-              <th className="px-3 py-2 font-medium">Section</th>
-              <th className="px-3 py-2 font-medium">Trạng thái</th>
-            </tr>
-          </thead>
-          <tbody>
-            {quizGroups.map(({ quiz, sectionTitle }) => {
-              const meta = STATUS_META[quiz.status] ?? { label: quiz.status, cls: "bg-soft text-muted" };
-              return (
-                <tr key={quiz.id} className="border-t border-border">
-                  <td className="px-3 py-2">
-                    <input
-                      type="checkbox"
-                      checked={selected.has(quiz.id)}
-                      onChange={() => toggleSelected(quiz.id)}
-                    />
-                  </td>
-                  <td className="px-3 py-2 font-medium">{quiz.title}</td>
-                  <td className="px-3 py-2 text-muted">{sectionTitle}</td>
-                  <td className="px-3 py-2">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${meta.cls}`}>
-                      {meta.label}
-                    </span>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
 
       {showBulkRename && (
         <BulkRenameDialog
@@ -714,7 +778,7 @@ function CourseQuizzesPanel({
           onClose={() => setShowBulkRename(false)}
         />
       )}
-    </section>
+    </div>
   );
 }
 
