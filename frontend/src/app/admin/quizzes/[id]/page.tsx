@@ -904,27 +904,35 @@ function QuestionsPanel({
       )}
 
       {editingId !== null && (
-        <div className="mt-4 rounded-lg border border-border p-4">
-          <div className="mb-3 flex items-center justify-between">
-            <h3 className="text-sm font-semibold">Sửa câu hỏi</h3>
-            <button type="button" onClick={closeEdit} className="text-xs text-muted">
-              Đóng
-            </button>
+        <div
+          className="fixed inset-0 z-[100] grid place-items-center bg-black/40 px-4"
+          onClick={closeEdit}
+        >
+          <div
+            className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-border bg-surface p-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-sm font-semibold">Sửa câu hỏi</h3>
+              <button type="button" onClick={closeEdit} className="text-xs text-muted">
+                Đóng
+              </button>
+            </div>
+            {!editingDetail ? (
+              <p className="text-sm text-muted">Đang tải…</p>
+            ) : (
+              <QuestionForm
+                mode="edit"
+                initial={editingDetail}
+                categories={createCategories}
+                passages={passages}
+                tags={tags}
+                token={token}
+                onSaved={handleQuestionEdited}
+                onCategoriesChanged={refreshCreateCategories}
+              />
+            )}
           </div>
-          {!editingDetail ? (
-            <p className="text-sm text-muted">Đang tải…</p>
-          ) : (
-            <QuestionForm
-              mode="edit"
-              initial={editingDetail}
-              categories={createCategories}
-              passages={passages}
-              tags={tags}
-              token={token}
-              onSaved={handleQuestionEdited}
-              onCategoriesChanged={refreshCreateCategories}
-            />
-          )}
         </div>
       )}
 
