@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
+  Bell,
   BookOpen,
   CheckCircle2,
   ChevronDown,
@@ -10,23 +11,23 @@ import {
   ChevronRight,
   ChevronUp,
   Flag,
+  Headphones,
   Highlighter,
   Hourglass,
   Lightbulb,
-  Lock,
+  Menu,
   NotebookPen,
-  Pause,
   Play,
   Timer,
   Trash2,
+  Wifi,
   X,
   XCircle,
 } from "lucide-react";
-import { DndContext, type DragEndEvent } from "@dnd-kit/core";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
 import { KidsMatchingGame } from "@/components/kids/KidsMatchingGame";
-import { PassageDragChip, PassageDropBlank } from "@/components/PassageDragBlank";
+import { Logo } from "@/components/Logo";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
 import { ApiError, quizApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
@@ -182,6 +183,7 @@ export default function QuizPlayerPage() {
   const [stepIndex, setStepIndex] = useState(0);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
   const submittingRef = useRef(false);
   const token = accessToken ?? "";
@@ -370,8 +372,6 @@ export default function QuizPlayerPage() {
   }, [steps]);
   const audioRef = useRef<HTMLAudioElement>(null);
   const [audioStarted, setAudioStarted] = useState(false);
-  const [audioCurrent, setAudioCurrent] = useState(0);
-  const [audioDuration, setAudioDuration] = useState(0);
   const [audioEnded, setAudioEnded] = useState(false);
   const [audioTransferLeft, setAudioTransferLeft] = useState<number | null>(null);
   const maxAudioReachedRef = useRef(0);
@@ -505,7 +505,6 @@ export default function QuizPlayerPage() {
           ref={audioRef}
           src={audioSrc}
           controls={false}
-          onLoadedMetadata={(e) => setAudioDuration(e.currentTarget.duration || 0)}
           onTimeUpdate={(e) => {
             const t = e.currentTarget.currentTime;
             if (t > maxAudioReachedRef.current + 1.5) {
@@ -513,42 +512,59 @@ export default function QuizPlayerPage() {
               return;
             }
             maxAudioReachedRef.current = Math.max(maxAudioReachedRef.current, t);
-            setAudioCurrent(t);
           }}
           onEnded={() => setAudioEnded(true)}
         />
       )}
 
-      {/* Header phòng thi */}
+      {/*
+        Header phòng thi — luôn giữ thanh "chrome" tối màu cố định, khớp bố
+        cục giao diện phòng thi CD thật (logo trái, icon trạng thái phải),
+        không đổi theo isExamMode — chỉ phần nội dung bên dưới đổi trắng-đen.
+      */}
       <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-3"
-        style={isExamMode ? { background: "#ffffff", color: "#000000", borderBottom: "1px solid #cccccc" } : { background: "#262019", color: "#ECE4D8" }}>
-        <div className="flex items-center gap-3">
-          <span className="font-semibold">{attempt.quizTitle}</span>
-          {attempt.examTemplateCode && (
-            <span className="rounded-full bg-red px-2.5 py-0.5 text-xs font-bold text-white">
-              {attempt.examTemplateCode}
-            </span>
-          )}
-          <span className={`flex items-center gap-1 text-xs ${isExamMode ? "text-black/50" : "text-white/50"}`}>
-            <Lock className="h-3.5 w-3.5" /> Chế độ thi
-          </span>
-        </div>
+        style={{ background: "#262019", color: "#ECE4D8" }}>
+        <Logo className="[&_span]:text-white" />
         <div className="flex items-center gap-4">
-          {attempt.antiCheatEnabled && (
-            <span className={`text-xs ${isExamMode ? "text-black/60" : "text-white/60"}`}>
-              Vi phạm: {violations}/{attempt.maxViolations}
-            </span>
-          )}
+          <Wifi className="h-4 w-4 opacity-60" aria-hidden />
+          <span className="relative flex items-center">
+            <Bell className="h-4 w-4 opacity-60" aria-hidden />
+            {attempt.antiCheatEnabled && violations > 0 && (
+              <span className="absolute -right-1.5 -top-1.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-red text-[9px] font-bold text-white">
+                {violations}
+              </span>
+            )}
+          </span>
           {remaining !== null && (
             <span className={`flex items-center gap-1 font-mono text-lg ${remaining < 60 ? "text-red" : ""}`}
               style={{ fontFamily: "var(--font-mono)" }}>
               <Timer className="h-4 w-4" /> {fmt(remaining)}
             </span>
           )}
-          <button type="button" onClick={doSubmit}
-            className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white">
-            Nộp bài
-          </button>
+          <div className="relative">
+            <button type="button" onClick={() => setMenuOpen((v) => !v)}
+              className="grid h-8 w-8 place-items-center rounded hover:bg-white/10"
+              title="Menu" aria-label="Menu">
+              <Menu className="h-5 w-5" />
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-full z-30 mt-2 w-52 overflow-hidden rounded-lg border border-border bg-surface text-text shadow-lg">
+                <button type="button"
+                  onClick={() => { setNotesOpen(true); setMenuOpen(false); }}
+                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-soft">
+                  <NotebookPen className="h-4 w-4" /> Ghi chú{notes.length > 0 ? ` (${notes.length})` : ""}
+                </button>
+                <button type="button"
+                  onClick={() => { setMenuOpen(false); doSubmit(); }}
+                  className="flex w-full items-center gap-2 border-t border-border px-4 py-2.5 text-left text-sm font-semibold text-accent hover:bg-soft">
+                  <CheckCircle2 className="h-4 w-4" /> Nộp bài
+                </button>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </header>
 
@@ -586,8 +602,6 @@ export default function QuizPlayerPage() {
                   onAnswer={setAnswer}
                   onFlag={toggleFlag}
                   started={audioStarted}
-                  current={audioCurrent}
-                  duration={audioDuration}
                   ended={audioEnded}
                   transferLeft={audioTransferLeft}
                   onStart={startAudio}
@@ -614,43 +628,62 @@ export default function QuizPlayerPage() {
         })}
       </div>
 
-      {/* Bottom navigator: nhóm theo Part, bấm số nào nhảy đúng tới câu đó */}
+      {/*
+        Bottom navigator: hàng tab theo Part ở trên, chỉ sổ ra số câu của
+        Part đang chọn ở dưới — bấm tab khác nhảy stepIndex + đổi số hiện.
+      */}
       <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-surface px-4 py-2.5">
-        <div className="mx-auto flex max-w-5xl items-center gap-3 overflow-x-auto">
-          <span className="shrink-0 text-xs text-muted">
-            {answeredCount}/{orderedSlots.length} câu
-          </span>
-          <div className="flex items-center gap-3">
+        <div className="mx-auto max-w-5xl">
+          <div className="mb-2 flex items-center gap-2 overflow-x-auto">
+            <span className="shrink-0 text-xs text-muted">
+              {answeredCount}/{orderedSlots.length} câu
+            </span>
             {steps.map((step, idx) => (
-              <div key={step.key} className="flex shrink-0 items-center gap-1.5">
-                {idx > 0 && <span className="mx-1 h-5 w-px shrink-0 bg-border" />}
-                {stepSlots(step).map((slot) => {
-                  const answered = isSlotAnswered(slot, answers);
-                  const isFlagged = flagged.has(slot.quizQuestionId);
-                  const isCurrent = focusId === slot.key;
-                  return (
-                    <button
-                      key={slot.key}
-                      type="button"
-                      onClick={() => goToQuestion(slot.key)}
-                      title={`Câu ${order.get(slot.key)} — ${step.label}`}
-                      className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-semibold transition-transform ${
-                        isCurrent ? "ring-2 ring-primary ring-offset-1 ring-offset-surface" : ""
-                      } ${
-                        isFlagged ? "border-accent bg-accent-soft text-accent"
-                          : answered ? "border-green bg-green-soft text-green"
-                          : "border-border text-muted"}`}>
-                      {order.get(slot.key)}
-                    </button>
-                  );
-                })}
-              </div>
+              <button
+                key={step.key}
+                type="button"
+                onClick={() => {
+                  const slots = stepSlots(step);
+                  if (slots.length > 0) goToQuestion(slots[0].key);
+                  else setStepIndex(idx);
+                }}
+                className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                  idx === stepIndex ? "bg-primary text-white" : "bg-soft text-muted hover:text-text"
+                }`}
+              >
+                {step.label}
+              </button>
             ))}
+          </div>
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            {stepSlots(steps[stepIndex]).map((slot) => {
+              const answered = isSlotAnswered(slot, answers);
+              const isFlagged = flagged.has(slot.quizQuestionId);
+              const isCurrent = focusId === slot.key;
+              return (
+                <button
+                  key={slot.key}
+                  type="button"
+                  onClick={() => goToQuestion(slot.key)}
+                  title={`Câu ${order.get(slot.key)} — ${steps[stepIndex].label}`}
+                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-semibold transition-transform ${
+                    isCurrent ? "ring-2 ring-primary ring-offset-1 ring-offset-surface" : ""
+                  } ${
+                    isFlagged ? "border-accent bg-accent-soft text-accent"
+                      : answered ? "border-green bg-green-soft text-green"
+                      : "border-border text-muted"}`}>
+                  {order.get(slot.key)}
+                </button>
+              );
+            })}
           </div>
         </div>
       </nav>
 
-      {/* Ghi chú + điều hướng câu tiếp theo/trước đó, góc dưới bên phải */}
+      {/*
+        Ghi chú (mở từ menu header) + điều hướng câu trước/sau, góc dưới
+        bên phải — khớp bố cục tham khảo (chỉ còn 2 mũi tên ở góc này).
+      */}
       <div className="fixed bottom-20 right-6 z-30 flex flex-col items-end gap-2">
         {notesOpen && (
           <NotesPanel
@@ -661,21 +694,6 @@ export default function QuizPlayerPage() {
             onClose={() => setNotesOpen(false)}
           />
         )}
-        <button
-          type="button"
-          onClick={() => setNotesOpen((v) => !v)}
-          title="Ghi chú"
-          className={`relative grid h-11 w-11 place-items-center rounded-full border shadow-md ${
-            notesOpen ? "border-primary bg-primary text-white" : "border-border bg-surface text-muted"
-          }`}
-        >
-          <NotebookPen className="h-5 w-5" />
-          {notes.length > 0 && (
-            <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-accent text-[10px] font-bold text-white">
-              {notes.length}
-            </span>
-          )}
-        </button>
         <div className="flex gap-2">
           <button type="button" onClick={() => stepBy(-1)} title="Câu trước"
             className="grid h-11 w-11 place-items-center rounded-full border border-border bg-surface shadow-md hover:bg-primary-soft">
@@ -1051,9 +1069,10 @@ function ReadingSplitPane({
   const questionsChoice = questionsSel.stage.kind === "choice" ? questionsSel.stage : null;
   const questionsCompose = questionsSel.stage.kind === "compose" ? questionsSel.stage : null;
 
-  // Kéo-thả vào đoạn văn (Matching Heading): 1 câu DRAG_DROP_TEXT có passageId
-  // trùng đoạn văn đang hiện -> marker [[n]] nằm ngay trong passageContent thay
-  // vì trong settings.template riêng của câu hỏi. Xem Lát 17.
+  // Matching Heading: 1 câu DRAG_DROP_TEXT có passageId trùng đoạn văn đang
+  // hiện -> marker [[n]] nằm ngay trong passageContent. Mỗi marker hiện 1
+  // dropdown chọn tiêu đề (không kéo-thả) — giữ nguyên shape `placements`
+  // cũ (itemId -> targetLabel) nên chấm điểm (gradeDragDropText) không đổi.
   const embeddedQuestion = useMemo(
     () =>
       questions.find(
@@ -1064,34 +1083,21 @@ function ReadingSplitPane({
   const embeddedPlacements: Record<string, string> = embeddedQuestion
     ? (answers[embeddedQuestion.quizQuestionId]?.placements ?? {})
     : {};
-  const embeddedUsedItemIds = new Set(Object.keys(embeddedPlacements));
 
-  function clearEmbeddedBlank(targetLabel: string) {
+  function handleSelectHeading(targetLabel: string, itemId: string) {
     if (!embeddedQuestion) return;
     const next = { ...embeddedPlacements };
     Object.keys(next).forEach((id) => {
-      if (next[id] === targetLabel) delete next[id];
+      // Giải phóng target này (nếu đang có tiêu đề khác) và giải phóng chính
+      // itemId mới chọn khỏi bất kỳ target nào khác nó từng được gán (mỗi
+      // tiêu đề chỉ dùng được 1 lần, giống hệt quy tắc kéo-thả cũ).
+      if (next[id] === targetLabel || id === itemId) delete next[id];
     });
-    onAnswer(embeddedQuestion, { placements: next });
-  }
-
-  function handleEmbeddedDragEnd(event: DragEndEvent) {
-    if (!embeddedQuestion) return;
-    const { active, over } = event;
-    if (!over) return;
-    const itemId = active.data.current?.itemId as string | undefined;
-    if (!itemId) return;
-    const targetLabel = String(over.id).replace("passage-blank-", "");
-    const next = { ...embeddedPlacements };
-    Object.keys(next).forEach((id) => {
-      if (next[id] === targetLabel) delete next[id];
-    });
-    next[itemId] = targetLabel;
+    if (itemId) next[itemId] = targetLabel;
     onAnswer(embeddedQuestion, { placements: next });
   }
 
   return (
-    <DndContext onDragEnd={handleEmbeddedDragEnd}>
     <div>
       <div className="border-b border-border px-6 py-2 text-sm font-medium"
         style={{ background: "#f0f0f0", color: "#000000" }}>
@@ -1114,18 +1120,22 @@ function ReadingSplitPane({
                 markerPattern={/\[\[(\d+)\]\]/g}
                 className="prose prose-sm dark:prose-invert max-w-none"
                 renderBlank={(targetLabel) => {
-                  const itemId = Object.keys(embeddedPlacements).find(
+                  const selectedItemId = Object.keys(embeddedPlacements).find(
                     (id) => embeddedPlacements[id] === targetLabel,
-                  );
-                  const filledItem = itemId
-                    ? (embeddedQuestion.dragItems.find((d) => String(d.id) === itemId) ?? null)
-                    : null;
+                  ) ?? "";
                   return (
-                    <PassageDropBlank
-                      targetLabel={targetLabel}
-                      filledItem={filledItem}
-                      onClear={() => clearEmbeddedBlank(targetLabel)}
-                    />
+                    <select
+                      value={selectedItemId}
+                      onChange={(e) => handleSelectHeading(targetLabel, e.target.value)}
+                      className="input mx-1 inline-block w-auto align-middle text-sm"
+                    >
+                      <option value="">— Chọn tiêu đề —</option>
+                      {embeddedQuestion.dragItems.map((item) => (
+                        <option key={item.id} value={String(item.id)}>
+                          {item.content}
+                        </option>
+                      ))}
+                    </select>
                   );
                 }}
               />
@@ -1154,8 +1164,8 @@ function ReadingSplitPane({
           <div className="space-y-4">
             {questions.map((q) =>
               q === embeddedQuestion ? (
-                <EmbeddedDragPoolCard key={q.quizQuestionId} index={cardLabel(q, order)}
-                  question={q} usedItemIds={embeddedUsedItemIds}
+                <EmbeddedMatchingInfoCard key={q.quizQuestionId} index={cardLabel(q, order)}
+                  question={q}
                   flagged={flagged.has(q.quizQuestionId)}
                   focused={isFocusedQuestion(focusedId, q.quizQuestionId)}
                   onFlag={() => onFlag(q.quizQuestionId)} />
@@ -1175,31 +1185,20 @@ function ReadingSplitPane({
         </div>
       </div>
     </div>
-    </DndContext>
   );
 }
 
 // ------------------------------------------------------------------
 // Listening: audio dùng chung toàn quiz (xem <audio> ở QuizPlayerPage) +
-// waveform + note completion. Component này chỉ hiển thị trạng thái phát dùng
-// chung, không tự quản lý audio riêng — mọi Part Listening đều phản ánh cùng
-// một tiến trình phát, và một khi đã bấm phát thì không còn nút tạm dừng.
+// note completion. Component này chỉ hiển thị trạng thái phát dùng chung,
+// không tự quản lý audio riêng — mọi Part Listening đều phản ánh cùng một
+// tiến trình phát, và một khi đã bấm phát thì không còn cách tạm dừng/tua.
 // ------------------------------------------------------------------
 const TRANSFER_TIME_SECONDS = 600; // 10 phút theo chuẩn IELTS CDT
 
-function seededBarHeights(count: number): number[] {
-  let seed = 7;
-  const rand = () => {
-    seed = (seed * 48271) % 0x7fffffff;
-    return seed / 0x7fffffff;
-  };
-  return Array.from({ length: count }, () => 0.3 + rand() * 0.7);
-}
-const WAVEFORM_HEIGHTS = seededBarHeights(40);
-
 function ListeningPane({
   page, questions, order, answers, flagged, focusedId, onAnswer, onFlag,
-  started, current, duration, ended, transferLeft, onStart,
+  started, ended, transferLeft, onStart,
 }: {
   page: ExamPage;
   questions: PlayerQuestion[];
@@ -1212,63 +1211,43 @@ function ListeningPane({
   onAnswer: (q: PlayerQuestion, r: any) => void;
   onFlag: (id: number) => void;
   started: boolean;
-  current: number;
-  duration: number;
   ended: boolean;
   transferLeft: number | null;
   onStart: () => void;
 }) {
-  const progress = duration > 0 ? current / duration : 0;
-  const playedBars = Math.round(progress * WAVEFORM_HEIGHTS.length);
-
   return (
-    <div id={`q-page-${page.id}`}>
+    <div id={`q-page-${page.id}`} className="relative">
       <div className="border-b border-border px-6 py-2 text-sm font-medium"
         style={{ background: "#f0f0f0", color: "#000000" }}>
         {page.partLabel ?? `Part ${page.pageNumber}`} — Listening
       </div>
 
-      <div className="mx-auto max-w-3xl px-6 py-6">
-        {/* Audio bar — dùng chung, không có nút tạm dừng một khi đã bấm phát */}
-        <div className="flex items-center gap-4 rounded-card border border-border bg-surface p-4">
+      {/*
+        Cổng chặn trước khi nghe — học sinh không thao tác được câu hỏi cho
+        tới khi bấm Play (thỏa chính sách autoplay-cần-cử-chỉ-người-dùng của
+        trình duyệt). Sau khi bấm, audio tự chạy liên tục — không còn thanh
+        waveform/thời gian/nút tạm dừng nào nữa (đúng chuẩn phòng thi thật).
+      */}
+      {!started && (
+        <div className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-4 bg-bg/95 px-6 text-center">
+          <div className="grid h-16 w-16 place-items-center rounded-full bg-soft">
+            <Headphones className="h-8 w-8 text-muted" />
+          </div>
+          <p className="max-w-sm text-sm text-muted">
+            Bạn sẽ nghe 1 đoạn audio trong bài thi này. Bạn sẽ không được phép tạm dừng hoặc tua lại audio trong lúc trả lời câu hỏi.
+          </p>
+          <p className="text-sm text-muted">Để tiếp tục, bấm Phát.</p>
           <button
             type="button"
             onClick={onStart}
-            disabled={started}
-            aria-label={started ? "Đang phát" : "Phát"}
-            title={started ? "Audio đang phát, không thể tạm dừng" : "Bắt đầu phát audio"}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-green text-white disabled:opacity-70"
+            className="flex items-center gap-2 rounded-lg bg-text px-5 py-2.5 text-sm font-semibold text-bg"
           >
-            {started ? <Pause className="h-5 w-5" /> : <Play className="h-5 w-5" />}
+            <Play className="h-4 w-4" /> Phát
           </button>
-
-          <div className="flex flex-1 items-center gap-[3px]" aria-hidden>
-            {WAVEFORM_HEIGHTS.map((h, i) => (
-              <span
-                key={i}
-                className="w-1 rounded-sm"
-                style={{
-                  height: `${Math.round(h * 28)}px`,
-                  background: i < playedBars ? "var(--green)" : "var(--border)",
-                }}
-              />
-            ))}
-          </div>
-
-          <span
-            className="shrink-0 font-mono text-sm text-muted"
-            style={{ fontFamily: "var(--font-mono)" }}
-          >
-            {fmt(Math.floor(current))} / {fmt(Math.floor(duration))}
-          </span>
         </div>
+      )}
 
-        {!started && (
-          <p className="mt-2 text-xs text-muted">
-            Bấm phát để bắt đầu — audio sẽ chạy liên tục qua cả 3 phần, kể cả khi bạn chuyển trang, và không thể tạm dừng.
-          </p>
-        )}
-
+      <div className="mx-auto max-w-3xl px-6 py-6">
         {/* Transfer time banner */}
         {ended && transferLeft !== null && transferLeft > 0 && (
           <div className="mt-4 flex items-start gap-2 rounded-lg bg-accent-soft px-4 py-3 text-sm text-accent">
@@ -1450,12 +1429,11 @@ function QuestionCard({
 
 /** Pool các mục kéo-thả cho câu DRAG_DROP_TEXT nhúng vào đoạn văn (Lát 17) — ô
  * trống thật sự nằm bên đoạn văn cột trái, thẻ này chỉ hiện các mục chưa dùng. */
-function EmbeddedDragPoolCard({
-  index, question, usedItemIds, flagged, focused, onFlag,
+function EmbeddedMatchingInfoCard({
+  index, question, flagged, focused, onFlag,
 }: {
   index: number | string;
   question: PlayerQuestion;
-  usedItemIds: Set<string>;
   flagged: boolean;
   focused?: boolean;
   onFlag: () => void;
@@ -1465,24 +1443,17 @@ function EmbeddedDragPoolCard({
       className={`rounded-card border bg-surface p-4 transition-colors ${
         focused ? "border-primary ring-2 ring-primary/30" : "border-border"
       }`}>
-      <div className="mb-3 flex items-start gap-3">
+      <div className="flex items-start gap-3">
         <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold text-primary" style={{ minWidth: "1.75rem" }}>
           {index}
         </span>
         <p className="flex-1 text-sm text-muted">
-          Kéo các mục bên dưới thả vào chỗ trống trong đoạn văn bên trái.
+          Chọn tiêu đề phù hợp cho mỗi đoạn văn bằng ô chọn ngay trong đoạn văn bên trái.
         </p>
         <button type="button" onClick={onFlag} title="Đánh dấu"
           className={flagged ? "text-accent" : "text-faint hover:text-accent"}>
           <Flag className="h-4 w-4" />
         </button>
-      </div>
-      <div className="flex flex-wrap gap-3 pl-10">
-        {question.dragItems
-          .filter((item) => !usedItemIds.has(String(item.id)))
-          .map((item) => (
-            <PassageDragChip key={item.id} item={item} />
-          ))}
       </div>
     </div>
   );
