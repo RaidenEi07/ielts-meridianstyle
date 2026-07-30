@@ -4,8 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GradebookTable } from "@/components/GradebookTable";
 import { PageHeader } from "@/components/PageHeader";
+import { WrongTypesSummary } from "@/components/WrongTypesSummary";
 import { ApiError, catalogAdminApi, catalogApi, gradebookApi, rosterApi } from "@/lib/api";
-import type { CourseSummary, GradebookRow, StudentSummary } from "@/lib/types";
+import type { CourseSummary, GradebookRow, StudentSummary, TypeBreakdown } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useToast } from "@/store/toast";
 
@@ -19,6 +20,7 @@ export default function TeacherStudentDetailPage() {
 
   const [student, setStudent] = useState<StudentSummary | null>(null);
   const [rows, setRows] = useState<GradebookRow[] | null>(null);
+  const [wrongTypes, setWrongTypes] = useState<TypeBreakdown[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const [myCourses, setMyCourses] = useState<CourseSummary[]>([]);
@@ -53,6 +55,10 @@ export default function TeacherStudentDetailPage() {
         setError(err instanceof ApiError ? err.message : "Không tải được kết quả");
         setRows([]);
       });
+    gradebookApi
+      .wrongTypesForMyStudent(token, params.id)
+      .then(setWrongTypes)
+      .catch(() => setWrongTypes([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed, params.id]);
 
@@ -158,7 +164,10 @@ export default function TeacherStudentDetailPage() {
         {rows === null ? (
           <p className="text-muted">Đang tải…</p>
         ) : (
-          <GradebookTable rows={rows} emptyLabel="Học sinh này chưa có điểm nào." />
+          <>
+            <WrongTypesSummary rows={wrongTypes} />
+            <GradebookTable rows={rows} emptyLabel="Học sinh này chưa có điểm nào." token={token} />
+          </>
         )}
       </main>
     </div>

@@ -2,6 +2,7 @@ import type {
   AdminLessonRecording,
   AdminUser,
   Announcement,
+  AnswerGradingDto,
   AppNotification,
   AttemptPlayer,
   AttemptResult,
@@ -50,6 +51,7 @@ import type {
   StudentSummary,
   SystemAnalytics,
   TeacherPublic,
+  TypeBreakdown,
   ViolationResult,
 } from "./types";
 
@@ -774,6 +776,20 @@ export const gradebookApi = {
         : `/api/teacher/roster/students/${studentId}/gradebook`,
       { token },
     ),
+
+  wrongTypesAsAdmin: (token: string, userId: string) =>
+    apiFetch<TypeBreakdown[]>(`/api/admin/students/${userId}/wrong-answer-types`, { token }),
+
+  wrongTypesForMyStudent: (token: string, studentId: string) =>
+    apiFetch<TypeBreakdown[]>(
+      `/api/teacher/roster/students/${studentId}/wrong-answer-types`,
+      { token },
+    ),
+};
+
+export const gradingAdminApi = {
+  answersForGrading: (token: string, attemptId: number) =>
+    apiFetch<AnswerGradingDto[]>(`/api/admin/attempts/${attemptId}/answers`, { token }),
 };
 
 export const reportApi = {

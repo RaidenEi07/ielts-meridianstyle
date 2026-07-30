@@ -4,8 +4,9 @@ import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GradebookTable } from "@/components/GradebookTable";
 import { PageHeader } from "@/components/PageHeader";
+import { WrongTypesSummary } from "@/components/WrongTypesSummary";
 import { gradebookApi, usersAdminApi } from "@/lib/api";
-import type { AdminUser, GradebookRow } from "@/lib/types";
+import type { AdminUser, GradebookRow, TypeBreakdown } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
 export default function AdminStudentDetailPage() {
@@ -18,6 +19,7 @@ export default function AdminStudentDetailPage() {
 
   const [student, setStudent] = useState<AdminUser | null>(null);
   const [rows, setRows] = useState<GradebookRow[] | null>(null);
+  const [wrongTypes, setWrongTypes] = useState<TypeBreakdown[]>([]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -38,6 +40,10 @@ export default function AdminStudentDetailPage() {
       setStudent(users.find((u) => u.id === params.id) ?? null);
     });
     gradebookApi.forStudentAsAdmin(token, params.id).then(setRows).catch(() => setRows([]));
+    gradebookApi
+      .wrongTypesAsAdmin(token, params.id)
+      .then(setWrongTypes)
+      .catch(() => setWrongTypes([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed, params.id]);
 
@@ -74,7 +80,10 @@ export default function AdminStudentDetailPage() {
         {rows === null ? (
           <p className="text-muted">Đang tải…</p>
         ) : (
-          <GradebookTable rows={rows} emptyLabel="Học sinh này chưa có điểm nào." />
+          <>
+            <WrongTypesSummary rows={wrongTypes} />
+            <GradebookTable rows={rows} emptyLabel="Học sinh này chưa có điểm nào." token={token} />
+          </>
         )}
       </main>
     </div>

@@ -470,6 +470,38 @@ export interface GradebookRow {
   status: string;
   attempts: number;
   lastSubmittedAt: string | null;
+  attemptList: AttemptSummary[];
+}
+
+/** Tóm tắt 1 lượt làm bài cụ thể — dùng để admin/giáo viên xem chi tiết. */
+export interface AttemptSummary {
+  attemptId: number;
+  attemptNumber: number;
+  status: string;
+  submittedAt: string | null;
+  rawScore: number | null;
+  maxScore: number | null;
+  bandScore: number | null;
+}
+
+/** Số câu đúng/sai theo 1 dạng câu hỏi, gộp toàn bộ lịch sử làm bài của học viên. */
+export interface TypeBreakdown {
+  type: string;
+  correctCount: number;
+  wrongCount: number;
+}
+
+/** Một câu trả lời trong 1 lượt làm — dùng cho màn "Xem chi tiết lượt làm bài". */
+export interface AnswerGradingDto {
+  answerId: number;
+  quizQuestionId: number;
+  type: string | null;
+  name: string | null;
+  response: string | null;
+  mark: number | null;
+  awardedMark: number | null;
+  correct: boolean | null;
+  needsManualGrading: boolean;
 }
 
 export interface MonthlyPoint {
