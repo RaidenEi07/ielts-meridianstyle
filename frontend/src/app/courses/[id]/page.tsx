@@ -16,7 +16,7 @@ export default function CourseDetailPage() {
   const courseId = Number(params.id);
   const router = useRouter();
 
-  const { accessToken, hydrated } = useAuthStore();
+  const { accessToken, hydrated, loadMe, hasCapability } = useAuthStore();
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [enrollState, setEnrollState] = useState<
@@ -44,6 +44,12 @@ export default function CourseDetailPage() {
     if (!hydrated || !accessToken) return;
     quizApi.courseQuizzes(courseId, accessToken).then(setQuizzes).catch(() => {});
   }, [hydrated, accessToken, courseId]);
+
+  useEffect(() => {
+    if (!hydrated || !accessToken) return;
+    loadMe().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, accessToken]);
 
   function jumpToSection(id: number) {
     setShowAllSections(true);
@@ -402,6 +408,15 @@ export default function CourseDetailPage() {
             >
               ← Tất cả khóa học
             </Link>
+
+            {hasCapability("course:manage") && (
+              <Link
+                href={`/admin/courses/${courseId}`}
+                className="mt-2 block text-center text-sm font-medium text-accent hover:underline"
+              >
+                ✏️ Chỉnh sửa khóa học
+              </Link>
+            )}
           </div>
         </aside>
       </div>
