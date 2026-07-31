@@ -1063,12 +1063,20 @@ function ReadingSplitPane({
   // hiện -> marker [[n]] nằm ngay trong passageContent. Mỗi marker hiện 1
   // dropdown chọn tiêu đề (không kéo-thả) — giữ nguyên shape `placements`
   // cũ (itemId -> targetLabel) nên chấm điểm (gradeDragDropText) không đổi.
+  // passageId trùng KHÔNG đủ để coi là "nhúng" — dữ liệu di chuyển từ Moodle
+  // thường gắn passageId cho MỌI câu hỏi trên trang (kể cả câu sentence-
+  // completion độc lập, template/marker nằm ở settings riêng chứ không phải
+  // trong đoạn văn) — chỉ nhúng khi marker [[n]] thật sự có trong passageContent.
   const embeddedQuestion = useMemo(
     () =>
       questions.find(
-        (q) => q.type === "DRAG_DROP_TEXT" && page.passageId != null && q.passageId === page.passageId,
+        (q) =>
+          q.type === "DRAG_DROP_TEXT" &&
+          page.passageId != null &&
+          q.passageId === page.passageId &&
+          /\[\[\d+\]\]/.test(page.passageContent ?? ""),
       ) ?? null,
-    [questions, page.passageId],
+    [questions, page.passageId, page.passageContent],
   );
   const embeddedPlacements: Record<string, string> = embeddedQuestion
     ? (answers[embeddedQuestion.quizQuestionId]?.placements ?? {})
@@ -1249,15 +1257,18 @@ function ListeningPane({
           </div>
         )}
 
-        {/* Note completion */}
+        {/* Câu hỏi — dùng chung QuestionCard/QuestionRenderer với Reading để mọi
+            dạng câu hỏi (MC, Cloze, Drag-drop...) chấm/hiển thị đúng theo type,
+            thay vì coi mọi câu trong Listening đều là note-completion 1 ô trống. */}
         <div className="mt-5 space-y-4">
           {questions.map((q) => (
-            <NoteCompletionCard
+            <QuestionCard
               key={q.quizQuestionId}
-              index={order.get(`${q.quizQuestionId}`)!}
+              index={cardLabel(q, order)}
               question={q}
               answer={answers[q.quizQuestionId]}
               flagged={flagged.has(q.quizQuestionId)}
+              order={order}
               focused={isFocusedQuestion(focusedId, q.quizQuestionId)}
               onChange={(r) => onAnswer(q, r)}
               onFlag={() => onFlag(q.quizQuestionId)}
@@ -1269,51 +1280,6 @@ function ListeningPane({
   );
 }
 
-function NoteCompletionCard({
-  index, question, answer, flagged, focused, onChange, onFlag,
-}: {
-  index: number;
-  question: PlayerQuestion;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  answer: any;
-  flagged: boolean;
-  focused?: boolean;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  onChange: (r: any) => void;
-  onFlag: () => void;
-}) {
-  const text: string = answer?.text ?? "";
-  const stem = question.stem ?? question.name;
-
-  return (
-    <div id={`q-${question.quizQuestionId}`}
-      className={`flex items-start gap-3 rounded-card border bg-surface p-4 transition-colors ${
-        focused ? "border-primary ring-2 ring-primary/30" : "border-border"
-      }`}>
-      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary">
-        {index}
-      </span>
-      <HtmlWithBlanks
-        html={stem}
-        markerPattern={/_{3,}/g}
-        className="prose prose-sm dark:prose-invert max-w-none flex-1"
-        renderBlank={() => (
-          <input
-            type="text"
-            value={text}
-            onChange={(e) => onChange({ text: e.target.value })}
-            className="mx-1 w-28 border-0 border-b-2 bg-transparent px-1 text-center outline-none"
-            style={{ borderColor: text ? "var(--primary)" : "var(--border)" }}
-          />
-        )}
-      />
-      <button type="button" onClick={onFlag} title="Đánh dấu"
-        className={flagged ? "text-accent" : "text-faint hover:text-accent"}>
-        <Flag className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
 
 // ------------------------------------------------------------------
 // Writing editor với đếm từ
@@ -1380,7 +1346,11 @@ function QuestionCard({
   onChange: (r: any) => void;
   onFlag: () => void;
 }) {
-  const stemRef = useImperativeHtml(question.stem ?? question.name);
+  // CLOZE's stem IS the full fill-in-the-blank passage (with {n} markers) —
+  // QuestionRenderer already renders it complete with working inputs below,
+  // so showing it again here would just duplicate it as unprocessed raw text.
+  const showStemHeader = question.type !== "CLOZE";
+  const stemRef = useImperativeHtml(showStemHeader ? (question.stem ?? question.name) : "");
   return (
     <div id={`q-${question.quizQuestionId}`}
       className={`rounded-card border bg-surface p-4 transition-colors ${
