@@ -129,6 +129,62 @@ function cardLabel(q: PlayerQuestion, order: Map<string, number>): string {
   return String(order.get(`${q.quizQuestionId}`) ?? "");
 }
 
+/** 1 câu MULTIPLE_CHOICE độc lập, hoặc 1 nhóm câu cùng dùng chung 1 bộ đáp án
+ * (vd Yes/No/Not Given lặp lại cho nhiều câu) — nhóm để hiện thành 1 bảng
+ * lưới, mỗi câu vẫn là 1 quizQuestion/điểm/chấm riêng hệt như trước (thuần
+ * gộp hiển thị, KHÔNG đổi dữ liệu/logic chấm điểm). */
+type QuestionOrGroup = PlayerQuestion | { kind: "mc-grid"; key: string; columns: string[]; rows: PlayerQuestion[] };
+
+function optionSignature(q: PlayerQuestion): string | null {
+  if (q.type !== "MULTIPLE_CHOICE" || q.options.length < 2) return null;
+  return q.options.map((o) => o.content.trim().toUpperCase()).join("|");
+}
+
+/** Nội dung câu hỏi di chuyển từ Moodle hay lặp lại y hệt 1 bộ đáp án nhỏ cho
+ * nhiều câu liền nhau (vd Yes/No/Not Given cho từng câu nhận định) — thay vì
+ * hiện N thẻ MC riêng lẻ (mỗi thẻ lặp lại cùng 3 đáp án), gộp hiển thị thành
+ * 1 bảng lưới giống format thi IELTS CD thật. Nhóm theo cùng chữ ký đáp án
+ * trên cùng 1 trang, không cần liền kề theo sortOrder (dữ liệu di chuyển đôi
+ * khi xen lẫn thứ tự) — sắp lại theo `order` (số thứ tự thật) khi gộp.
+ */
+function groupMcGrids(questions: PlayerQuestion[], order: Map<string, number>): QuestionOrGroup[] {
+  const bySignature = new Map<string, PlayerQuestion[]>();
+  questions.forEach((q) => {
+    const sig = optionSignature(q);
+    if (sig == null) return;
+    const list = bySignature.get(sig) ?? [];
+    list.push(q);
+    bySignature.set(sig, list);
+  });
+
+  const grouped = new Set<number>();
+  const groupByFirstMember = new Map<number, QuestionOrGroup>();
+  bySignature.forEach((members, sig) => {
+    if (members.length < 2) return;
+    const sorted = [...members].sort(
+      (a, b) => (order.get(`${a.quizQuestionId}`) ?? 0) - (order.get(`${b.quizQuestionId}`) ?? 0),
+    );
+    const columns = sorted[0].options.map((o) => o.content);
+    sorted.forEach((m) => grouped.add(m.quizQuestionId));
+    groupByFirstMember.set(sorted[0].quizQuestionId, {
+      kind: "mc-grid",
+      key: `grid-${sig}`,
+      columns,
+      rows: sorted,
+    });
+  });
+
+  const result: QuestionOrGroup[] = [];
+  questions.forEach((q) => {
+    if (groupByFirstMember.has(q.quizQuestionId)) {
+      result.push(groupByFirstMember.get(q.quizQuestionId)!);
+    } else if (!grouped.has(q.quizQuestionId)) {
+      result.push(q);
+    }
+  });
+  return result;
+}
+
 /** So sánh focusId (slot key, có thể là "66" hoặc "66:2") với 1 quizQuestionId. */
 function isFocusedQuestion(focusId: string | null, quizQuestionId: number): boolean {
   if (focusId == null) return false;
@@ -1160,19 +1216,24 @@ function ReadingSplitPane({
         <div ref={questionsRef} onMouseUp={questionsSel.handleMouseUp}
           className="relative flex-1 select-text overflow-y-auto px-6 py-4" style={{ width: `${100 - leftPct}%` }}>
           <div className="space-y-4">
-            {questions.map((q) =>
-              q === embeddedQuestion ? (
-                <EmbeddedMatchingInfoCard key={q.quizQuestionId} index={cardLabel(q, order)}
-                  question={q}
-                  flagged={flagged.has(q.quizQuestionId)}
-                  focused={isFocusedQuestion(focusedId, q.quizQuestionId)}
-                  onFlag={() => onFlag(q.quizQuestionId)} />
+            {embeddedQuestion && (
+              <EmbeddedMatchingInfoCard index={cardLabel(embeddedQuestion, order)}
+                question={embeddedQuestion}
+                flagged={flagged.has(embeddedQuestion.quizQuestionId)}
+                focused={isFocusedQuestion(focusedId, embeddedQuestion.quizQuestionId)}
+                onFlag={() => onFlag(embeddedQuestion.quizQuestionId)} />
+            )}
+            {groupMcGrids(questions.filter((q) => q !== embeddedQuestion), order).map((item) =>
+              "kind" in item ? (
+                <McGridCard key={item.key} columns={item.columns} rows={item.rows} order={order}
+                  answers={answers} flagged={flagged} focusedId={focusedId}
+                  onAnswer={onAnswer} onFlag={onFlag} />
               ) : (
-                <QuestionCard key={q.quizQuestionId} index={cardLabel(q, order)}
-                  question={q} answer={answers[q.quizQuestionId]} flagged={flagged.has(q.quizQuestionId)}
+                <QuestionCard key={item.quizQuestionId} index={cardLabel(item, order)}
+                  question={item} answer={answers[item.quizQuestionId]} flagged={flagged.has(item.quizQuestionId)}
                   order={order}
-                  focused={isFocusedQuestion(focusedId, q.quizQuestionId)}
-                  onChange={(r) => onAnswer(q, r)} onFlag={() => onFlag(q.quizQuestionId)} />
+                  focused={isFocusedQuestion(focusedId, item.quizQuestionId)}
+                  onChange={(r) => onAnswer(item, r)} onFlag={() => onFlag(item.quizQuestionId)} />
               ),
             )}
           </div>
@@ -1261,19 +1322,25 @@ function ListeningPane({
             dạng câu hỏi (MC, Cloze, Drag-drop...) chấm/hiển thị đúng theo type,
             thay vì coi mọi câu trong Listening đều là note-completion 1 ô trống. */}
         <div className="mt-5 space-y-4">
-          {questions.map((q) => (
-            <QuestionCard
-              key={q.quizQuestionId}
-              index={cardLabel(q, order)}
-              question={q}
-              answer={answers[q.quizQuestionId]}
-              flagged={flagged.has(q.quizQuestionId)}
-              order={order}
-              focused={isFocusedQuestion(focusedId, q.quizQuestionId)}
-              onChange={(r) => onAnswer(q, r)}
-              onFlag={() => onFlag(q.quizQuestionId)}
-            />
-          ))}
+          {groupMcGrids(questions, order).map((item) =>
+            "kind" in item ? (
+              <McGridCard key={item.key} columns={item.columns} rows={item.rows} order={order}
+                answers={answers} flagged={flagged} focusedId={focusedId}
+                onAnswer={onAnswer} onFlag={onFlag} />
+            ) : (
+              <QuestionCard
+                key={item.quizQuestionId}
+                index={cardLabel(item, order)}
+                question={item}
+                answer={answers[item.quizQuestionId]}
+                flagged={flagged.has(item.quizQuestionId)}
+                order={order}
+                focused={isFocusedQuestion(focusedId, item.quizQuestionId)}
+                onChange={(r) => onAnswer(item, r)}
+                onFlag={() => onFlag(item.quizQuestionId)}
+              />
+            ),
+          )}
         </div>
       </div>
     </div>
@@ -1382,6 +1449,85 @@ function QuestionCard({
         ) : (
           <QuestionRenderer question={question} answer={answer} onChange={onChange} blankOrder={order} />
         )}
+      </div>
+    </div>
+  );
+}
+
+/** Bảng lưới gộp hiển thị cho N câu MULTIPLE_CHOICE dùng chung 1 bộ đáp án
+ * (vd Yes/No/Not Given) — thuần hiển thị, mỗi hàng vẫn là 1 quizQuestion độc
+ * lập với điểm/chấm/cờ đánh dấu riêng hệt như khi hiện thành thẻ rời (xem
+ * groupMcGrids). Style mirror GRID_MATCHING thật (Lát 36). */
+function McGridCard({
+  columns, rows, order, answers, flagged, focusedId, onAnswer, onFlag,
+}: {
+  columns: string[];
+  rows: PlayerQuestion[];
+  order: Map<string, number>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  answers: Record<number, any>;
+  flagged: Set<number>;
+  focusedId: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onAnswer: (q: PlayerQuestion, r: any) => void;
+  onFlag: (id: number) => void;
+}) {
+  return (
+    <div className="rounded-card border border-border bg-surface p-4">
+      <div className="overflow-x-auto rounded-card border border-border">
+        <table className="w-full min-w-max border-collapse text-sm">
+          <thead>
+            <tr className="bg-soft">
+              <th className="border-b border-border p-3 text-left font-semibold text-text" />
+              {columns.map((c) => (
+                <th key={c} className="min-w-14 border-b border-l border-border p-3 text-center font-semibold text-text">
+                  {c}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((q, idx) => {
+              const selected: number[] = answers[q.quizQuestionId]?.selectedOptionIds ?? [];
+              const isFlagged = flagged.has(q.quizQuestionId);
+              return (
+                <tr key={q.quizQuestionId}
+                  className={`${idx % 2 === 1 ? "bg-soft/40" : ""} ${
+                    isFocusedQuestion(focusedId, q.quizQuestionId) ? "ring-2 ring-inset ring-primary" : ""
+                  }`}>
+                  <td id={`q-${q.quizQuestionId}`} className="border-b border-border p-3">
+                    <div className="flex items-start gap-2">
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
+                        {order.get(`${q.quizQuestionId}`) ?? ""}
+                      </span>
+                      <span className="flex-1 font-medium">{q.stem ?? q.name}</span>
+                      <button type="button" onClick={() => onFlag(q.quizQuestionId)} title="Đánh dấu"
+                        className={isFlagged ? "text-accent" : "text-faint hover:text-accent"}>
+                        <Flag className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                  {q.options.map((opt) => {
+                    const checked = selected.includes(opt.id);
+                    return (
+                      <td key={opt.id} className="border-b border-l border-border p-0 text-center">
+                        <label className="flex h-full w-full cursor-pointer items-center justify-center p-3 hover:bg-primary-soft">
+                          <input
+                            type="radio"
+                            className="h-4 w-4 accent-current"
+                            name={`mcgrid-${q.quizQuestionId}`}
+                            checked={checked}
+                            onChange={() => onAnswer(q, { selectedOptionIds: [opt.id] })}
+                          />
+                        </label>
+                      </td>
+                    );
+                  })}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
       </div>
     </div>
   );

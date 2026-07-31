@@ -3,6 +3,7 @@
 import { DragDropImageBoard } from "@/components/DragDropImageBoard";
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
 import { KidsDragDropSentence } from "@/components/kids/KidsDragDropSentence";
+import { TextDragDropDropdown } from "@/components/TextDragDropDropdown";
 import type { PlayerQuestion } from "@/lib/types";
 
 /**
@@ -180,8 +181,22 @@ export function QuestionRenderer({
     case "DRAG_DROP_TEXT": {
       const template: string =
         (question.settings as { template?: string } | null)?.template ?? "";
+      // Trẻ em: giữ nguyên kéo-thả chip (vui, trực quan). Academic/IELTS: đổi
+      // sang dropdown chọn — khớp cách IELTS CD thật hiện các dạng matching
+      // (Matching Features, Sentence/Summary Completion...), không đổi shape
+      // `placements`/logic chấm điểm (gradeDragDropText không đổi).
+      if (question.audience === "KIDS") {
+        return (
+          <KidsDragDropSentence
+            template={template}
+            dragItems={question.dragItems}
+            answer={answer}
+            onChange={onChange}
+          />
+        );
+      }
       return (
-        <KidsDragDropSentence
+        <TextDragDropDropdown
           template={template}
           dragItems={question.dragItems}
           answer={answer}
