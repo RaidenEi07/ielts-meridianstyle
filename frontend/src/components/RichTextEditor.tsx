@@ -5,6 +5,7 @@ import Link from "@tiptap/extension-link";
 import { TableKit } from "@tiptap/extension-table";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
+import type { Editor, Extensions } from "@tiptap/core";
 import { EditorContent, useEditor } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import {
@@ -20,6 +21,7 @@ import {
   Link as LinkIcon,
   List,
   ListOrdered,
+  PenSquare,
   Quote,
   Redo2,
   Rows3,
@@ -30,31 +32,45 @@ import {
   Undo2,
   type LucideIcon,
 } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ApiError, mediaApi } from "@/lib/api";
+import { ClozeBlankExtension, type ClozeBlankAttrs } from "@/components/richtext/ClozeBlankExtension";
+
+/** Danh sách extension nền dùng chung — soạn (ở đây) VÀ chuyển JSON→HTML lúc
+ * lưu Cloze (`serializeClozeEditorState` trong `@/lib/clozeStemTransform`)
+ * phải luôn khớp nhau, nên xuất thành 1 hằng số duy nhất thay vì khai báo 2 nơi. */
+export const BASE_RICH_TEXT_EXTENSIONS: Extensions = [
+  StarterKit,
+  Underline,
+  TextAlign.configure({ types: ["heading", "paragraph"] }),
+  Link.configure({ openOnClick: false }),
+  Image,
+  TableKit.configure({ table: { resizable: true } }),
+];
 
 export function RichTextEditor({
   value,
   onChange,
   token,
+  enableClozeBlanks,
+  onEditorReady,
 }: {
   value: string;
   onChange: (html: string) => void;
   token: string;
+  /** Bật thanh công cụ + node "ô trống Cloze" nội tuyến — chỉ dùng cho ô stem của câu hỏi Cloze. */
+  enableClozeBlanks?: boolean;
+  /** Cho component cha lấy tham chiếu editor sống (vd để lấy JSON lúc lưu Cloze). */
+  onEditorReady?: (editor: Editor | null) => void;
 }) {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Underline,
-      TextAlign.configure({ types: ["heading", "paragraph"] }),
-      Link.configure({ openOnClick: false }),
-      Image,
-      TableKit.configure({ table: { resizable: true } }),
-    ],
+    extensions: enableClozeBlanks
+      ? [...BASE_RICH_TEXT_EXTENSIONS, ClozeBlankExtension]
+      : BASE_RICH_TEXT_EXTENSIONS,
     content: value,
     immediatelyRender: false,
     onUpdate: ({ editor }) => onChange(editor.getHTML()),
@@ -65,7 +81,18 @@ export function RichTextEditor({
     },
   });
 
+  useEffect(() => {
+    onEditorReady?.(editor ?? null);
+    return () => onEditorReady?.(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editor]);
+
   if (!editor) return null;
+
+  function insertClozeBlank() {
+    const attrs: ClozeBlankAttrs = { answers: [], caseSensitive: false, subType: "TEXT", options: null };
+    editor?.chain().focus().insertContent({ type: "clozeBlank", attrs }).run();
+  }
 
   function setLink() {
     const url = window.prompt("URL liên kết:");
@@ -170,6 +197,12 @@ export function RichTextEditor({
           className="hidden"
           onChange={handleImageSelected}
         />
+        {enableClozeBlanks && (
+          <>
+            <Divider />
+            <ToolbarButton icon={PenSquare} label="Chèn ô trống" onClick={insertClozeBlank} />
+          </>
+        )}
         <Divider />
         <ToolbarButton icon={Undo2} label="Hoàn tác" onClick={() => editor.chain().focus().undo().run()} />
         <ToolbarButton icon={Redo2} label="Làm lại" onClick={() => editor.chain().focus().redo().run()} />

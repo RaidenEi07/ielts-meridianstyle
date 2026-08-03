@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
-import { RichTextEditor } from "@/components/RichTextEditor";
+import type { Editor } from "@tiptap/core";
+import { useRef, useState } from "react";
+import { BASE_RICH_TEXT_EXTENSIONS, RichTextEditor } from "@/components/RichTextEditor";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { ApiError, questionBankApi } from "@/lib/api";
 import { categoryOptionLabel } from "@/lib/categoryLabel";
+import { preprocessClozeStemForEditing, serializeClozeEditorState } from "@/lib/clozeStemTransform";
 import { TYPE_META } from "@/lib/questionTypes";
 import type {
   Audience,
@@ -21,7 +23,6 @@ import type {
   QuestionTag,
 } from "@/lib/types";
 import { useToast } from "@/store/toast";
-import { ClozeForm } from "./forms/ClozeForm";
 import { DragDropMarkerForm } from "./forms/DragDropMarkerForm";
 import { DragDropTextForm } from "./forms/DragDropTextForm";
 import { EssayForm } from "./forms/EssayForm";
@@ -81,7 +82,15 @@ export function QuestionForm({
   );
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [type, setType] = useState(initial?.type ?? "MULTIPLE_CHOICE");
-  const [stem, setStem] = useState(initial?.stem ?? "");
+  // Câu Cloze cũ lưu marker {n} thô trong stem — "dịch" thành chip tương tác
+  // NGAY từ initializer (không phải effect sau mount), vì RichTextEditor chỉ
+  // đọc `value` lúc dựng editor, không tự đồng bộ lại nếu đổi sau đó.
+  const [stem, setStem] = useState(() =>
+    initial && initial.type === "CLOZE"
+      ? preprocessClozeStemForEditing(initial.stem ?? "", initial.clozeSubAnswers ?? [])
+      : (initial?.stem ?? ""),
+  );
+  const clozeEditorRef = useRef<Editor | null>(null);
   const [passageId, setPassageId] = useState<number | "">(initial?.passageId ?? "");
   const [answerParagraphIndex, setAnswerParagraphIndex] = useState<number | "">(
     initial?.answerParagraphIndex ?? "",
@@ -118,9 +127,10 @@ export function QuestionForm({
   );
   const [dragItems, setDragItems] = useState<QuestionDragItem[]>(initial?.dragItems ?? []);
   const [dragZones, setDragZones] = useState<QuestionDragZone[]>(initial?.dragZones ?? []);
-  const [clozeSubAnswers, setClozeSubAnswers] = useState<QuestionClozeSubAnswer[]>(
-    initial?.clozeSubAnswers ?? [],
-  );
+  // Không còn form riêng chỉnh danh sách này — đáp án Cloze giờ nhập ngay
+  // trong chip nội tuyến (xem `clozeEditorRef`), đây chỉ còn là giá trị dự
+  // phòng hiếm khi dùng tới (xem `save()`).
+  const clozeSubAnswers: QuestionClozeSubAnswer[] = initial?.clozeSubAnswers ?? [];
   const [gridColumns, setGridColumns] = useState<QuestionGridColumn[]>(
     initial?.gridColumns ?? [],
   );
@@ -164,11 +174,25 @@ export function QuestionForm({
     setSaving(true);
     setError(null);
     try {
+      // Cloze: đọc thẳng cây JSON của editor sống lúc lưu (không dùng state
+      // `stem` thô) — mỗi chip `clozeBlank` gặp theo thứ tự tài liệu được
+      // chuyển lại thành text {n} + 1 dòng clozeSubAnswers khớp, nên số thứ
+      // tự luôn đúng theo đúng vị trí hiện tại trong bài, không thể lệch.
+      let finalStem = stem;
+      let finalClozeSubAnswers = clozeSubAnswers;
+      if (type === "CLOZE" && clozeEditorRef.current) {
+        const result = serializeClozeEditorState(
+          clozeEditorRef.current.getJSON(),
+          BASE_RICH_TEXT_EXTENSIONS,
+        );
+        finalStem = result.stem;
+        finalClozeSubAnswers = result.clozeSubAnswers;
+      }
       const req = {
         categoryId: Number(categoryId),
         type,
         name,
-        stem: stem || undefined,
+        stem: finalStem || undefined,
         passageId: passageId ? Number(passageId) : undefined,
         answerParagraphIndex: passageId && answerParagraphIndex ? Number(answerParagraphIndex) : undefined,
         explanation: explanation || undefined,
@@ -185,7 +209,7 @@ export function QuestionForm({
             ? withSortOrder(dragItems)
             : undefined,
         dragZones: type === "DRAG_DROP_MARKER" ? withSortOrder(dragZones) : undefined,
-        clozeSubAnswers: type === "CLOZE" ? withSortOrder(clozeSubAnswers) : undefined,
+        clozeSubAnswers: type === "CLOZE" ? withSortOrder(finalClozeSubAnswers) : undefined,
         gridColumns: type === "GRID_MATCHING" ? withSortOrder(gridColumns) : undefined,
         gridRows: type === "GRID_MATCHING" ? withSortOrder(gridRows) : undefined,
       };
@@ -344,9 +368,17 @@ export function QuestionForm({
             <label className="block sm:col-span-2">
               <span className="mb-1 block text-xs font-medium text-muted">
                 Nội dung câu hỏi (stem)
-                {type === "CLOZE" && " — dùng {1}, {2}… đánh dấu chỗ trống"}
+                {type === "CLOZE" && " — bấm \"Chèn ô trống\" ở thanh công cụ để đánh dấu chỗ trống"}
               </span>
-              <RichTextEditor value={stem} onChange={setStem} token={token} />
+              <RichTextEditor
+                value={stem}
+                onChange={setStem}
+                token={token}
+                enableClozeBlanks={type === "CLOZE"}
+                onEditorReady={(editor) => {
+                  clozeEditorRef.current = editor;
+                }}
+              />
             </label>
 
             <label className="block sm:col-span-2">
@@ -443,7 +475,12 @@ export function QuestionForm({
               onZonesChange={setDragZones}
             />
           )}
-          {type === "CLOZE" && <ClozeForm value={clozeSubAnswers} onChange={setClozeSubAnswers} />}
+          {type === "CLOZE" && (
+            <p className="text-xs text-muted">
+              Đáp án các ô trống được nhập ngay trong ô &ldquo;Nội dung câu hỏi&rdquo; ở trên — bấm vào 1
+              ô trống để sửa lại đáp án.
+            </p>
+          )}
           {type === "GRID_MATCHING" && (
             <GridMatchingForm
               columns={gridColumns}

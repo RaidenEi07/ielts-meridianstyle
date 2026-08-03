@@ -77,10 +77,10 @@ export const QUESTION_GUIDES: Record<string, QuestionGuide> = {
     title: "Điền khuyết",
     purpose: "Học viên điền vào nhiều chỗ trống ngay trong đoạn văn.",
     steps: [
-      "Đặt các mốc {1}, {2}... vào chỗ cần điền trong ô nội dung.",
-      "Thêm ô trả lời tương ứng mỗi mốc: \"Nhập chữ\" (gõ tự do) hoặc \"Chọn từ danh sách\" (cho sẵn lựa chọn).",
+      "Đặt con trỏ vào vị trí muốn tạo ô trống, bấm \"Chèn ô trống\" ở thanh công cụ.",
+      "Nhập đáp án chấp nhận ngay trong ô vừa hiện ra — chọn \"Nhập chữ\" (gõ tự do) hoặc \"Chọn từ danh sách\" (cho sẵn lựa chọn). Bấm lại vào ô trống bất kỳ lúc nào để sửa đáp án.",
     ],
-    example: "\"Thủ đô Pháp là {1}.\" → ô 1: Nhập chữ, đáp án \"Paris\".",
+    example: "Gõ \"Thủ đô Pháp là \", bấm Chèn ô trống, nhập đáp án \"Paris\".",
   },
   GRID_MATCHING: {
     title: "Trắc nghiệm dạng lưới",
