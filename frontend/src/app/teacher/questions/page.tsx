@@ -44,6 +44,7 @@ export default function QuestionBankPage() {
   const [textImportResult, setTextImportResult] = useState<TextImportSummary | null>(null);
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [bulkWorking, setBulkWorking] = useState(false);
+  const [fixingSingleAnswer, setFixingSingleAnswer] = useState(false);
   const [showBulkRename, setShowBulkRename] = useState(false);
   const confirm = useConfirm();
   const toast = useToast();
@@ -285,6 +286,30 @@ export default function QuestionBankPage() {
     }
   }
 
+  async function handleFixSingleAnswer() {
+    if (!accessToken) return;
+    if (!(await confirm(
+      "Quét toàn bộ câu MCQ hiện có, tự đánh dấu \"1 đáp án đúng\" cho câu nào chỉ có đúng 1 lựa chọn đúng nhưng chưa được đánh dấu. Tiếp tục?",
+      { title: "Tự động sửa MCQ 1 đáp án", confirmLabel: "Sửa", danger: false },
+    ))) {
+      return;
+    }
+    setFixingSingleAnswer(true);
+    try {
+      const fixed = await questionBankApi.fixSingleAnswerMcq(accessToken);
+      if (fixed.length > 0) {
+        toast.success(`Đã sửa ${fixed.length} câu MCQ thành chế độ 1 đáp án`);
+        refresh();
+      } else {
+        toast.success("Không có câu nào cần sửa");
+      }
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Sửa hàng loạt thất bại");
+    } finally {
+      setFixingSingleAnswer(false);
+    }
+  }
+
   if (!hydrated || !ready) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
   }
@@ -365,6 +390,15 @@ export default function QuestionBankPage() {
                 className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-text"
               >
                 + Nhập nhanh MCQ
+              </button>
+              <button
+                type="button"
+                disabled={fixingSingleAnswer}
+                onClick={handleFixSingleAnswer}
+                title="Tự đánh dấu 1 đáp án đúng cho các câu MCQ cũ chỉ có đúng 1 lựa chọn đúng"
+                className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-text disabled:opacity-60"
+              >
+                {fixingSingleAnswer ? "Đang sửa…" : "Tự động sửa MCQ 1 đáp án"}
               </button>
               <Link
                 href="/teacher/questions/new"

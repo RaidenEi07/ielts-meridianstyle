@@ -7,10 +7,13 @@ import com.meridian.question.dto.QuestionSummaryDto;
 import com.meridian.question.dto.QuestionUpsertRequest;
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.databind.JsonNode;
@@ -135,6 +138,44 @@ public class QuestionService {
                 src.options(), src.matchingPairs(), src.dragItems(), src.dragZones(),
                 src.clozeSubAnswers(), src.gridColumns(), src.gridRows());
         return createQuestion(userId, req);
+    }
+
+    /**
+     * Sửa hàng loạt câu MCQ có sẵn: câu nào có đúng 1 đáp án đúng nhưng chưa
+     * đánh dấu settings.singleAnswer thì tự đánh dấu (né các câu "chọn NHIỀU
+     * đáp án" thật đã có sẵn nhiều đáp án đúng — không đụng tới). Áp dụng cho
+     * nội dung cũ tạo trước khi có mặc định singleAnswer=true cho câu mới.
+     */
+    @Transactional
+    public List<QuestionSummaryDto> normalizeSingleAnswerMcq() {
+        List<Question> mcqQuestions =
+                questionRepository.findByTypeOrderByCreatedAtDesc(QuestionType.MULTIPLE_CHOICE);
+        List<Long> ids = mcqQuestions.stream().map(Question::getId).toList();
+        Map<Long, List<QuestionOption>> optionsByQuestion = optionRepository
+                .findByQuestionIdIn(ids).stream()
+                .collect(Collectors.groupingBy(QuestionOption::getQuestionId));
+
+        List<QuestionSummaryDto> fixed = new ArrayList<>();
+        for (Question q : mcqQuestions) {
+            JsonNode settings = parseJson(q.getSettings());
+            if (settings != null && settings.path("singleAnswer").asBoolean(false)) {
+                continue;
+            }
+            long correctCount = optionsByQuestion.getOrDefault(q.getId(), List.of()).stream()
+                    .filter(QuestionOption::isCorrect).count();
+            if (correctCount != 1) {
+                continue;
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = settings != null
+                    ? json.convertValue(settings, Map.class)
+                    : new LinkedHashMap<>();
+            map.put("singleAnswer", true);
+            q.setSettings(json.writeValueAsString(map));
+            questionRepository.save(q);
+            fixed.add(toSummary(q));
+        }
+        return fixed;
     }
 
     // ================= Helpers =================

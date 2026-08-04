@@ -202,6 +202,16 @@ public class QuestionBankController {
         return req.ids().stream().map(id -> questionService.duplicateQuestion(uid, id)).toList();
     }
 
+    /**
+     * Quét toàn bộ câu MCQ có sẵn, tự đánh dấu singleAnswer=true cho câu nào
+     * chỉ có đúng 1 đáp án đúng (nội dung cũ tạo trước khi có mặc định này).
+     */
+    @PostMapping("/questions/fix-single-answer-mcq")
+    public List<QuestionSummaryDto> fixSingleAnswerMcq() {
+        guard();
+        return questionService.normalizeSingleAnswerMcq();
+    }
+
     // ---- Xuất/Nhập theo danh mục ----
 
     @GetMapping("/categories/{id}/export")

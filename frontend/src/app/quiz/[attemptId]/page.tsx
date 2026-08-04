@@ -49,6 +49,11 @@ function fmt(sec: number): string {
 function wordCount(text: string): number {
   return text.trim() ? text.trim().split(/\s+/).length : 0;
 }
+/** Tròn 2 số lẻ để khớp với cách backend hiện điểm khi xem lại (getResult). */
+function round2(n: number | null | undefined): number {
+  if (n == null) return 0;
+  return Math.round(n * 100) / 100;
+}
 
 /**
  * Render HTML imperatively (không dùng dangerouslySetInnerHTML) để nội dung
@@ -634,7 +639,7 @@ function QuizPlayerPageInner() {
           )}
           <div className="relative">
             <button type="button" onClick={() => setMenuOpen((v) => !v)}
-              className="grid h-8 w-8 place-items-center rounded hover:bg-white/10"
+              className="grid h-8 w-8 place-items-center rounded-md hover:bg-white/10"
               title="Menu" aria-label="Menu">
               <Menu className="h-5 w-5" />
             </button>
@@ -1658,8 +1663,8 @@ function ResultView({
       <div className="w-full max-w-xl rounded-[18px] border border-border bg-surface p-8 text-center">
         <p className="text-sm text-muted">Kết quả bài làm</p>
         <div className="mt-2 text-5xl font-bold text-primary" style={{ fontFamily: "var(--font-serif)" }}>
-          {result.rawScore ?? 0}
-          <span className="text-2xl text-muted">/{result.maxScore ?? 0}</span>
+          {round2(result.rawScore)}
+          <span className="text-2xl text-muted">/{round2(result.maxScore)}</span>
         </div>
         <p className="mt-1 text-sm text-muted">{pct}% đúng</p>
         {result.bandScore != null && (
@@ -1690,7 +1695,7 @@ function ResultView({
                       // Cloze/MCQ nhiều đáp án chấm từng phần — không hẳn
                       // "Sai" tuyệt đối, hiện đúng tỉ lệ điểm nhận được.
                       <span className="font-semibold text-accent">
-                        Đúng {b.awardedMark}/{b.mark}
+                        Đúng {round2(b.awardedMark)}/{round2(b.mark)}
                       </span>
                     ) : (
                       <span className="flex items-center gap-1 font-semibold text-red">

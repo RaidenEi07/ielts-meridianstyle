@@ -643,6 +643,12 @@ export const questionBankApi = {
       body: req,
       token,
     }),
+
+  fixSingleAnswerMcq: (token: string) =>
+    apiFetch<QuestionSummary[]>("/api/admin/question-bank/questions/fix-single-answer-mcq", {
+      method: "POST",
+      token,
+    }),
 };
 
 // ---- Xuất/nhập ngân hàng câu hỏi (file .zip: manifest.json + ảnh/audio đính kèm) ----

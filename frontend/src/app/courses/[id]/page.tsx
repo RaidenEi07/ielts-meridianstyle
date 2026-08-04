@@ -47,6 +47,18 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     if (!hydrated || !accessToken) return;
+    enrollmentApi
+      .mine(accessToken)
+      .then((enrollments) => {
+        if (enrollments.some((e) => e.courseId === courseId)) {
+          setEnrollState("already");
+        }
+      })
+      .catch(() => {});
+  }, [hydrated, accessToken, courseId]);
+
+  useEffect(() => {
+    if (!hydrated || !accessToken) return;
     loadMe().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, accessToken]);

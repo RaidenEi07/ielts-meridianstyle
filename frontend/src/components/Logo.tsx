@@ -19,7 +19,7 @@ export function Logo({ className = "" }: { className?: string }) {
     <span className={`inline-flex items-center gap-2 ${className}`}>
       <span
         aria-hidden
-        className="grid h-9 w-9 place-items-center rounded-[10px] bg-primary text-white"
+        className="grid h-9 w-9 place-items-center rounded-md bg-primary text-white"
         style={{ fontFamily: "var(--font-serif)" }}
       >
         {monogram}
