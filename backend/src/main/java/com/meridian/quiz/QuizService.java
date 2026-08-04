@@ -6,6 +6,7 @@ import com.meridian.catalog.CourseSectionRepository;
 import com.meridian.common.ApiException;
 import com.meridian.question.Question;
 import com.meridian.question.QuestionRepository;
+import com.meridian.question.QuestionService;
 import com.meridian.quiz.dto.QuizDtos.QuizDetailDto;
 import com.meridian.quiz.dto.QuizDtos.QuizDto;
 import com.meridian.quiz.dto.QuizDtos.QuizPageDto;
@@ -35,19 +36,21 @@ public class QuizService {
     private final QuizQuestionRepository quizQuestionRepository;
     private final CourseSectionRepository sectionRepository;
     private final QuestionRepository questionRepository;
+    private final QuestionService questionService;
     private final ContextService contextService;
     private final PermissionService permissionService;
 
     public QuizService(QuizRepository quizRepository, QuizPageRepository pageRepository,
             QuizQuestionRepository quizQuestionRepository,
             CourseSectionRepository sectionRepository,
-            QuestionRepository questionRepository, ContextService contextService,
-            PermissionService permissionService) {
+            QuestionRepository questionRepository, QuestionService questionService,
+            ContextService contextService, PermissionService permissionService) {
         this.quizRepository = quizRepository;
         this.pageRepository = pageRepository;
         this.quizQuestionRepository = quizQuestionRepository;
         this.sectionRepository = sectionRepository;
         this.questionRepository = questionRepository;
+        this.questionService = questionService;
         this.contextService = contextService;
         this.permissionService = permissionService;
     }
@@ -120,11 +123,28 @@ public class QuizService {
             qq.setQuizId(quizId);
             qq.setQuestionId(q.getId());
             qq.setPageId(req.pageId());
-            qq.setMark(req.mark() != null ? req.mark() : BigDecimal.ONE);
+            qq.setMark(req.mark() != null ? req.mark() : defaultMarkFor(q));
             qq.setSortOrder(order++);
             quizQuestionRepository.save(qq);
         }
         return listQuizQuestions(quizId);
+    }
+
+    /**
+     * Mặc định điểm khi gắn câu hỏi mới vào quiz, không chỉ định điểm sẵn:
+     * 1 điểm cho mỗi ô trống (Cloze) hoặc mỗi đáp án đúng (MC nhiều đáp án),
+     * khớp cách chấm điểm từng phần — mọi dạng khác giữ mặc định 1 như cũ.
+     * Chỉ áp dụng cho lần gắn MỚI, không đụng tới các quiz_questions đã có.
+     */
+    private BigDecimal defaultMarkFor(Question q) {
+        var detail = questionService.getQuestion(q.getId());
+        int count = switch (detail.type()) {
+            case "CLOZE" -> detail.clozeSubAnswers().size();
+            case "MULTIPLE_CHOICE" -> (int) detail.options().stream()
+                    .filter(o -> o.correct()).count();
+            default -> 1;
+        };
+        return BigDecimal.valueOf(Math.max(1, count));
     }
 
     @Transactional

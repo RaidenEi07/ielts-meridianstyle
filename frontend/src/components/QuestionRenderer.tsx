@@ -1,9 +1,9 @@
 "use client";
 
 import { DragDropImageBoard } from "@/components/DragDropImageBoard";
+import { DragDropSentence } from "@/components/DragDropSentence";
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
-import { KidsDragDropSentence } from "@/components/kids/KidsDragDropSentence";
-import { TextDragDropDropdown } from "@/components/TextDragDropDropdown";
+import { isTfngOptionSet } from "@/lib/tfngOptionSet";
 import type { PlayerQuestion } from "@/lib/types";
 
 /**
@@ -27,9 +27,13 @@ export function QuestionRenderer({
 }) {
   switch (question.type) {
     case "MULTIPLE_CHOICE": {
-      const singleAnswer = Boolean(
-        (question.settings as { singleAnswer?: boolean } | null)?.singleAnswer,
-      );
+      // Nội dung di chuyển từ Moodle thường lưu Yes/No/Not-Given (hay
+      // True/False/Not-Given) dưới dạng MULTIPLE_CHOICE thường, không có
+      // settings.singleAnswer — nhưng bản chất luôn chỉ chọn được 1 đáp án,
+      // ép về radio bất kể settings để không cho tick nhiều đáp án cùng lúc.
+      const singleAnswer =
+        isTfngOptionSet(question.options.map((o) => o.content)) ||
+        Boolean((question.settings as { singleAnswer?: boolean } | null)?.singleAnswer);
       const selected: number[] = answer?.selectedOptionIds ?? [];
       return (
         <div className="space-y-2">
@@ -181,22 +185,12 @@ export function QuestionRenderer({
     case "DRAG_DROP_TEXT": {
       const template: string =
         (question.settings as { template?: string } | null)?.template ?? "";
-      // Trẻ em: giữ nguyên kéo-thả chip (vui, trực quan). Academic/IELTS: đổi
-      // sang dropdown chọn — khớp cách IELTS CD thật hiện các dạng matching
-      // (Matching Features, Sentence/Summary Completion...), không đổi shape
-      // `placements`/logic chấm điểm (gradeDragDropText không đổi).
-      if (question.audience === "KIDS") {
-        return (
-          <KidsDragDropSentence
-            template={template}
-            dragItems={question.dragItems}
-            answer={answer}
-            onChange={onChange}
-          />
-        );
-      }
+      // Câu hỏi đứng riêng (không nhúng vào đoạn văn — dạng đó render thẳng
+      // trong ReadingSplitPane bằng dropdown, không qua đây) luôn kéo-thả
+      // thật, mọi audience — khớp IELTS CD thật cho Sentence/Summary
+      // Completion (kéo từ khối từ vào chỗ trống), không phải dropdown.
       return (
-        <TextDragDropDropdown
+        <DragDropSentence
           template={template}
           dragItems={question.dragItems}
           answer={answer}

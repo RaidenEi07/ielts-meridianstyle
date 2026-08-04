@@ -33,6 +33,7 @@ function toPlayerQuestion(q: CheckpointQuestion): PlayerQuestion {
     gridColumns: q.gridColumns,
     gridRows: q.gridRows,
     audience: q.audience,
+    correctAnswerCount: null,
   };
 }
 

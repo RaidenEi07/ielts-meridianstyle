@@ -128,6 +128,55 @@ class GradingServiceTest {
     }
 
     @Test
+    void clozePartialCreditGivesFractionalScore() {
+        var subs = List.of(
+                new QuestionParts.ClozeSubAnswer(1L, 1, "TEXT", json.readTree("[\"a\"]"), null, 0, false),
+                new QuestionParts.ClozeSubAnswer(2L, 2, "TEXT", json.readTree("[\"b\"]"), null, 1, false),
+                new QuestionParts.ClozeSubAnswer(3L, 3, "TEXT", json.readTree("[\"c\"]"), null, 2, false),
+                new QuestionParts.ClozeSubAnswer(4L, 4, "TEXT", json.readTree("[\"d\"]"), null, 3, false));
+        stub(dto("CLOZE", null, null, null, null, subs));
+
+        var threeOfFour = gradingService.grade(QID,
+                json.readTree("{\"subs\":{\"1\":\"a\",\"2\":\"b\",\"3\":\"c\",\"4\":\"WRONG\"}}"));
+
+        assertThat(threeOfFour.correct()).isFalse();
+        assertThat(threeOfFour.fraction()).isEqualByComparingTo(new BigDecimal("0.75"));
+    }
+
+    @Test
+    void multipleChoiceWithTwoCorrectAnswersGivesPartialCredit() {
+        var options = List.of(
+                new QuestionParts.Option(10L, "Infoterra", true, null, 0),
+                new QuestionParts.Option(11L, "RapidEye", true, null, 1),
+                new QuestionParts.Option(12L, "Sevepi", false, null, 2));
+        stub(dto("MULTIPLE_CHOICE", null, options, null, null, null));
+
+        var oneOfTwo = gradingService.grade(QID, json.readTree("{\"selectedOptionIds\":[10]}"));
+        var bothCorrect = gradingService.grade(QID, json.readTree("{\"selectedOptionIds\":[10,11]}"));
+        var oneCorrectPlusWrong = gradingService.grade(QID, json.readTree("{\"selectedOptionIds\":[10,12]}"));
+
+        assertThat(oneOfTwo.correct()).isFalse();
+        assertThat(oneOfTwo.fraction()).isEqualByComparingTo(new BigDecimal("0.5"));
+        assertThat(bothCorrect.correct()).isTrue();
+        assertThat(bothCorrect.fraction()).isEqualByComparingTo(BigDecimal.ONE);
+        assertThat(oneCorrectPlusWrong.fraction()).isEqualByComparingTo(new BigDecimal("0.5"));
+    }
+
+    @Test
+    void multipleChoiceSingleAnswerSettingStaysAllOrNothingEvenWithTwoCorrectOptionsDeclared() {
+        JsonNode settings = json.readTree("{\"singleAnswer\":true}");
+        var options = List.of(
+                new QuestionParts.Option(10L, "A", true, null, 0),
+                new QuestionParts.Option(11L, "B", true, null, 1));
+        stub(dto("MULTIPLE_CHOICE", settings, options, null, null, null));
+
+        var partial = gradingService.grade(QID, json.readTree("{\"selectedOptionIds\":[10]}"));
+
+        assertThat(partial.correct()).isFalse();
+        assertThat(partial.fraction()).isEqualByComparingTo(BigDecimal.ZERO);
+    }
+
+    @Test
     void clozeCaseSensitivityIsPerSubAnswer() {
         var subs = List.of(
                 new QuestionParts.ClozeSubAnswer(1L, 1, "TEXT",

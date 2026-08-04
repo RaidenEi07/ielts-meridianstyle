@@ -398,6 +398,7 @@ export interface PlayerQuestion {
   gridColumns: PlayerGridColumn[];
   gridRows: PlayerGridRow[];
   audience: Audience | null;
+  correctAnswerCount: number | null;
 }
 
 export interface ExamPage {

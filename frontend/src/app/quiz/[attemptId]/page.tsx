@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   Bell,
   BookOpen,
@@ -24,13 +24,14 @@ import {
   X,
   XCircle,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
 import { KidsMatchingGame } from "@/components/kids/KidsMatchingGame";
 import { Logo } from "@/components/Logo";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
 import { ApiError, quizApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
+import { isTfngOptionSet } from "@/lib/tfngOptionSet";
 import { useToast } from "@/store/toast";
 import type {
   AttemptPlayer,
@@ -94,6 +95,17 @@ function expandSlots(q: PlayerQuestion): Slot[] {
         subIndex: c.subIndex,
       }));
   }
+  // MCQ nhiều đáp án đúng (vd "chọn HAI chữ cái") chiếm nhiều số thứ tự IELTS
+  // thật dù chỉ 1 bản ghi câu hỏi — không có subIndex thật như Cloze (chỉ 1
+  // selectedOptionIds chung), nên các slot này để subIndex trống, tự rơi về
+  // nhánh "answer != null" chung của isSlotAnswered (chia sẻ đúng 1 trạng
+  // thái trả lời/cờ đánh dấu cho toàn bộ N slot của câu này).
+  if (q.type === "MULTIPLE_CHOICE" && (q.correctAnswerCount ?? 1) > 1) {
+    return Array.from({ length: q.correctAnswerCount ?? 1 }, (_, i) => ({
+      key: `${q.quizQuestionId}:mc${i}`,
+      quizQuestionId: q.quizQuestionId,
+    }));
+  }
   return [{ key: `${q.quizQuestionId}`, quizQuestionId: q.quizQuestionId }];
 }
 
@@ -115,18 +127,17 @@ function isSlotAnswered(slot: Slot, answers: Record<number, unknown>): boolean {
   return answer != null;
 }
 
-/** Nhãn số hiển thị trên thẻ câu hỏi: 1 số bình thường, hoặc dải số "4-6" cho CLOZE nhiều chỗ trống. */
+/** Nhãn số hiển thị trên thẻ câu hỏi: 1 số bình thường, hoặc dải số "4-6" cho
+ * CLOZE nhiều chỗ trống / MCQ nhiều đáp án đúng — dùng chung đúng cách chia
+ * slot của expandSlots() để không lệch với số hiện ở thanh điều hướng. */
 function cardLabel(q: PlayerQuestion, order: Map<string, number>): string {
-  if (q.type === "CLOZE" && q.clozeSubAnswers.length > 0) {
-    const nums = q.clozeSubAnswers
-      .map((c) => order.get(`${q.quizQuestionId}:${c.subIndex}`))
-      .filter((n): n is number => n != null);
-    if (nums.length === 0) return "";
-    const min = Math.min(...nums);
-    const max = Math.max(...nums);
-    return min === max ? `${min}` : `${min}-${max}`;
-  }
-  return String(order.get(`${q.quizQuestionId}`) ?? "");
+  const nums = expandSlots(q)
+    .map((s) => order.get(s.key))
+    .filter((n): n is number => n != null);
+  if (nums.length === 0) return "";
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  return min === max ? `${min}` : `${min}-${max}`;
 }
 
 /** 1 câu MULTIPLE_CHOICE độc lập, hoặc 1 nhóm câu cùng dùng chung 1 bộ đáp án
@@ -137,7 +148,15 @@ type QuestionOrGroup = PlayerQuestion | { kind: "mc-grid"; key: string; columns:
 
 function optionSignature(q: PlayerQuestion): string | null {
   if (q.type !== "MULTIPLE_CHOICE" || q.options.length < 2) return null;
-  return q.options.map((o) => o.content.trim().toUpperCase()).join("|");
+  // MCQ nhiều đáp án đúng không khớp mô hình "1 radio mỗi hàng" của bảng
+  // lưới — giữ nguyên hiện dạng checkbox riêng lẻ. Yes/No/Not-Given (hay
+  // True/False/Not-Given) luôn phải hiện riêng từng câu, xếp dọc, không bao
+  // giờ gộp thành lưới dù trùng đáp án với câu khác (khác bản chất với cụm
+  // Matching Features thật — xem isTfngOptionSet).
+  if ((q.correctAnswerCount ?? 1) > 1) return null;
+  const contents = q.options.map((o) => o.content);
+  if (isTfngOptionSet(contents)) return null;
+  return contents.map((c) => c.trim().toUpperCase()).join("|");
 }
 
 /** Nội dung câu hỏi di chuyển từ Moodle hay lặp lại y hệt 1 bộ đáp án nhỏ cho
@@ -221,9 +240,20 @@ function flashMark(el: HTMLElement) {
 }
 
 export default function QuizPlayerPage() {
+  return (
+    <Suspense
+      fallback={<div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>}
+    >
+      <QuizPlayerPageInner />
+    </Suspense>
+  );
+}
+
+function QuizPlayerPageInner() {
   const params = useParams<{ attemptId: string }>();
   const attemptId = Number(params.attemptId);
   const router = useRouter();
+  const returnTo = useSearchParams().get("returnTo");
   const { accessToken, hydrated } = useAuthStore();
 
   const [attempt, setAttempt] = useState<AttemptPlayer | null>(null);
@@ -519,7 +549,7 @@ export default function QuizPlayerPage() {
   if (loading || !hydrated) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
   }
-  if (result) return <ResultView result={result} questions={resultQuestions} />;
+  if (result) return <ResultView result={result} questions={resultQuestions} returnTo={returnTo} />;
   if (!attempt) {
     return (
       <div className="grid min-h-screen place-items-center text-muted">
@@ -601,11 +631,6 @@ export default function QuizPlayerPage() {
                   onClick={() => { setNotesOpen(true); setMenuOpen(false); }}
                   className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-soft">
                   <NotebookPen className="h-4 w-4" /> Ghi chú{notes.length > 0 ? ` (${notes.length})` : ""}
-                </button>
-                <button type="button"
-                  onClick={() => { setMenuOpen(false); doSubmit(); }}
-                  className="flex w-full items-center gap-2 border-t border-border px-4 py-2.5 text-left text-sm font-semibold text-accent hover:bg-soft">
-                  <CheckCircle2 className="h-4 w-4" /> Nộp bài
                 </button>
                 </div>
               </>
@@ -715,7 +740,10 @@ export default function QuizPlayerPage() {
                   className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-semibold transition-transform ${
                     isCurrent ? "ring-2 ring-primary ring-offset-1 ring-offset-surface" : ""
                   } ${
-                    isFlagged ? "border-accent bg-accent-soft text-accent"
+                    // border-dashed cho cờ đánh dấu (không chỉ dựa vào màu) —
+                    // ở chế độ thi trắng-đen, accent/green trùng màu nhau nên
+                    // phải phân biệt được bằng hình dạng viền, không riêng màu.
+                    isFlagged ? "border-dashed border-accent bg-accent-soft text-accent"
                       : answered ? "border-green bg-green-soft text-green"
                       : "border-border text-muted"}`}>
                   {order.get(slot.key)}
@@ -740,7 +768,11 @@ export default function QuizPlayerPage() {
             onClose={() => setNotesOpen(false)}
           />
         )}
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={doSubmit}
+            className="flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 font-semibold text-white shadow-md hover:opacity-90">
+            <CheckCircle2 className="h-4 w-4" /> Nộp bài
+          </button>
           <button type="button" onClick={() => stepBy(-1)} title="Câu trước"
             className="grid h-11 w-11 place-items-center rounded-full border border-border bg-surface shadow-md hover:bg-primary-soft">
             <ChevronLeft className="h-5 w-5" />
@@ -1434,7 +1466,7 @@ function QuestionCard({
         />
         <button type="button" onClick={onFlag} title="Đánh dấu"
           className={flagged ? "text-accent" : "text-faint hover:text-accent"}>
-          <Flag className="h-4 w-4" />
+          <Flag className="h-4 w-4" fill={flagged ? "currentColor" : "none"} />
         </button>
       </div>
 
@@ -1503,7 +1535,7 @@ function McGridCard({
                       <span className="flex-1 font-medium">{q.stem ?? q.name}</span>
                       <button type="button" onClick={() => onFlag(q.quizQuestionId)} title="Đánh dấu"
                         className={isFlagged ? "text-accent" : "text-faint hover:text-accent"}>
-                        <Flag className="h-4 w-4" />
+                        <Flag className="h-4 w-4" fill={isFlagged ? "currentColor" : "none"} />
                       </button>
                     </div>
                   </td>
@@ -1558,7 +1590,7 @@ function EmbeddedMatchingInfoCard({
         </p>
         <button type="button" onClick={onFlag} title="Đánh dấu"
           className={flagged ? "text-accent" : "text-faint hover:text-accent"}>
-          <Flag className="h-4 w-4" />
+          <Flag className="h-4 w-4" fill={flagged ? "currentColor" : "none"} />
         </button>
       </div>
     </div>
@@ -1568,9 +1600,11 @@ function EmbeddedMatchingInfoCard({
 function ResultView({
   result,
   questions,
+  returnTo,
 }: {
   result: AttemptResult;
   questions: PlayerQuestion[];
+  returnTo: string | null;
 }) {
   const pct =
     result.maxScore && result.maxScore > 0
@@ -1637,6 +1671,12 @@ function ResultView({
                       <span className="flex items-center gap-1 font-semibold text-green">
                         <CheckCircle2 className="h-4 w-4" /> Đúng
                       </span>
+                    ) : b.awardedMark != null && b.awardedMark > 0 ? (
+                      // Cloze/MCQ nhiều đáp án chấm từng phần — không hẳn
+                      // "Sai" tuyệt đối, hiện đúng tỉ lệ điểm nhận được.
+                      <span className="font-semibold text-accent">
+                        Đúng {b.awardedMark}/{b.mark}
+                      </span>
                     ) : (
                       <span className="flex items-center gap-1 font-semibold text-red">
                         <XCircle className="h-4 w-4" /> Sai
@@ -1686,9 +1726,9 @@ function ResultView({
             Ghi nhận {result.violations} lần vi phạm chống gian lận.
           </p>
         )}
-        <Link href="/dashboard"
+        <Link href={returnTo || "/dashboard"}
           className="mt-6 inline-block rounded-lg bg-primary px-6 py-2.5 font-semibold text-white">
-          Về bảng điều khiển
+          {returnTo ? "Về khóa học" : "Về bảng điều khiển"}
         </Link>
       </div>
     </div>

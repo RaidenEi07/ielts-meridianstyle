@@ -75,7 +75,9 @@ export default function CourseDetailPage() {
     setQuizError(null);
     try {
       const attempt = await quizApi.start(quizId, accessToken);
-      router.push(`/quiz/${attempt.attemptId}`);
+      router.push(
+        `/quiz/${attempt.attemptId}?returnTo=${encodeURIComponent(`/courses/${courseId}`)}`,
+      );
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Không bắt đầu được bài làm";
       setQuizError(msg);

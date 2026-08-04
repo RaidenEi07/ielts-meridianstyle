@@ -108,7 +108,8 @@ export default function VaoHocLessonPage() {
     setError(null);
     try {
       const attempt = await quizApi.start(quizId, accessToken);
-      router.push(`/quiz/${attempt.attemptId}`);
+      const returnTo = `/vao-hoc/${params.group}/${courseId}/${sectionId}`;
+      router.push(`/quiz/${attempt.attemptId}?returnTo=${encodeURIComponent(returnTo)}`);
     } catch (e) {
       const msg = e instanceof ApiError ? e.message : "Không bắt đầu được bài luyện tập";
       setError(msg);

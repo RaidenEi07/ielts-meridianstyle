@@ -26,6 +26,7 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
     gridColumns: [],
     gridRows: [],
     audience: q.audience,
+    correctAnswerCount: null,
   };
 
   switch (q.type) {
@@ -33,6 +34,7 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
     case "TRUE_FALSE_NOT_GIVEN":
       base.options = q.options.map((o) => ({ id: o.id ?? 0, content: o.content }));
       base.settings = q.settings;
+      base.correctAnswerCount = q.options.filter((o) => o.correct).length;
       break;
     case "MATCHING": {
       base.matchingPairs = q.matchingPairs.map((p) => ({

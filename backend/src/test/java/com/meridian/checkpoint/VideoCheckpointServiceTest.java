@@ -136,7 +136,7 @@ class VideoCheckpointServiceTest {
         SectionVideoCheckpoint cp = checkpoint(5L, section, 100L);
         when(checkpointRepository.findById(5L)).thenReturn(Optional.of(cp));
         when(gradingService.grade(eq(100L), any()))
-                .thenReturn(new GradingService.GradeResult(true, true));
+                .thenReturn(new GradingService.GradeResult(true, java.math.BigDecimal.ONE, true));
         when(answerRepository.findByUserIdAndCheckpointId(userId, 5L)).thenReturn(Optional.empty());
 
         var result = service.submitAnswer(userId, 5L, json.readTree("{\"selectedOptionId\":1}"));

@@ -65,7 +65,8 @@ public final class AttemptDtos {
             List<PlayerClozeSubAnswer> clozeSubAnswers,
             List<PlayerGridColumn> gridColumns,
             List<PlayerGridRow> gridRows,
-            Audience audience) {
+            Audience audience,
+            Integer correctAnswerCount) {
     }
 
     /** Một trang thi (Part) kèm passage/audio để render split-pane / listening. */

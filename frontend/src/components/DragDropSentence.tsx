@@ -53,7 +53,9 @@ function BlankSlot({
   );
 }
 
-export function KidsDragDropSentence({
+/** Kéo-thả từ/cụm từ vào chỗ trống trong câu (Sentence/Summary Completion
+ * kiểu word-bank) — dùng cho mọi audience, khớp IELTS CD thật. */
+export function DragDropSentence({
   template,
   dragItems,
   answer,

@@ -307,7 +307,7 @@ public class AttemptService {
             GradingService.GradeResult res = gradingService.grade(qq.getQuestionId(), parse(ans.getResponse()));
             ans.setCorrect(res.correct());
             if (res.autoGraded()) {
-                BigDecimal awarded = Boolean.TRUE.equals(res.correct()) ? qq.getMark() : BigDecimal.ZERO;
+                BigDecimal awarded = qq.getMark().multiply(res.fraction());
                 ans.setAwardedMark(awarded);
                 raw = raw.add(awarded);
             } else {
@@ -391,12 +391,16 @@ public class AttemptService {
                             List<PlayerGridColumn> gridColumns = List.of();
                             List<PlayerGridRow> gridRows = List.of();
                             JsonNode settings = null;
+                            Integer correctAnswerCount = null;
                             switch (q.type()) {
                                 case "MULTIPLE_CHOICE", "TRUE_FALSE_NOT_GIVEN" -> {
                                     options = q.options().stream()
                                             .map(o -> new PlayerOption(o.id(), o.content()))
                                             .toList();
                                     settings = q.settings();
+                                    correctAnswerCount = (int) q.options().stream()
+                                            .filter(QuestionParts.Option::correct)
+                                            .count();
                                 }
                                 case "MATCHING" -> {
                                     matchingPairs = q.matchingPairs().stream()
@@ -439,7 +443,8 @@ public class AttemptService {
                             return new PlayerQuestion(qq.getId(), qq.getQuestionId(), q.type(),
                                     q.name(), q.stem(), qq.getMark(), qq.getPageId(), q.passageId(),
                                     settings, options, matchingPairs, matchingRightPool, dragItems,
-                                    dragZones, clozeSubAnswers, gridColumns, gridRows, q.audience());
+                                    dragZones, clozeSubAnswers, gridColumns, gridRows, q.audience(),
+                                    correctAnswerCount);
                         }).toList();
 
         List<PagePlayer> pages = pageRepository.findByQuizIdOrderByPageNumberAsc(quiz.getId())
