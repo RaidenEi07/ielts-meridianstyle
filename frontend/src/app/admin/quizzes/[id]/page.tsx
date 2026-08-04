@@ -627,6 +627,25 @@ function QuestionsPanel({
   const attachedIds = new Set(detail.questions.map((q) => q.questionId));
   const pagesById = new Map(detail.pages.map((p) => [p.id, p]));
 
+  // Gợi ý sẵn danh mục/passage khi soạn câu hỏi MỚI ngay trong quiz này — lấy
+  // danh mục xuất hiện nhiều nhất trong số câu đã gắn (đa số quiz academic chỉ
+  // dùng đúng 1 danh mục cho toàn bộ câu hỏi của nó), và passage của Part đang
+  // chọn ở ô "Gán vào trang" — đỡ phải tự chọn lại đúng thứ đã hiển nhiên.
+  const categoryCounts = new Map<number, number>();
+  detail.questions.forEach((q) => {
+    const catId = bank?.find((b) => b.id === q.questionId)?.categoryId;
+    if (catId != null) categoryCounts.set(catId, (categoryCounts.get(catId) ?? 0) + 1);
+  });
+  let defaultCategoryId: number | undefined;
+  let maxCategoryCount = 0;
+  categoryCounts.forEach((count, id) => {
+    if (count > maxCategoryCount) {
+      maxCategoryCount = count;
+      defaultCategoryId = id;
+    }
+  });
+  const defaultPassageId = pageId ? (pagesById.get(Number(pageId))?.passageId ?? undefined) : undefined;
+
   // Bucket questions by Part so each Part renders as exactly one contiguous
   // block (instead of scattering wherever its questions happen to fall in
   // sortOrder) — the flattened bucket order becomes the real sortOrder, since
@@ -937,7 +956,14 @@ function QuestionsPanel({
       )}
 
       {picking && (
-        <div className="mt-4 rounded-lg border border-border p-4">
+        <div
+          className="fixed inset-0 z-[100] grid place-items-center bg-black/40 px-4"
+          onClick={() => setPicking(false)}
+        >
+        <div
+          className="max-h-[85vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-border bg-surface p-4 shadow-lg"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
             <div className="flex gap-1 rounded-lg bg-soft p-1">
               <button
@@ -959,6 +985,9 @@ function QuestionsPanel({
                 + Tạo câu hỏi mới
               </button>
             </div>
+            <button type="button" onClick={() => setPicking(false)} className="text-xs text-muted">
+              Đóng
+            </button>
             {pickerTab === "bank" && (
               <div className="w-56">
                 <SearchableSelect
@@ -1078,6 +1107,7 @@ function QuestionsPanel({
                 Tạo xong sẽ tự động gán câu hỏi này vào quiz theo Part/điểm đã chọn ở trên.
               </p>
               <QuestionForm
+                key={pageId}
                 mode="create"
                 categories={createCategories}
                 passages={passages}
@@ -1086,6 +1116,8 @@ function QuestionsPanel({
                 lockAudience={createAudience}
                 onSaved={handleQuestionCreated}
                 onCategoriesChanged={refreshCreateCategories}
+                initialCategoryId={defaultCategoryId}
+                initialPassageId={defaultPassageId}
               />
               <button
                 type="button"
@@ -1096,6 +1128,7 @@ function QuestionsPanel({
               </button>
             </div>
           )}
+        </div>
         </div>
       )}
     </section>

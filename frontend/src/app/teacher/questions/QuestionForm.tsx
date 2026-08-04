@@ -63,6 +63,8 @@ export function QuestionForm({
   onCategoriesChanged,
   allowedTypes,
   lockAudience,
+  initialCategoryId,
+  initialPassageId,
 }: {
   mode: "create" | "edit";
   initial?: QuestionDetail;
@@ -74,11 +76,16 @@ export function QuestionForm({
   onCategoriesChanged: () => void;
   allowedTypes?: string[];
   lockAudience?: Audience;
+  /** Danh mục/passage gợi ý sẵn khi tạo câu hỏi MỚI trực tiếp trong 1 quiz cụ
+   * thể (vd đang soạn ngay trong quiz "Reading 1" thì khỏi phải tự chọn lại
+   * đúng danh mục/passage đó) — bỏ qua hoàn toàn ở chế độ sửa câu đã có. */
+  initialCategoryId?: number;
+  initialPassageId?: number;
 }) {
   const [step, setStep] = useState<"pick" | "form">(mode === "edit" ? "form" : "pick");
   const [name, setName] = useState(initial?.name ?? "");
   const [categoryId, setCategoryId] = useState<number | "">(
-    initial?.categoryId ?? categories[0]?.id ?? "",
+    initial?.categoryId ?? initialCategoryId ?? categories[0]?.id ?? "",
   );
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [type, setType] = useState(initial?.type ?? "MULTIPLE_CHOICE");
@@ -91,7 +98,9 @@ export function QuestionForm({
       : (initial?.stem ?? ""),
   );
   const clozeEditorRef = useRef<Editor | null>(null);
-  const [passageId, setPassageId] = useState<number | "">(initial?.passageId ?? "");
+  const [passageId, setPassageId] = useState<number | "">(
+    initial?.passageId ?? initialPassageId ?? "",
+  );
   const [answerParagraphIndex, setAnswerParagraphIndex] = useState<number | "">(
     initial?.answerParagraphIndex ?? "",
   );
@@ -112,7 +121,12 @@ export function QuestionForm({
       : "",
   );
   const [caseSensitive, setCaseSensitive] = useState(Boolean(initSettings?.caseSensitive));
-  const [singleAnswer, setSingleAnswer] = useState(Boolean(initSettings?.singleAnswer));
+  // Câu MỚI mặc định 1-đáp-án-đúng (khớp đa số MCQ IELTS thật) — chỉ câu nào
+  // giáo viên chủ động tick "cho phép chọn nhiều" mới là ngoại lệ. Câu ĐÃ CÓ
+  // vẫn đọc đúng giá trị đã lưu (không âm thầm đổi hành vi câu cũ).
+  const [singleAnswer, setSingleAnswer] = useState(
+    initial ? Boolean(initSettings?.singleAnswer) : true,
+  );
   const [essayWordLimit, setEssayWordLimit] = useState(
     initSettings?.wordLimit != null ? String(initSettings.wordLimit) : "",
   );
