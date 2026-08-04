@@ -296,6 +296,7 @@ export interface QuizSummary {
   questionCount: number;
   examTemplateCode: string | null;
   audienceGroup: CourseAudienceGroup;
+  allowReviewAfterSubmit: boolean;
 }
 
 // ---- Quiz management (admin/teacher) ----
@@ -483,6 +484,24 @@ export interface AttemptSummary {
   rawScore: number | null;
   maxScore: number | null;
   bandScore: number | null;
+}
+
+/** 1 lượt làm bài của CHÍNH học viên — trả về bởi GET /api/attempts/me, dùng cho trang "Lịch sử làm bài". */
+export interface MyAttemptSummary {
+  id: number;
+  attemptNumber: number;
+  status: string;
+  startedAt: string;
+  submittedAt: string | null;
+  rawScore: number | null;
+  maxScore: number | null;
+  bandScore: number | null;
+  violations: number;
+  quizId: number | null;
+  quizTitle: string | null;
+  courseId: number | null;
+  courseTitle: string | null;
+  allowReviewAfterSubmit: boolean;
 }
 
 /** Số câu đúng/sai theo 1 dạng câu hỏi, gộp toàn bộ lịch sử làm bài của học viên. */

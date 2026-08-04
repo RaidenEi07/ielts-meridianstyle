@@ -295,7 +295,8 @@ public class QuizService {
                 quiz.getContext() != null ? quiz.getContext().getId() : null,
                 quizQuestionRepository.countByQuizId(quiz.getId()),
                 template != null ? template.getCode() : null,
-                course.getCategory().getAudienceGroup());
+                course.getCategory().getAudienceGroup(),
+                quiz.isAllowReviewAfterSubmit());
     }
 
     private void applyCreate(Quiz quiz, QuizRequests.CreateQuiz req) {
@@ -308,6 +309,9 @@ public class QuizService {
         if (req.maxViolations() != null) quiz.setMaxViolations(req.maxViolations());
         quiz.setPassMark(req.passMark());
         quiz.setStatus(parseStatus(req.status(), QuizStatus.DRAFT));
+        if (req.allowReviewAfterSubmit() != null) {
+            quiz.setAllowReviewAfterSubmit(req.allowReviewAfterSubmit());
+        }
     }
 
     private void applyUpdate(Quiz quiz, QuizRequests.UpdateQuiz req) {
@@ -320,6 +324,9 @@ public class QuizService {
         if (req.maxViolations() != null) quiz.setMaxViolations(req.maxViolations());
         if (req.passMark() != null) quiz.setPassMark(req.passMark());
         if (req.status() != null) quiz.setStatus(parseStatus(req.status(), quiz.getStatus()));
+        if (req.allowReviewAfterSubmit() != null) {
+            quiz.setAllowReviewAfterSubmit(req.allowReviewAfterSubmit());
+        }
     }
 
     private QuizStatus parseStatus(String raw, QuizStatus fallback) {

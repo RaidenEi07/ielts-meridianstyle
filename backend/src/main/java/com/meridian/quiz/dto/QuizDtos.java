@@ -26,7 +26,8 @@ public final class QuizDtos {
             Long contextId,
             long questionCount,
             String examTemplateCode,
-            CourseAudienceGroup audienceGroup) {
+            CourseAudienceGroup audienceGroup,
+            boolean allowReviewAfterSubmit) {
     }
 
     public record QuizQuestionDto(

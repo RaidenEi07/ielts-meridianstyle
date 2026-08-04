@@ -138,7 +138,12 @@ public final class AttemptDtos {
             BigDecimal rawScore,
             BigDecimal maxScore,
             BigDecimal bandScore,
-            int violations) {
+            int violations,
+            Long quizId,
+            String quizTitle,
+            Long courseId,
+            String courseTitle,
+            boolean allowReviewAfterSubmit) {
     }
 
     public record LogDto(Long id, String eventType, String detail, Instant createdAt) {

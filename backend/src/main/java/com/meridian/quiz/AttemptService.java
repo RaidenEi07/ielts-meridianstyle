@@ -191,9 +191,21 @@ public class AttemptService {
         return buildResult(attempt);
     }
 
+    /**
+     * Xem lại kết quả SAU KHI đã rời trang (tải lại /quay lại từ lịch sử) — gọi
+     * riêng khỏi luồng nộp bài (submit() trả kết quả trực tiếp trong response,
+     * không gọi lại hàm này), nên chặn ở đây không ảnh hưởng tới việc học viên
+     * luôn thấy điểm ngay lúc vừa nộp bài.
+     */
     @Transactional(readOnly = true)
     public AttemptResult getResult(UUID uid, Long attemptId) {
         QuizAttempt attempt = requireOwnedAttempt(uid, attemptId);
+        // Quiz đã bị xóa mềm (existsById false, xem toSummary()) thì không còn
+        // setting nào để chặn theo nữa — không crash, cứ hiện bình thường.
+        Long quizId = attempt.getQuiz().getId();
+        if (quizRepository.existsById(quizId) && !attempt.getQuiz().isAllowReviewAfterSubmit()) {
+            throw ApiException.forbidden("Giáo viên đã tắt xem lại bài làm cho bài này.");
+        }
         return buildResult(attempt);
     }
 
@@ -487,9 +499,27 @@ public class AttemptService {
     }
 
     private AttemptSummary toSummary(QuizAttempt a) {
+        // quiz.getId() đọc thẳng từ FK trên proxy lazy, không chạm DB — an toàn
+        // kể cả khi quiz đã bị xóa mềm. Chỉ tải đầy đủ (tên quiz/khóa học) khi
+        // quiz còn tồn tại, tránh EntityNotFoundException khi liệt kê LỊCH SỬ
+        // của học viên có thể dính tới quiz đã bị giáo viên xóa từ lâu.
+        Quiz quiz = a.getQuiz();
+        Long quizId = quiz.getId();
+        String quizTitle = null;
+        Long courseId = null;
+        String courseTitle = null;
+        boolean allowReview = true;
+        if (quizRepository.existsById(quizId)) {
+            quizTitle = quiz.getTitle();
+            var course = quiz.getSection().getCourse();
+            courseId = course.getId();
+            courseTitle = course.getTitle();
+            allowReview = quiz.isAllowReviewAfterSubmit();
+        }
         return new AttemptSummary(a.getId(), a.getUserId(), a.getAttemptNumber(),
                 a.getStatus().name(), a.getStartedAt(), a.getSubmittedAt(),
-                a.getRawScore(), a.getMaxScore(), a.getBandScore(), a.getViolations());
+                a.getRawScore(), a.getMaxScore(), a.getBandScore(), a.getViolations(),
+                quizId, quizTitle, courseId, courseTitle, allowReview);
     }
 
     private Quiz requireQuiz(Long id) {

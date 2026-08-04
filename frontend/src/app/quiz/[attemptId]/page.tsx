@@ -266,6 +266,7 @@ function QuizPlayerPageInner() {
   const [violations, setViolations] = useState(0);
   const toast = useToast();
   const [loading, setLoading] = useState(true);
+  const [reviewBlocked, setReviewBlocked] = useState(false);
   const [stepIndex, setStepIndex] = useState(0);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
@@ -333,7 +334,13 @@ function QuizPlayerPageInner() {
       .then((a) => {
         if (a.status !== "IN_PROGRESS") {
           setResultQuestions(a.questions ?? []);
-          return quizApi.result(attemptId, token).then(setResult);
+          return quizApi.result(attemptId, token).then(setResult).catch((err) => {
+            if (err instanceof ApiError && err.status === 403) {
+              setReviewBlocked(true);
+              return;
+            }
+            throw err;
+          });
         }
         setAttempt(a);
         setAnswers(a.savedAnswers ?? {});
@@ -550,6 +557,14 @@ function QuizPlayerPageInner() {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
   }
   if (result) return <ResultView result={result} questions={resultQuestions} returnTo={returnTo} />;
+  if (reviewBlocked) {
+    return (
+      <div className="grid min-h-screen place-items-center px-6 text-center text-muted">
+        Giáo viên đã tắt xem lại bài làm cho bài này.{" "}
+        <Link href="/attempts" className="text-accent">Về lịch sử làm bài</Link>
+      </div>
+    );
+  }
   if (!attempt) {
     return (
       <div className="grid min-h-screen place-items-center text-muted">

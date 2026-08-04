@@ -36,6 +36,11 @@ export function SiteHeader() {
               Đang học: {user.fullName} · Quay lại phụ huynh
             </button>
           )}
+          {hydrated && user && (
+            <Link href="/attempts" className="hidden hover:text-text sm:inline">
+              Lịch sử làm bài
+            </Link>
+          )}
           {hydrated && user ? (
             <Link
               href="/dashboard"

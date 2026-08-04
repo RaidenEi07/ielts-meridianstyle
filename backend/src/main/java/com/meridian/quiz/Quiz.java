@@ -62,6 +62,9 @@ public class Quiz {
     @Column(name = "pass_mark", precision = 6, scale = 2)
     private BigDecimal passMark;
 
+    @Column(name = "allow_review_after_submit", nullable = false)
+    private boolean allowReviewAfterSubmit = true;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private QuizStatus status = QuizStatus.DRAFT;

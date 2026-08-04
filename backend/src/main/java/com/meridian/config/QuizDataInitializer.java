@@ -79,7 +79,8 @@ public class QuizDataInitializer implements CommandLineRunner {
                 true,           // bật anti-cheat
                 3,              // tối đa 3 lần vi phạm
                 new BigDecimal("2"),  // điểm đạt
-                "PUBLISHED"));
+                "PUBLISHED",
+                true));         // cho xem lại
 
         List<Long> questionIds = new ArrayList<>();
         for (QuestionType t : List.of(QuestionType.MULTIPLE_CHOICE,

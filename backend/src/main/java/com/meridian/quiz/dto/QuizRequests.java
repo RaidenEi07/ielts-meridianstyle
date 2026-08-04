@@ -21,7 +21,8 @@ public final class QuizRequests {
             Boolean antiCheatEnabled,
             Integer maxViolations,
             BigDecimal passMark,
-            String status) {
+            String status,
+            Boolean allowReviewAfterSubmit) {
     }
 
     public record UpdateQuiz(
@@ -33,7 +34,8 @@ public final class QuizRequests {
             Boolean antiCheatEnabled,
             Integer maxViolations,
             BigDecimal passMark,
-            String status) {
+            String status,
+            Boolean allowReviewAfterSubmit) {
     }
 
     public record ImportQuestions(

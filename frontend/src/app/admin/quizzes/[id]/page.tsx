@@ -185,6 +185,7 @@ function QuizSettingsForm({
   const [maxViolations, setMaxViolations] = useState(String(q.maxViolations));
   const [passMark, setPassMark] = useState(q.passMark != null ? String(q.passMark) : "");
   const [status, setStatus] = useState(q.status);
+  const [allowReview, setAllowReview] = useState(q.allowReviewAfterSubmit);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -200,6 +201,7 @@ function QuizSettingsForm({
     setMaxViolations(String(q.maxViolations));
     setPassMark(q.passMark != null ? String(q.passMark) : "");
     setStatus(q.status);
+    setAllowReview(q.allowReviewAfterSubmit);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q.id]);
 
@@ -218,6 +220,7 @@ function QuizSettingsForm({
         maxViolations: Number(maxViolations),
         passMark: passMark ? Number(passMark) : undefined,
         status,
+        allowReviewAfterSubmit: allowReview,
       });
       setMsg("Đã lưu");
       setTimeout(() => setMsg(null), 2000);
@@ -326,6 +329,14 @@ function QuizSettingsForm({
             onChange={(e) => setShuffle(e.target.checked)}
           />
           Trộn thứ tự câu hỏi
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={allowReview}
+            onChange={(e) => setAllowReview(e.target.checked)}
+          />
+          Cho phép học viên xem lại bài làm, kết quả và đáp án sau khi nộp
         </label>
         {isAcademic && (
           <label className="flex items-center gap-2 text-sm">

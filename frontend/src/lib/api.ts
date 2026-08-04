@@ -33,6 +33,7 @@ import type {
   LeaderboardEntry,
   LessonRecording,
   MemoryPair,
+  MyAttemptSummary,
   PassageSummary,
   PublicStats,
   QuestionCategoryNode,
@@ -359,6 +360,7 @@ export const quizAdminApi = {
       maxViolations?: number;
       passMark?: number;
       status?: string;
+      allowReviewAfterSubmit?: boolean;
     },
   ) =>
     apiFetch<QuizDetailAdmin>("/api/admin/quizzes", {
@@ -383,6 +385,7 @@ export const quizAdminApi = {
       maxViolations: number;
       passMark: number;
       status: string;
+      allowReviewAfterSubmit: boolean;
     }>,
   ) =>
     apiFetch<QuizDetailAdmin>(`/api/admin/quizzes/${id}`, {
@@ -750,6 +753,9 @@ export const quizApi = {
 
   result: (attemptId: number, token: string) =>
     apiFetch<AttemptResult>(`/api/attempts/${attemptId}/result`, { token }),
+
+  myAttempts: (token: string) =>
+    apiFetch<MyAttemptSummary[]>(`/api/attempts/me`, { token }),
 };
 
 // ---- Gradebook & reports ----
