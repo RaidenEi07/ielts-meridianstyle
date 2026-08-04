@@ -522,6 +522,7 @@ export interface AnswerGradingDto {
   awardedMark: number | null;
   correct: boolean | null;
   needsManualGrading: boolean;
+  answered: boolean;
 }
 
 export interface MonthlyPoint {

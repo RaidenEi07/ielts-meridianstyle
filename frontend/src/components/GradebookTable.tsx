@@ -61,19 +61,27 @@ function AttemptDetailModal({
               const meta = a.type ? TYPE_META[a.type] : undefined;
               return (
                 <li
-                  key={a.answerId}
+                  key={a.quizQuestionId}
                   className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm"
                 >
                   <span
                     className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      a.correct === true
-                        ? "bg-green-soft text-green"
-                        : a.correct === false
-                          ? "bg-red-soft text-red"
-                          : "bg-soft text-muted"
+                      !a.answered
+                        ? "bg-soft text-faint"
+                        : a.correct === true
+                          ? "bg-green-soft text-green"
+                          : a.correct === false
+                            ? "bg-red-soft text-red"
+                            : "bg-soft text-muted"
                     }`}
                   >
-                    {a.correct === true ? "✓ Đúng" : a.correct === false ? "✗ Sai" : "Chưa chấm"}
+                    {!a.answered
+                      ? "— Không trả lời"
+                      : a.correct === true
+                        ? "✓ Đúng"
+                        : a.correct === false
+                          ? "✗ Sai"
+                          : "Chưa chấm"}
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-medium">{a.name ?? "—"}</p>

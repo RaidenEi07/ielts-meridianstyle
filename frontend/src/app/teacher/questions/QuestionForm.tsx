@@ -87,6 +87,19 @@ export function QuestionForm({
   const [categoryId, setCategoryId] = useState<number | "">(
     initial?.categoryId ?? initialCategoryId ?? categories[0]?.id ?? "",
   );
+  // `categories` luôn nạp SAU lần render đầu (effect riêng ở trang cha), nên
+  // initializer ở trên luôn chụp đúng lúc mảng còn rỗng đối với câu hỏi MỚI.
+  // Điều chỉnh state ngay trong lúc render (mẫu "adjusting state on prop
+  // change" của React, KHÔNG dùng useEffect) để tự chọn danh mục đầu tiên
+  // ngay khi danh sách về — nhưng CHỈ khi chưa ai chọn gì (categoryId rỗng),
+  // để không đè lựa chọn thật của giáo viên.
+  const [categoriesSeen, setCategoriesSeen] = useState(categories);
+  if (categories !== categoriesSeen) {
+    setCategoriesSeen(categories);
+    if (categoryId === "" && categories.length > 0) {
+      setCategoryId(initialCategoryId ?? categories[0].id);
+    }
+  }
   const [creatingCategory, setCreatingCategory] = useState(false);
   const [type, setType] = useState(initial?.type ?? "MULTIPLE_CHOICE");
   // Câu Cloze cũ lưu marker {n} thô trong stem — "dịch" thành chip tương tác
@@ -185,6 +198,12 @@ export function QuestionForm({
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
+    if (categoryId === "") {
+      const msg = "Vui lòng chọn danh mục trước khi lưu";
+      setError(msg);
+      toast.error(msg);
+      return;
+    }
     setSaving(true);
     setError(null);
     try {

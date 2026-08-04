@@ -18,7 +18,9 @@ import com.meridian.rbac.ContextService;
 import com.meridian.rbac.PermissionService;
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -51,21 +53,36 @@ public class GradingAdminService {
         this.questionService = questionService;
     }
 
-    /** Danh sách câu trả lời của một lượt làm (kèm answerId) cho giáo viên chấm. */
+    /**
+     * Danh sách câu trả lời của một lượt làm (kèm answerId) cho giáo viên chấm.
+     * Duyệt theo TOÀN BỘ câu hỏi của quiz (không chỉ những câu đã có trong
+     * quiz_attempt_answers) — thí sinh bỏ trống 1 câu thì không có row nào cho
+     * câu đó, nếu chỉ liệt kê theo answerRepository sẽ lặng lẽ thiếu mất các
+     * câu bị bỏ trống, gây hiểu lầm khi đối chiếu với điểm tổng của lượt làm.
+     */
     @Transactional(readOnly = true)
     public List<AnswerGradingDto> answersForGrading(UUID uid, Long attemptId) {
         QuizAttempt attempt = attemptRepository.findById(attemptId)
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy lượt làm"));
         permissionService.requireCapability(uid, "quiz:regrade", ctxId(attempt.getQuiz().getContext()));
 
-        return answerRepository.findByAttemptId(attemptId).stream().map(a -> {
-            QuizQuestion qq = quizQuestionRepository.findById(a.getQuizQuestionId()).orElse(null);
-            var q = qq != null ? questionService.getQuestion(qq.getQuestionId()) : null;
-            String type = q != null ? q.type() : null;
-            return new AnswerGradingDto(a.getId(), a.getQuizQuestionId(), type,
-                    q != null ? q.name() : null, a.getResponse(),
-                    qq != null ? qq.getMark() : null, a.getAwardedMark(), a.getCorrect(),
-                    "ESSAY".equals(type));
+        Map<Long, QuizAttemptAnswer> answersByQuizQuestionId = answerRepository.findByAttemptId(attemptId)
+                .stream()
+                .collect(Collectors.toMap(QuizAttemptAnswer::getQuizQuestionId, a -> a));
+
+        List<QuizQuestion> quizQuestions =
+                quizQuestionRepository.findByQuizIdOrderBySortOrderAscIdAsc(attempt.getQuiz().getId());
+
+        return quizQuestions.stream().map(qq -> {
+            var q = questionService.getQuestion(qq.getQuestionId());
+            String type = q.type();
+            QuizAttemptAnswer a = answersByQuizQuestionId.get(qq.getId());
+            if (a == null) {
+                return new AnswerGradingDto(null, qq.getId(), type, q.name(), null,
+                        qq.getMark(), BigDecimal.ZERO, null, "ESSAY".equals(type), false);
+            }
+            return new AnswerGradingDto(a.getId(), qq.getId(), type, q.name(), a.getResponse(),
+                    qq.getMark(), a.getAwardedMark(), a.getCorrect(), "ESSAY".equals(type), true);
         }).toList();
     }
 
