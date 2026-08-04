@@ -69,8 +69,8 @@ export const QUESTION_GUIDES: Record<string, QuestionGuide> = {
       "Học viên gán mỗi mục vào đúng vị trí/vùng trên một hình ảnh (bản đồ, sơ đồ...).",
     steps: [
       "Nhập URL ảnh nền.",
-      "Vẽ các vùng bằng tọa độ (x, y, rộng, cao) và đặt nhãn (A, B...).",
-      "Thêm mục kéo-thả, ô \"Nhãn vùng đúng\" ghi đúng nhãn đó.",
+      "Kéo chuột trực tiếp lên ảnh để vẽ vùng thả — kéo góc dưới-phải để đổi kích thước, kéo thân để di chuyển, nhãn (A, B...) tự động gán.",
+      "Thêm mục kéo-thả, chọn đúng vùng trong ô \"Vị trí đúng\".",
     ],
   },
   CLOZE: {

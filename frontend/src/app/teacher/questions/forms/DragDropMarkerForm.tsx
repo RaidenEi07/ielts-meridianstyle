@@ -1,6 +1,7 @@
 "use client";
 
 import type { QuestionDragItem, QuestionDragZone } from "@/lib/types";
+import { DragZoneEditor } from "@/components/DragZoneEditor";
 
 export function DragDropMarkerForm({
   backgroundImageUrl,
@@ -32,19 +33,6 @@ export function DragDropMarkerForm({
     onItemsChange(items.filter((_, idx) => idx !== i));
   }
 
-  function updateZone(i: number, patch: Partial<QuestionDragZone>) {
-    onZonesChange(zones.map((z, idx) => (idx === i ? { ...z, ...patch } : z)));
-  }
-  function addZone() {
-    onZonesChange([
-      ...zones,
-      { id: null, label: "", x: 0, y: 0, width: 80, height: 40, sortOrder: zones.length },
-    ]);
-  }
-  function removeZone(i: number) {
-    onZonesChange(zones.filter((_, idx) => idx !== i));
-  }
-
   return (
     <div className="space-y-3">
       <label className="block">
@@ -57,55 +45,12 @@ export function DragDropMarkerForm({
         />
       </label>
 
-      <div>
-        <span className="mb-1 block text-xs font-medium text-muted">
-          Vùng thả trên ảnh (tọa độ pixel)
-        </span>
-        {zones.map((z, i) => (
-          <div key={i} className="mb-1 flex items-center gap-2">
-            <input
-              value={z.label}
-              onChange={(e) => updateZone(i, { label: e.target.value })}
-              placeholder="Nhãn (vd: A)"
-              className="input w-20 text-sm"
-            />
-            <input
-              type="number"
-              value={z.x}
-              onChange={(e) => updateZone(i, { x: Number(e.target.value) })}
-              placeholder="x"
-              className="input w-16 text-sm"
-            />
-            <input
-              type="number"
-              value={z.y}
-              onChange={(e) => updateZone(i, { y: Number(e.target.value) })}
-              placeholder="y"
-              className="input w-16 text-sm"
-            />
-            <input
-              type="number"
-              value={z.width}
-              onChange={(e) => updateZone(i, { width: Number(e.target.value) })}
-              placeholder="rộng"
-              className="input w-16 text-sm"
-            />
-            <input
-              type="number"
-              value={z.height}
-              onChange={(e) => updateZone(i, { height: Number(e.target.value) })}
-              placeholder="cao"
-              className="input w-16 text-sm"
-            />
-            <button type="button" onClick={() => removeZone(i)} className="text-xs text-red">
-              Xóa
-            </button>
-          </div>
-        ))}
-        <button type="button" onClick={addZone} className="text-sm font-semibold text-accent">
-          + Thêm vùng
-        </button>
-      </div>
+      <DragZoneEditor
+        key={backgroundImageUrl}
+        backgroundImageUrl={backgroundImageUrl}
+        zones={zones}
+        onZonesChange={onZonesChange}
+      />
 
       <div>
         <span className="mb-1 block text-xs font-medium text-muted">
