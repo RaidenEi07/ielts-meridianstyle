@@ -13,7 +13,6 @@ import {
   Highlighter,
   Hourglass,
   Lightbulb,
-  Menu,
   NotebookPen,
   Play,
   Timer,
@@ -338,7 +337,6 @@ function QuizPlayerPageInner() {
   const [stepIndex, setStepIndex] = useState(0);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
   const submittingRef = useRef(false);
   const token = accessToken ?? "";
@@ -679,8 +677,17 @@ function QuizPlayerPageInner() {
   const isExamMode = steps.some((s) => s.kind === "reading" || s.kind === "listening" || s.kind === "essay");
 
   return (
+    <div className="flex">
+    {/*
+      `transform` biến div này thành containing block cho MỌI phần tử con
+      `position: fixed` bên trong (header, thanh điều hướng dưới, cụm nổi
+      góc phải) — nhờ vậy khi panel Ghi chú mở ra đẩy cột này hẹp lại
+      (flex-1 co lại), toàn bộ "fixed" bên trong co theo đúng cột thay vì
+      tính theo cả viewport, khớp đúng hiệu ứng "đẩy giao diện sang trái".
+    */}
     <div
-      className={`flex min-h-screen flex-col bg-bg pb-16 ${isExamMode ? "exam-mode" : ""}`}
+      className={`relative flex min-h-screen flex-1 flex-col bg-bg pb-16 ${isExamMode ? "exam-mode" : ""}`}
+      style={{ transform: "translateZ(0)" }}
       onCopy={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
       onPaste={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
       onContextMenu={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
@@ -739,25 +746,6 @@ function QuizPlayerPageInner() {
               </span>
             )
           )}
-          <div className="relative">
-            <button type="button" onClick={() => setMenuOpen((v) => !v)}
-              className="grid h-8 w-8 place-items-center rounded-md hover:bg-white/10"
-              title="Menu" aria-label="Menu">
-              <Menu className="h-5 w-5" />
-            </button>
-            {menuOpen && (
-              <>
-                <div className="fixed inset-0 z-20" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-full z-30 mt-2 w-52 overflow-hidden rounded-lg border border-border bg-surface text-text shadow-lg">
-                <button type="button"
-                  onClick={() => { setNotesOpen(true); setMenuOpen(false); }}
-                  className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm hover:bg-soft">
-                  <NotebookPen className="h-4 w-4" /> Ghi chú{notes.length > 0 ? ` (${notes.length})` : ""}
-                </button>
-                </div>
-              </>
-            )}
-          </div>
         </div>
       </header>
 
@@ -832,50 +820,34 @@ function QuizPlayerPageInner() {
       </div>
 
       {/*
-        Bottom navigator: hàng tab theo Part ở trên, chỉ sổ ra số câu của
-        Part đang chọn ở dưới — bấm tab khác nhảy stepIndex + đổi số hiện.
+        Bottom navigator: gộp chung 1 hàng — đếm câu + tab Part đứng yên 2
+        đầu, dải số câu cuộn ngang ở giữa — gọn hơn hẳn so với 2 hàng tách
+        rời trước đây.
       */}
-      <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-surface px-4 py-2.5">
-        <div className="mx-auto max-w-5xl">
-          <div className="mb-2 flex items-center gap-2">
-            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
-              <span className="shrink-0 text-xs text-muted">
-                {answeredCount}/{orderedSlots.length} câu
-              </span>
-              {steps.map((step, idx) => (
-                <button
-                  key={step.key}
-                  type="button"
-                  onClick={() => {
-                    const slots = stepSlots(step);
-                    if (slots.length > 0) goToQuestion(slots[0].key);
-                    else setStepIndex(idx);
-                  }}
-                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                    idx === stepIndex ? "bg-primary text-white" : "bg-soft text-muted hover:text-text"
-                  }`}
-                >
-                  {step.label}
-                </button>
-              ))}
-            </div>
-            {/* Nộp bài neo cố định ở thanh điều hướng dưới cùng (không còn nổi
-                riêng cạnh 2 mũi tên) — luôn thấy được, không lẫn với khu vực
-                cuộn ngang của tab Part/số câu. Đã có kết quả (đang xem lại)
-                thì đổi thành lối thoát về khóa học thay vì nộp lại. */}
-            {result ? (
-              <Link href={returnTo || "/dashboard"}
-                className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
-                {returnTo ? "Về khóa học" : "Về bảng điều khiển"}
-              </Link>
-            ) : (
-              <button type="button" onClick={doSubmit}
-                className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
-                <CheckCircle2 className="h-3.5 w-3.5" /> Nộp bài
+      <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-surface px-4 py-2">
+        <div className="mx-auto flex max-w-5xl items-center gap-2">
+          <span className="shrink-0 text-xs text-muted">
+            {answeredCount}/{orderedSlots.length} câu
+          </span>
+          <div className="flex shrink-0 items-center gap-1">
+            {steps.map((step, idx) => (
+              <button
+                key={step.key}
+                type="button"
+                onClick={() => {
+                  const slots = stepSlots(step);
+                  if (slots.length > 0) goToQuestion(slots[0].key);
+                  else setStepIndex(idx);
+                }}
+                className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                  idx === stepIndex ? "bg-primary text-white" : "bg-soft text-muted hover:text-text"
+                }`}
+              >
+                {step.label}
               </button>
-            )}
+            ))}
           </div>
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
             {stepSlots(steps[stepIndex]).map((slot) => {
               const answered = isSlotAnswered(slot, answers);
               const isFlagged = flagged.has(slot.quizQuestionId);
@@ -900,23 +872,42 @@ function QuizPlayerPageInner() {
               );
             })}
           </div>
+          {/* Nộp bài neo cố định ở thanh điều hướng dưới cùng (không còn nổi
+              riêng cạnh 2 mũi tên) — luôn thấy được. Đã có kết quả (đang xem
+              lại) thì đổi thành lối thoát về khóa học thay vì nộp lại. */}
+          {result ? (
+            <Link href={returnTo || "/dashboard"}
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
+              {returnTo ? "Về khóa học" : "Về bảng điều khiển"}
+            </Link>
+          ) : (
+            <button type="button" onClick={doSubmit}
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Nộp bài
+            </button>
+          )}
         </div>
       </nav>
 
       {/*
-        Ghi chú (mở từ menu header) + điều hướng câu trước/sau, góc dưới
-        bên phải — khớp bố cục tham khảo (chỉ còn 2 mũi tên ở góc này).
+        Nút bật/tắt Ghi chú (luôn hiện, không còn ẩn trong menu header nữa)
+        + điều hướng câu trước/sau, góc dưới bên phải. Bấm nút Ghi chú mở
+        panel dạng drawer đẩy toàn bộ giao diện làm bài sang trái (xem
+        <aside> ngoài containing-block ở dưới), không còn nổi đè lên nữa.
       */}
       <div className="fixed bottom-20 right-6 z-30 flex flex-col items-end gap-2">
-        {notesOpen && (
-          <NotesPanel
-            notes={notes}
-            onAdd={addNote}
-            onRemove={removeNote}
-            onJump={focusNoteMark}
-            onClose={() => setNotesOpen(false)}
-          />
-        )}
+        <button type="button" onClick={() => setNotesOpen((v) => !v)}
+          title="Ghi chú" aria-label="Ghi chú"
+          className={`relative grid h-11 w-11 place-items-center rounded-full border shadow-md ${
+            notesOpen ? "border-primary bg-primary text-white" : "border-border bg-surface hover:bg-primary-soft"
+          }`}>
+          <NotebookPen className="h-5 w-5" />
+          {notes.length > 0 && (
+            <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-white">
+              {notes.length}
+            </span>
+          )}
+        </button>
         <div className="flex items-center gap-2">
           <button type="button" onClick={() => stepBy(-1)} title="Câu trước"
             className="grid h-11 w-11 place-items-center rounded-full border border-border bg-surface shadow-md hover:bg-primary-soft">
@@ -928,6 +919,18 @@ function QuizPlayerPageInner() {
           </button>
         </div>
       </div>
+    </div>
+    {notesOpen && (
+      <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-surface">
+        <NotesPanel
+          notes={notes}
+          onAdd={addNote}
+          onRemove={removeNote}
+          onJump={focusNoteMark}
+          onClose={() => setNotesOpen(false)}
+        />
+      </aside>
+    )}
     </div>
   );
 }
@@ -950,14 +953,14 @@ function NotesPanel({
     setDraft("");
   }
   return (
-    <div className="flex w-80 flex-col rounded-card border border-border bg-surface p-3 shadow-xl">
-      <div className="mb-2 flex items-center justify-between">
+    <div className="flex h-full flex-col p-4">
+      <div className="mb-3 flex shrink-0 items-center justify-between">
         <span className="text-sm font-semibold">Ghi chú của tôi</span>
         <button type="button" onClick={onClose} className="text-muted hover:text-red">
           <X className="h-4 w-4" />
         </button>
       </div>
-      <div className="mb-2 flex gap-2">
+      <div className="mb-3 flex shrink-0 gap-2">
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
@@ -979,7 +982,7 @@ function NotesPanel({
       {notes.length === 0 ? (
         <p className="text-xs text-muted">Chưa có ghi chú nào.</p>
       ) : (
-        <div className="max-h-64 space-y-1.5 overflow-y-auto">
+        <div className="flex-1 space-y-1.5 overflow-y-auto">
           {notes.map((n) => (
             <div
               key={n.id}

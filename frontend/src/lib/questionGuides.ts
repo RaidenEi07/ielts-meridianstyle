@@ -12,9 +12,10 @@ export const QUESTION_GUIDES: Record<string, QuestionGuide> = {
     steps: [
       "Nhập câu hỏi ở ô \"Nội dung câu hỏi\".",
       "Thêm các lựa chọn bên dưới.",
-      "Tick vào ô bên trái lựa chọn đúng (có thể tick nhiều ô nếu cho phép nhiều đáp án đúng).",
+      "Câu hỏi mới mặc định chỉ cho phép 1 đáp án đúng (chọn kiểu tròn/radio) — bỏ tick \"Chỉ cho phép chọn 1 đáp án đúng\" phía trên danh sách nếu muốn cho phép chọn nhiều đáp án cùng lúc (kiểu ô vuông/checkbox).",
+      "Tick vào ô bên trái (các) lựa chọn đúng.",
     ],
-    example: "\"Thủ đô của Việt Nam là gì?\" → Hà Nội (✓), TP.HCM, Đà Nẵng.",
+    example: "\"Thủ đô của Việt Nam là gì?\" → Hà Nội (✓), TP.HCM, Đà Nẵng. (1 đáp án đúng — mặc định)",
   },
   TRUE_FALSE_NOT_GIVEN: {
     title: "Đúng/Sai/NG",
@@ -58,10 +59,10 @@ export const QUESTION_GUIDES: Record<string, QuestionGuide> = {
     title: "Kéo thả văn bản",
     purpose: "Học viên chọn từ/cụm từ điền vào chỗ trống trong câu.",
     steps: [
-      "Viết câu với chỗ trống đánh dấu [[1]], [[2]]... trong ô \"Mẫu câu\".",
-      "Thêm các mục kéo-thả, ô \"Vị trí đúng\" ghi đúng số khớp với dấu ngoặc.",
+      "Viết câu với chỗ trống đánh dấu [[1]], [[2]]... trong ô \"Mẫu câu\" — hệ thống tự phát hiện và liệt kê ngay các ô trống tìm được bên dưới.",
+      "Thêm các mục kéo-thả, chọn đúng ô trống tương ứng trong dropdown \"Vị trí đúng\" (không cần tự gõ số) — để \"Mồi nhử\" nếu mục đó chỉ để gây nhiễu, không phải đáp án của ô nào.",
     ],
-    example: "\"The [[1]] orbits the [[2]].\" → Earth=1, Sun=2.",
+    example: "\"The [[1]] orbits the [[2]].\" → Earth=[[1]], Sun=[[2]].",
   },
   DRAG_DROP_MARKER: {
     title: "Kéo thả ảnh",
