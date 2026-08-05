@@ -196,6 +196,13 @@ public class QuizService {
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy trang"));
         Quiz quiz = requireQuiz(page.getQuizId());
         permissionService.requireCapability(uid, CAP, contextId(quiz.getContext()));
+        // Câu hỏi vẫn có thể đang gắn với trang này (page_id) — gỡ liên kết trước
+        // khi xoá, tránh lỗi khoá ngoại thô và mồ côi câu hỏi khỏi quiz.
+        List<QuizQuestion> attached = quizQuestionRepository.findByPageId(pageId);
+        if (!attached.isEmpty()) {
+            attached.forEach(qq -> qq.setPageId(null));
+            quizQuestionRepository.saveAll(attached);
+        }
         pageRepository.delete(page);
     }
 

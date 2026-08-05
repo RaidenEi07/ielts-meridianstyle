@@ -10,4 +10,6 @@ public interface QuizQuestionRepository extends JpaRepository<QuizQuestion, Long
     boolean existsByQuizIdAndQuestionId(Long quizId, Long questionId);
 
     long countByQuizId(Long quizId);
+
+    List<QuizQuestion> findByPageId(Long pageId);
 }
