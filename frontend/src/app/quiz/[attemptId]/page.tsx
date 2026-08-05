@@ -88,6 +88,20 @@ interface Slot {
   key: string;
   quizQuestionId: number;
   subIndex?: number;
+  /** Nhãn vị trí thả (marker "1"/"2".../nhãn vùng "A"/"B"...) cho slot Kéo-thả
+   * — dùng để tra `answer.placements` xem đúng vị trí này đã có mục nào chưa. */
+  dragTargetLabel?: string;
+}
+
+/** Các mốc `[[n]]` phát hiện được trong mẫu câu Kéo-thả văn bản, đúng công
+ * thức `detectBlanks()` đã dùng ở form soạn (`DragDropTextForm.tsx`) — mỗi
+ * mốc là 1 số thứ tự IELTS thật riêng, không phải cả câu chỉ tính 1 số. */
+function dragTextBlankLabels(template: string): string[] {
+  const found = new Set<string>();
+  for (const m of template.matchAll(/\[\[(\d+)\]\]/g)) {
+    found.add(m[1]);
+  }
+  return [...found].sort((a, b) => Number(a) - Number(b));
 }
 
 function expandSlots(q: PlayerQuestion): Slot[] {
@@ -111,6 +125,32 @@ function expandSlots(q: PlayerQuestion): Slot[] {
       quizQuestionId: q.quizQuestionId,
     }));
   }
+  // Kéo-thả văn bản đứng riêng (không nhúng vào đoạn văn — dạng Matching
+  // Heading nhúng có marker nằm trong `Passage.content` chứ không phải
+  // `settings.template`, nên ở đây không phát hiện được gì và tự rơi về
+  // nhánh mặc định 1 số bên dưới, giữ nguyên hành vi hiện có cho dạng đó)
+  // chiếm nhiều số thứ tự IELTS thật theo đúng số mốc [[n]] trong mẫu câu.
+  if (q.type === "DRAG_DROP_TEXT") {
+    const template = (q.settings as { template?: string } | null)?.template ?? "";
+    const labels = dragTextBlankLabels(template);
+    if (labels.length > 0) {
+      return labels.map((label) => ({
+        key: `${q.quizQuestionId}:dd${label}`,
+        quizQuestionId: q.quizQuestionId,
+        dragTargetLabel: label,
+      }));
+    }
+  }
+  // Kéo-thả ảnh: mỗi vùng thả đã vẽ (dragZones) là 1 vị trí/số thứ tự riêng
+  // trên bản đồ/sơ đồ, khớp đúng cách đề thi thật đánh số (vd Label the map,
+  // Questions 33-35 cho 3 vùng A/B/C).
+  if (q.type === "DRAG_DROP_MARKER" && q.dragZones.length > 0) {
+    return q.dragZones.map((z) => ({
+      key: `${q.quizQuestionId}:dz${z.label}`,
+      quizQuestionId: q.quizQuestionId,
+      dragTargetLabel: z.label,
+    }));
+  }
   return [{ key: `${q.quizQuestionId}`, quizQuestionId: q.quizQuestionId }];
 }
 
@@ -124,10 +164,15 @@ function stepSlots(step: Step): Slot[] {
 }
 
 function isSlotAnswered(slot: Slot, answers: Record<number, unknown>): boolean {
-  const answer = answers[slot.quizQuestionId] as { subs?: Record<string, string> } | undefined;
+  const answer = answers[slot.quizQuestionId] as
+    | { subs?: Record<string, string>; placements?: Record<string, string> }
+    | undefined;
   if (slot.subIndex != null) {
     const v = answer?.subs?.[String(slot.subIndex)];
     return Boolean(v && v.trim());
+  }
+  if (slot.dragTargetLabel != null) {
+    return Object.values(answer?.placements ?? {}).includes(slot.dragTargetLabel);
   }
   return answer != null;
 }
@@ -725,26 +770,35 @@ function QuizPlayerPageInner() {
       */}
       <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-surface px-4 py-2.5">
         <div className="mx-auto max-w-5xl">
-          <div className="mb-2 flex items-center gap-2 overflow-x-auto">
-            <span className="shrink-0 text-xs text-muted">
-              {answeredCount}/{orderedSlots.length} câu
-            </span>
-            {steps.map((step, idx) => (
-              <button
-                key={step.key}
-                type="button"
-                onClick={() => {
-                  const slots = stepSlots(step);
-                  if (slots.length > 0) goToQuestion(slots[0].key);
-                  else setStepIndex(idx);
-                }}
-                className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                  idx === stepIndex ? "bg-primary text-white" : "bg-soft text-muted hover:text-text"
-                }`}
-              >
-                {step.label}
-              </button>
-            ))}
+          <div className="mb-2 flex items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 overflow-x-auto">
+              <span className="shrink-0 text-xs text-muted">
+                {answeredCount}/{orderedSlots.length} câu
+              </span>
+              {steps.map((step, idx) => (
+                <button
+                  key={step.key}
+                  type="button"
+                  onClick={() => {
+                    const slots = stepSlots(step);
+                    if (slots.length > 0) goToQuestion(slots[0].key);
+                    else setStepIndex(idx);
+                  }}
+                  className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                    idx === stepIndex ? "bg-primary text-white" : "bg-soft text-muted hover:text-text"
+                  }`}
+                >
+                  {step.label}
+                </button>
+              ))}
+            </div>
+            {/* Nộp bài neo cố định ở thanh điều hướng dưới cùng (không còn nổi
+                riêng cạnh 2 mũi tên) — luôn thấy được, không lẫn với khu vực
+                cuộn ngang của tab Part/số câu. */}
+            <button type="button" onClick={doSubmit}
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Nộp bài
+            </button>
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {stepSlots(steps[stepIndex]).map((slot) => {
@@ -789,10 +843,6 @@ function QuizPlayerPageInner() {
           />
         )}
         <div className="flex items-center gap-2">
-          <button type="button" onClick={doSubmit}
-            className="flex h-11 items-center gap-1.5 rounded-full bg-primary px-5 font-semibold text-white shadow-md hover:opacity-90">
-            <CheckCircle2 className="h-4 w-4" /> Nộp bài
-          </button>
           <button type="button" onClick={() => stepBy(-1)} title="Câu trước"
             className="grid h-11 w-11 place-items-center rounded-full border border-border bg-surface shadow-md hover:bg-primary-soft">
             <ChevronLeft className="h-5 w-5" />
