@@ -113,7 +113,8 @@ public final class AttemptDtos {
             Boolean correct,
             String explanation,
             Integer answerParagraphIndex,
-            String answerParagraphHtml) {
+            String answerParagraphHtml,
+            List<String> correctAnswerLines) {
     }
 
     public record AttemptResult(

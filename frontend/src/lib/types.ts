@@ -441,6 +441,7 @@ export interface GradedItem {
   explanation: string | null;
   answerParagraphIndex: number | null;
   answerParagraphHtml: string | null;
+  correctAnswerLines: string[];
 }
 
 export interface AttemptResult {

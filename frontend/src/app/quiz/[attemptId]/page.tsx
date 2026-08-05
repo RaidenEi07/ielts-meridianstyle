@@ -1744,7 +1744,9 @@ function ResultView({
         )}
         <div className="mt-6 space-y-2 text-left">
           {result.breakdown.map((b, i) => {
-            const hasDetail = Boolean(b.explanation || b.answerParagraphHtml);
+            const hasDetail = Boolean(
+              b.explanation || b.answerParagraphHtml || b.correctAnswerLines.length > 0,
+            );
             const isOpen = expanded.has(b.quizQuestionId);
             const isKids = kidsQuestionIds.has(b.quizQuestionId);
             const kidsAnim = isKids ? (b.correct ? "animate-bubble-pop" : "animate-kids-shake") : "";
@@ -1785,6 +1787,16 @@ function ResultView({
                 </div>
                 {hasDetail && isOpen && (
                   <div className="border-t border-border bg-bg px-3 py-3 text-left">
+                    {b.correctAnswerLines.length > 0 && (
+                      <div className="mb-2">
+                        <p className="mb-1 text-xs font-semibold text-muted">Đáp án đúng:</p>
+                        <ul className="space-y-0.5 text-sm">
+                          {b.correctAnswerLines.map((line, idx) => (
+                            <li key={idx}>{line}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
                     {b.answerParagraphHtml && (
                       <div className="mb-2">
                         <p className="mb-1 text-xs font-semibold text-muted">

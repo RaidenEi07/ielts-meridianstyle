@@ -375,7 +375,8 @@ public class AttemptService {
                             return new GradedItem(qq.getId(), q.type(), q.name(), qq.getMark(),
                                     a != null ? a.getAwardedMark() : BigDecimal.ZERO,
                                     a != null ? a.getCorrect() : Boolean.FALSE,
-                                    q.explanation(), q.answerParagraphIndex(), paragraphHtml);
+                                    q.explanation(), q.answerParagraphIndex(), paragraphHtml,
+                                    com.meridian.question.CorrectAnswerFormatter.format(q));
                         }).toList();
 
         return new AttemptResult(attempt.getId(), attempt.getStatus().name(),
