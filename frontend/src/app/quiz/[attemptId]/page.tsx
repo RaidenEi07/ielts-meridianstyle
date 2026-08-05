@@ -91,6 +91,9 @@ interface Slot {
   /** Nhãn vị trí thả (marker "1"/"2".../nhãn vùng "A"/"B"...) cho slot Kéo-thả
    * — dùng để tra `answer.placements` xem đúng vị trí này đã có mục nào chưa. */
   dragTargetLabel?: string;
+  /** id của 1 hàng trong câu Trắc nghiệm dạng lưới — tra `answer.choices[id]`
+   * xem đúng hàng này đã chọn cột nào chưa. */
+  gridRowId?: number;
 }
 
 /** Các mốc `[[n]]` phát hiện được trong mẫu câu Kéo-thả văn bản, đúng công
@@ -151,6 +154,16 @@ function expandSlots(q: PlayerQuestion): Slot[] {
       dragTargetLabel: z.label,
     }));
   }
+  // Trắc nghiệm dạng lưới: mỗi hàng là 1 nhận định/mục riêng (vd Matching
+  // Features "Questions 27-31") — dù cả bảng hiện trong 1 thẻ, mỗi hàng vẫn
+  // chiếm 1 số thứ tự IELTS thật riêng.
+  if (q.type === "GRID_MATCHING" && q.gridRows.length > 0) {
+    return q.gridRows.map((r) => ({
+      key: `${q.quizQuestionId}:gr${r.id}`,
+      quizQuestionId: q.quizQuestionId,
+      gridRowId: r.id,
+    }));
+  }
   return [{ key: `${q.quizQuestionId}`, quizQuestionId: q.quizQuestionId }];
 }
 
@@ -165,7 +178,11 @@ function stepSlots(step: Step): Slot[] {
 
 function isSlotAnswered(slot: Slot, answers: Record<number, unknown>): boolean {
   const answer = answers[slot.quizQuestionId] as
-    | { subs?: Record<string, string>; placements?: Record<string, string> }
+    | {
+        subs?: Record<string, string>;
+        placements?: Record<string, string>;
+        choices?: Record<string, string>;
+      }
     | undefined;
   if (slot.subIndex != null) {
     const v = answer?.subs?.[String(slot.subIndex)];
@@ -173,6 +190,9 @@ function isSlotAnswered(slot: Slot, answers: Record<number, unknown>): boolean {
   }
   if (slot.dragTargetLabel != null) {
     return Object.values(answer?.placements ?? {}).includes(slot.dragTargetLabel);
+  }
+  if (slot.gridRowId != null) {
+    return Boolean(answer?.choices?.[String(slot.gridRowId)]);
   }
   return answer != null;
 }
