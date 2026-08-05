@@ -300,7 +300,7 @@ function flashMark(el: HTMLElement) {
   const prevShadow = el.style.boxShadow;
   const prevTransition = el.style.transition;
   el.style.transition = "box-shadow 0.2s ease";
-  el.style.boxShadow = "0 0 0 4px var(--accent)";
+  el.style.boxShadow = "0 0 0 1.5px var(--accent)";
   setTimeout(() => {
     el.style.boxShadow = prevShadow;
     el.style.transition = prevTransition;
@@ -676,18 +676,22 @@ function QuizPlayerPageInner() {
   // (có Part đọc/nghe/viết) — khóa Trẻ em chỉ có step "standalone" nên không đổi màu.
   const isExamMode = steps.some((s) => s.kind === "reading" || s.kind === "listening" || s.kind === "essay");
 
+  // Bề rộng panel Ghi chú (w-80) — dùng lại đúng số này để tính lề phải cho
+  // mọi phần tử `position: fixed` thật sự (header/thanh dưới/cụm nổi) khi
+  // panel mở, THAY vì dựa vào mẹo `transform` (đã thử — bị lỗi: transform
+  // biến "fixed" thành containing-block-relative giống "absolute", nên khi
+  // div cha đó tự cuộn nội bộ, phần tử "fixed" bên trong cuộn trôi theo
+  // luôn, mất hẳn hiệu ứng dính cố định — đúng lỗi bạn gặp). Cách này giữ
+  // nguyên "fixed" đúng nghĩa gốc (luôn tính theo viewport thật, cuộn trang
+  // kiểu bình thường như trước khi có panel Ghi chú), chỉ đổi lề phải qua
+  // inline style theo đúng bề rộng panel khi nó đang mở.
+  const notesDrawerWidth = 320;
+  const fixedRightOffset = notesOpen ? notesDrawerWidth : 0;
+
   return (
     <div className="flex">
-    {/*
-      `transform` biến div này thành containing block cho MỌI phần tử con
-      `position: fixed` bên trong (header, thanh điều hướng dưới, cụm nổi
-      góc phải) — nhờ vậy khi panel Ghi chú mở ra đẩy cột này hẹp lại
-      (flex-1 co lại), toàn bộ "fixed" bên trong co theo đúng cột thay vì
-      tính theo cả viewport, khớp đúng hiệu ứng "đẩy giao diện sang trái".
-    */}
     <div
       className={`relative flex min-h-screen flex-1 flex-col bg-bg pb-16 ${isExamMode ? "exam-mode" : ""}`}
-      style={{ transform: "translateZ(0)" }}
       onCopy={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
       onPaste={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
       onContextMenu={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
@@ -824,7 +828,8 @@ function QuizPlayerPageInner() {
         đầu, dải số câu cuộn ngang ở giữa — gọn hơn hẳn so với 2 hàng tách
         rời trước đây.
       */}
-      <nav className="fixed bottom-0 left-0 right-0 z-20 border-t border-border bg-surface px-4 py-2">
+      <nav className="fixed bottom-0 left-0 z-20 border-t border-border bg-surface px-4 py-2"
+        style={{ right: fixedRightOffset }}>
         <div className="mx-auto flex max-w-5xl items-center gap-2">
           <span className="shrink-0 text-xs text-muted">
             {answeredCount}/{orderedSlots.length} câu
@@ -893,9 +898,10 @@ function QuizPlayerPageInner() {
         Nút bật/tắt Ghi chú (luôn hiện, không còn ẩn trong menu header nữa)
         + điều hướng câu trước/sau, góc dưới bên phải. Bấm nút Ghi chú mở
         panel dạng drawer đẩy toàn bộ giao diện làm bài sang trái (xem
-        <aside> ngoài containing-block ở dưới), không còn nổi đè lên nữa.
+        <aside> ở cuối), không còn nổi đè lên nữa.
       */}
-      <div className="fixed bottom-20 right-6 z-30 flex flex-col items-end gap-2">
+      <div className="fixed bottom-20 z-30 flex flex-col items-end gap-2"
+        style={{ right: fixedRightOffset + 24 }}>
         <button type="button" onClick={() => setNotesOpen((v) => !v)}
           title="Ghi chú" aria-label="Ghi chú"
           className={`relative grid h-11 w-11 place-items-center rounded-full border shadow-md ${
@@ -921,7 +927,7 @@ function QuizPlayerPageInner() {
       </div>
     </div>
     {notesOpen && (
-      <aside className="flex w-80 shrink-0 flex-col border-l border-border bg-surface">
+      <aside className="sticky top-0 flex h-screen w-80 shrink-0 flex-col overflow-y-auto border-l border-border bg-surface">
         <NotesPanel
           notes={notes}
           onAdd={addNote}
