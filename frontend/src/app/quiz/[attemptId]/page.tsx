@@ -691,7 +691,9 @@ function QuizPlayerPageInner() {
   return (
     <div className="flex">
     <div
-      className={`relative flex min-h-screen flex-1 flex-col bg-bg pb-16 ${isExamMode ? "exam-mode" : ""}`}
+      className={`relative flex min-h-screen flex-1 flex-col bg-bg pb-16 ${isExamMode ? "exam-mode" : ""} ${
+        isExamMode && result ? "exam-mode-graded" : ""
+      }`}
       onCopy={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
       onPaste={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
       onContextMenu={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}

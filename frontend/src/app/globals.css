@@ -77,6 +77,21 @@
   --radius-xl: 0px;
 }
 
+/* Trong exam-mode, SAU khi nộp bài (đang xem lại kết quả) vẫn giữ khung/nền
+   trắng-đen chuẩn phòng thi như lúc làm bài, nhưng riêng tín hiệu đúng/sai
+   (xanh lá/đỏ, vàng accent cho đúng-một-phần) được trả lại màu thật — không
+   còn lý do gì để giấu màu nữa (không phải "gợi ý" có thể gây gian lận như
+   lúc đang làm), và người dùng cần phân biệt nhanh câu nào đúng/sai khi lướt
+   qua bài đã nộp. */
+.exam-mode.exam-mode-graded {
+  --green: #1e6f43;
+  --green-soft: #e2eee4;
+  --red: #9b2c2c;
+  --red-soft: #f6e3e0;
+  --accent: #c2691d;
+  --accent-soft: #fbefe2;
+}
+
 /* --radius-card/--radius-lg đã bị dự án override bằng giá trị cố định ngay
    trong khối @theme inline (12px/18px) — Tailwind v4 "inline" bản chất là
    in thẳng giá trị đó vào từng class lúc build (`.rounded-lg{border-radius:
