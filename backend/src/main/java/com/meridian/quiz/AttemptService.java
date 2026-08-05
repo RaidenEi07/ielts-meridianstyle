@@ -365,19 +365,68 @@ public class AttemptService {
         answerRepository.findByAttemptId(attempt.getId())
                 .forEach(a -> answers.put(a.getQuizQuestionId(), a));
 
-        List<GradedItem> breakdown =
-                quizQuestionRepository.findByQuizIdOrderBySortOrderAscIdAsc(attempt.getQuiz().getId())
-                        .stream().map(qq -> {
-                            QuestionDetailDto q = questionService.getQuestion(qq.getQuestionId());
-                            QuizAttemptAnswer a = answers.get(qq.getId());
-                            String paragraphHtml = com.meridian.question.PassageParagraphs
-                                    .extract(q.passageContent(), q.answerParagraphIndex());
-                            return new GradedItem(qq.getId(), q.type(), q.name(), qq.getMark(),
-                                    a != null ? a.getAwardedMark() : BigDecimal.ZERO,
-                                    a != null ? a.getCorrect() : Boolean.FALSE,
-                                    q.explanation(), q.answerParagraphIndex(), paragraphHtml,
-                                    com.meridian.question.CorrectAnswerFormatter.format(q));
-                        }).toList();
+        List<QuizQuestion> quizQuestions =
+                quizQuestionRepository.findByQuizIdOrderBySortOrderAscIdAsc(attempt.getQuiz().getId());
+
+        Map<Long, QuestionDetailDto> detailByQuizQuestionId = new LinkedHashMap<>();
+        for (QuizQuestion qq : quizQuestions) {
+            detailByQuizQuestionId.put(qq.getId(), questionService.getQuestion(qq.getQuestionId()));
+        }
+
+        // Số thứ tự "Câu N" thật (khớp màn làm bài) mà MỖI câu hỏi bắt đầu từ
+        // đâu — PHẢI duyệt câu hỏi theo đúng thứ tự frontend hiển thị (xem
+        // `steps`/`orderedSlots` trong quiz/[attemptId]/page.tsx), KHÔNG phải
+        // sort_order thô toàn quiz: frontend nhóm câu hỏi theo TRANG Đọc/Nghe
+        // trước (sắp theo pageNumber), rồi mới tới "câu hỏi khác" (không
+        // thuộc trang nào) — 1 trang có thể chứa lẫn nhiều loại câu hỏi
+        // (MC/TFNG/Cloze...) nên sort_order thô của riêng loại câu hỏi không
+        // phản ánh đúng thứ tự thật. ESSAY không tính (hiện riêng "Writing
+        // Task N", xem slotCount()). Mỗi ô trống Cloze/nhãn kéo-thả/hàng
+        // lưới/đáp-án-đúng-nhiều-trong-MC chiếm 1 số riêng, cộng dồn.
+        Set<Long> passagePageIds = new java.util.LinkedHashSet<>();
+        for (QuizPage pg : pageRepository.findByQuizIdOrderByPageNumberAsc(attempt.getQuiz().getId())) {
+            if (pg.getPassageId() == null) continue;
+            Passage p = passageRepository.findById(pg.getPassageId()).orElse(null);
+            if (p != null && (p.getKind() == com.meridian.question.PassageKind.READING
+                    || p.getKind() == com.meridian.question.PassageKind.LISTENING)) {
+                passagePageIds.add(pg.getId());
+            }
+        }
+        Map<Long, List<QuizQuestion>> byPageId = new LinkedHashMap<>();
+        List<QuizQuestion> standalone = new ArrayList<>();
+        for (QuizQuestion qq : quizQuestions) {
+            if ("ESSAY".equals(detailByQuizQuestionId.get(qq.getId()).type())) continue;
+            if (qq.getPageId() != null && passagePageIds.contains(qq.getPageId())) {
+                byPageId.computeIfAbsent(qq.getPageId(), k -> new ArrayList<>()).add(qq);
+            } else {
+                standalone.add(qq);
+            }
+        }
+        List<QuizQuestion> orderedForNumbering = new ArrayList<>();
+        for (Long pageId : passagePageIds) {
+            orderedForNumbering.addAll(byPageId.getOrDefault(pageId, List.of()));
+        }
+        orderedForNumbering.addAll(standalone);
+
+        Map<Long, Integer> startNumberByQuizQuestionId = new LinkedHashMap<>();
+        int runningNumber = 1;
+        for (QuizQuestion qq : orderedForNumbering) {
+            startNumberByQuizQuestionId.put(qq.getId(), runningNumber);
+            runningNumber += com.meridian.question.CorrectAnswerFormatter.slotCount(detailByQuizQuestionId.get(qq.getId()));
+        }
+
+        List<GradedItem> breakdown = quizQuestions.stream().map(qq -> {
+            QuestionDetailDto q = detailByQuizQuestionId.get(qq.getId());
+            QuizAttemptAnswer a = answers.get(qq.getId());
+            String paragraphHtml = com.meridian.question.PassageParagraphs
+                    .extract(q.passageContent(), q.answerParagraphIndex());
+            return new GradedItem(qq.getId(), q.type(), q.name(), qq.getMark(),
+                    a != null ? a.getAwardedMark() : BigDecimal.ZERO,
+                    a != null ? a.getCorrect() : Boolean.FALSE,
+                    q.explanation(), q.answerParagraphIndex(), paragraphHtml,
+                    com.meridian.question.CorrectAnswerFormatter.format(q,
+                            startNumberByQuizQuestionId.getOrDefault(qq.getId(), 0)));
+        }).toList();
 
         return new AttemptResult(attempt.getId(), attempt.getStatus().name(),
                 attempt.getRawScore(), attempt.getMaxScore(), attempt.getBandScore(),
