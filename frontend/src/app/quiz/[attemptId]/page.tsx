@@ -1621,6 +1621,18 @@ function ReviewStatusBadge({ review }: { review: GradedItem }) {
   return <span className="shrink-0 text-xs text-muted">Chấm tay</span>;
 }
 
+/** Border + nền nhạt theo kết quả đúng/sai khi xem lại — dùng chung mọi thẻ
+ * câu hỏi (QuestionCard, McGridCard, EmbeddedMatchingInfoCard) để nhận ra
+ * ngay câu nào đúng/sai/đúng-một-phần khi lướt mắt qua, không cần đọc badge.
+ * Cùng 3 mốc màu với ReviewStatusBadge (xanh lá / vàng-accent-đúng-1-phần /
+ * đỏ), không tô gì khi chờ chấm tay (correct == null). */
+function reviewTint(review?: GradedItem): string {
+  if (!review || review.correct == null) return "";
+  if (review.correct === true) return "border-green/40 bg-green-soft";
+  if (review.awardedMark != null && review.awardedMark > 0) return "border-accent/40 bg-accent-soft";
+  return "border-red/40 bg-red-soft";
+}
+
 /** Khối "Đáp án đúng" hiện ngay dưới câu hỏi khi xem lại — tái dùng đúng
  * `correctAnswerLines` backend đã định dạng sẵn theo từng loại câu hỏi, kèm
  * đoạn văn chứa đáp án + giải thích của giáo viên nếu có. */
@@ -1690,11 +1702,9 @@ function QuestionCard({
   const stemRef = useImperativeHtml(showStemHeader ? (question.stem ?? question.name) : "");
   return (
     <div id={`q-${question.quizQuestionId}`}
-      className={`rounded-card border bg-surface p-4 transition-colors ${
-        focused ? "border-primary ring-2 ring-primary/30"
-          : review?.correct === true ? "border-green/40"
-          : review?.correct === false ? "border-red/40"
-          : "border-border"
+      className={`rounded-card border p-4 transition-colors ${
+        focused ? "border-primary ring-2 ring-primary/30 bg-surface"
+          : reviewTint(review) || "border-border bg-surface"
       }`}>
       <div className="mb-3 flex items-start gap-3">
         <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold text-primary" style={{ minWidth: "1.75rem" }}>
@@ -1769,9 +1779,10 @@ function McGridCard({
               const selected: number[] = answers[q.quizQuestionId]?.selectedOptionIds ?? [];
               const isFlagged = flagged.has(q.quizQuestionId);
               const rowReview = review?.get(q.quizQuestionId);
+              const tint = reviewTint(rowReview);
               return (
                 <tr key={q.quizQuestionId}
-                  className={`${idx % 2 === 1 ? "bg-soft/40" : ""} ${
+                  className={`${tint || (idx % 2 === 1 ? "bg-soft/40" : "")} ${
                     isFocusedQuestion(focusedId, q.quizQuestionId) ? "ring-2 ring-inset ring-primary" : ""
                   }`}>
                   <td id={`q-${q.quizQuestionId}`} className="border-b border-border p-3">
@@ -1829,8 +1840,9 @@ function EmbeddedMatchingInfoCard({
 }) {
   return (
     <div id={`q-${question.quizQuestionId}`}
-      className={`rounded-card border bg-surface p-4 transition-colors ${
-        focused ? "border-primary ring-2 ring-primary/30" : "border-border"
+      className={`rounded-card border p-4 transition-colors ${
+        focused ? "border-primary ring-2 ring-primary/30 bg-surface"
+          : reviewTint(review) || "border-border bg-surface"
       }`}>
       <div className="flex items-start gap-3">
         <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold text-primary" style={{ minWidth: "1.75rem" }}>
