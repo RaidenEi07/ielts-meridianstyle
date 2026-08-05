@@ -6,10 +6,8 @@ import {
   Bell,
   BookOpen,
   CheckCircle2,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  ChevronUp,
   Flag,
   Headphones,
   Highlighter,
@@ -37,6 +35,7 @@ import type {
   AttemptPlayer,
   AttemptResult,
   ExamPage,
+  GradedItem,
   PlayerQuestion,
 } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
@@ -328,7 +327,6 @@ function QuizPlayerPageInner() {
 
   const [attempt, setAttempt] = useState<AttemptPlayer | null>(null);
   const [result, setResult] = useState<AttemptResult | null>(null);
-  const [resultQuestions, setResultQuestions] = useState<PlayerQuestion[]>([]);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [answers, setAnswers] = useState<Record<number, any>>({});
   const [flagged, setFlagged] = useState<Set<number>>(new Set());
@@ -378,20 +376,22 @@ function QuizPlayerPageInner() {
   }
   const [pendingMarkFocus, setPendingMarkFocus] = useState<string | null>(null);
 
+  // Nộp bài xong VẪN giữ nguyên `attempt` (không set null) — toàn bộ hạ tầng
+  // điều hướng (steps/orderedSlots/goToQuestion/notes...) đều dựng từ
+  // `attempt`, giữ lại để màn xem lại tái dùng nguyên giao diện làm bài thay
+  // vì phải dựng lại 1 màn tóm tắt riêng.
   const doSubmit = useCallback(async () => {
     if (submittingRef.current) return;
     submittingRef.current = true;
     try {
       const r = await quizApi.submit(attemptId, token);
-      setResultQuestions(attempt?.questions ?? []);
       setResult(r);
-      setAttempt(null);
       toast.success("Đã nộp bài");
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : "Nộp bài thất bại, vui lòng thử lại");
       submittingRef.current = false;
     }
-  }, [attemptId, token, attempt, toast]);
+  }, [attemptId, token, toast]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -402,8 +402,10 @@ function QuizPlayerPageInner() {
     quizApi
       .getAttempt(attemptId, token)
       .then((a) => {
+        setAttempt(a);
+        setAnswers(a.savedAnswers ?? {});
+        setViolations(a.violations);
         if (a.status !== "IN_PROGRESS") {
-          setResultQuestions(a.questions ?? []);
           return quizApi.result(attemptId, token).then(setResult).catch((err) => {
             if (err instanceof ApiError && err.status === 403) {
               setReviewBlocked(true);
@@ -412,18 +414,15 @@ function QuizPlayerPageInner() {
             throw err;
           });
         }
-        setAttempt(a);
-        setAnswers(a.savedAnswers ?? {});
-        setViolations(a.violations);
       })
       .catch(() => {})
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, accessToken, attemptId]);
 
-  // Timer
+  // Timer — dừng hẳn khi đã có kết quả (xem lại), không tính giờ/tự nộp lại nữa.
   useEffect(() => {
-    if (!attempt?.deadlineAt) return;
+    if (!attempt?.deadlineAt || result) return;
     const deadline = new Date(attempt.deadlineAt).getTime();
     const tick = () => {
       const left = Math.max(0, Math.round((deadline - Date.now()) / 1000));
@@ -433,11 +432,11 @@ function QuizPlayerPageInner() {
     tick();
     const iv = setInterval(tick, 1000);
     return () => clearInterval(iv);
-  }, [attempt?.deadlineAt, doSubmit]);
+  }, [attempt?.deadlineAt, doSubmit, result]);
 
-  // Anti-cheat
+  // Anti-cheat — không cần theo dõi nữa khi đang xem lại (đã nộp/chấm xong).
   useEffect(() => {
-    if (!attempt || !attempt.antiCheatEnabled) return;
+    if (!attempt || !attempt.antiCheatEnabled || result) return;
     let lastLog = 0;
     const report = async () => {
       const now = Date.now();
@@ -459,13 +458,17 @@ function QuizPlayerPageInner() {
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("blur", report);
     };
-  }, [attempt, attemptId, token, doSubmit, toast]);
+  }, [attempt, attemptId, token, doSubmit, toast, result]);
 
+  // Đã có kết quả (đang xem lại) thì khóa cứng, không lưu/ghi đè đáp án nữa —
+  // 1 chỗ chặn duy nhất, mọi nơi gọi onChange xuyên các loại câu hỏi tự động
+  // được khóa theo, không cần sửa riêng từng chỗ truyền prop.
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const setAnswer = useCallback((q: PlayerQuestion, response: any) => {
+    if (result) return;
     setAnswers((prev) => ({ ...prev, [q.quizQuestionId]: response }));
     quizApi.saveAnswer(attemptId, q.quizQuestionId, response, token).catch(() => {});
-  }, [attemptId, token]);
+  }, [attemptId, token, result]);
 
   const toggleFlag = useCallback((id: number) => {
     setFlagged((prev) => {
@@ -561,6 +564,33 @@ function QuizPlayerPageInner() {
     return m;
   }, [steps]);
 
+  // Đã nộp bài: tra cứu đúng/sai + đáp án đúng theo quizQuestionId, hiện
+  // thẳng trong đúng thẻ câu hỏi ở giao diện làm bài — không dựng màn tóm tắt
+  // riêng nữa, giáo viên/học viên xem lại ngay tại chỗ đã làm bài.
+  const reviewMap = useMemo(() => {
+    if (!result) return undefined;
+    const m = new Map<number, GradedItem>();
+    result.breakdown.forEach((b) => m.set(b.quizQuestionId, b));
+    return m;
+  }, [result]);
+
+  // Phản hồi âm thanh ngay khi có kết quả chấm, chỉ áp dụng cho câu hỏi trẻ em
+  // — chạy đúng 1 lần ngay khi `result` vừa xuất hiện (không lặp lại khi
+  // reload trang xem lại sau đó, chỉ định dùng[] deps riêng theo attemptId).
+  useEffect(() => {
+    if (!result || !attempt) return;
+    const kidsIds = new Set(
+      attempt.questions.filter((q) => q.audience === "KIDS").map((q) => q.quizQuestionId),
+    );
+    if (kidsIds.size === 0) return;
+    const kidsItems = result.breakdown.filter((b) => kidsIds.has(b.quizQuestionId));
+    kidsItems.forEach((b, i) => {
+      const play = b.correct ? playCorrectSound : playIncorrectSound;
+      setTimeout(play, i * 250);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
+
   const focusNoteMark = useCallback(
     (note: Note) => {
       if (!note.markId) return;
@@ -626,7 +656,6 @@ function QuizPlayerPageInner() {
   if (loading || !hydrated) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
   }
-  if (result) return <ResultView result={result} questions={resultQuestions} returnTo={returnTo} />;
   if (reviewBlocked) {
     return (
       <div className="grid min-h-screen place-items-center px-6 text-center text-muted">
@@ -652,9 +681,9 @@ function QuizPlayerPageInner() {
   return (
     <div
       className={`flex min-h-screen flex-col bg-bg pb-16 ${isExamMode ? "exam-mode" : ""}`}
-      onCopy={(e) => attempt.antiCheatEnabled && e.preventDefault()}
-      onPaste={(e) => attempt.antiCheatEnabled && e.preventDefault()}
-      onContextMenu={(e) => attempt.antiCheatEnabled && e.preventDefault()}
+      onCopy={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
+      onPaste={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
+      onContextMenu={(e) => attempt.antiCheatEnabled && !result && e.preventDefault()}
     >
       {/*
         Audio Listening dùng chung cho cả 3 Part — 1 thẻ <audio> duy nhất,
@@ -696,11 +725,19 @@ function QuizPlayerPageInner() {
               </span>
             )}
           </span>
-          {remaining !== null && (
-            <span className={`flex items-center gap-1 font-mono text-lg ${remaining < 60 ? "text-red" : ""}`}
-              style={{ fontFamily: "var(--font-mono)" }}>
-              <Timer className="h-4 w-4" /> {fmt(remaining)}
+          {result ? (
+            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold">
+              <CheckCircle2 className="h-4 w-4" />
+              {round2(result.rawScore)}/{round2(result.maxScore)}
+              {result.bandScore != null && ` · Band ${result.bandScore}`}
             </span>
+          ) : (
+            remaining !== null && (
+              <span className={`flex items-center gap-1 font-mono text-lg ${remaining < 60 ? "text-red" : ""}`}
+                style={{ fontFamily: "var(--font-mono)" }}>
+                <Timer className="h-4 w-4" /> {fmt(remaining)}
+              </span>
+            )
           )}
           <div className="relative">
             <button type="button" onClick={() => setMenuOpen((v) => !v)}
@@ -724,6 +761,12 @@ function QuizPlayerPageInner() {
         </div>
       </header>
 
+      {result && result.violations > 0 && (
+        <p className="border-b border-border bg-red-soft px-6 py-2 text-center text-sm text-red">
+          Ghi nhận {result.violations} lần vi phạm chống gian lận trong lượt làm này.
+        </p>
+      )}
+
       {/*
         Mỗi Part được mount SUỐT vòng đời bài thi, chỉ ẩn/hiện bằng CSS (không
         conditional-render) — nếu unmount khi chuyển Part, mọi highlight/mark đã
@@ -745,6 +788,7 @@ function QuizPlayerPageInner() {
                   onAnswer={setAnswer}
                   onFlag={toggleFlag}
                   onCaptureNote={addNote}
+                  review={reviewMap}
                 />
               )}
               {step.kind === "listening" && (
@@ -757,10 +801,11 @@ function QuizPlayerPageInner() {
                   focusedId={focusId}
                   onAnswer={setAnswer}
                   onFlag={toggleFlag}
-                  started={audioStarted}
+                  started={result ? true : audioStarted}
                   ended={audioEnded}
                   transferLeft={audioTransferLeft}
                   onStart={startAudio}
+                  review={reviewMap}
                 />
               )}
               {step.kind === "standalone" && (
@@ -770,14 +815,16 @@ function QuizPlayerPageInner() {
                       question={q} answer={answers[q.quizQuestionId]} flagged={flagged.has(q.quizQuestionId)}
                       order={order}
                       focused={isFocusedQuestion(focusId, q.quizQuestionId)}
-                      onChange={(r) => setAnswer(q, r)} onFlag={() => toggleFlag(q.quizQuestionId)} />
+                      onChange={(r) => setAnswer(q, r)} onFlag={() => toggleFlag(q.quizQuestionId)}
+                      review={reviewMap?.get(q.quizQuestionId)} />
                   ))}
                 </div>
               )}
               {step.kind === "essay" && (
                 <WritingEditor index={order.get(`${step.question.quizQuestionId}`)!}
                   question={step.question} value={answers[step.question.quizQuestionId]?.text ?? ""}
-                  onChange={(text) => setAnswer(step.question, { text })} />
+                  onChange={(text) => setAnswer(step.question, { text })}
+                  review={reviewMap?.get(step.question.quizQuestionId)} />
               )}
             </div>
           );
@@ -814,11 +861,19 @@ function QuizPlayerPageInner() {
             </div>
             {/* Nộp bài neo cố định ở thanh điều hướng dưới cùng (không còn nổi
                 riêng cạnh 2 mũi tên) — luôn thấy được, không lẫn với khu vực
-                cuộn ngang của tab Part/số câu. */}
-            <button type="button" onClick={doSubmit}
-              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
-              <CheckCircle2 className="h-3.5 w-3.5" /> Nộp bài
-            </button>
+                cuộn ngang của tab Part/số câu. Đã có kết quả (đang xem lại)
+                thì đổi thành lối thoát về khóa học thay vì nộp lại. */}
+            {result ? (
+              <Link href={returnTo || "/dashboard"}
+                className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
+                {returnTo ? "Về khóa học" : "Về bảng điều khiển"}
+              </Link>
+            ) : (
+              <button type="button" onClick={doSubmit}
+                className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
+                <CheckCircle2 className="h-3.5 w-3.5" /> Nộp bài
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-1.5 overflow-x-auto">
             {stepSlots(steps[stepIndex]).map((slot) => {
@@ -1191,7 +1246,7 @@ function NoteComposer({
 // Reading split-pane với divider kéo được + highlight
 // ------------------------------------------------------------------
 function ReadingSplitPane({
-  page, questions, order, answers, flagged, focusedId, onAnswer, onFlag, onCaptureNote,
+  page, questions, order, answers, flagged, focusedId, onAnswer, onFlag, onCaptureNote, review,
 }: {
   page: ExamPage;
   questions: PlayerQuestion[];
@@ -1204,6 +1259,7 @@ function ReadingSplitPane({
   onAnswer: (q: PlayerQuestion, r: any) => void;
   onFlag: (id: number) => void;
   onCaptureNote: (text: string, markId: string, stepKey: string, quote: string) => void;
+  review?: Map<number, GradedItem>;
 }) {
   const [leftPct, setLeftPct] = useState(52);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1302,6 +1358,7 @@ function ReadingSplitPane({
                   return (
                     <select
                       value={selectedItemId}
+                      disabled={!!review}
                       onChange={(e) => handleSelectHeading(targetLabel, e.target.value)}
                       className="input mx-1 inline-block w-auto align-middle text-sm"
                     >
@@ -1343,19 +1400,21 @@ function ReadingSplitPane({
                 question={embeddedQuestion}
                 flagged={flagged.has(embeddedQuestion.quizQuestionId)}
                 focused={isFocusedQuestion(focusedId, embeddedQuestion.quizQuestionId)}
-                onFlag={() => onFlag(embeddedQuestion.quizQuestionId)} />
+                onFlag={() => onFlag(embeddedQuestion.quizQuestionId)}
+                review={review?.get(embeddedQuestion.quizQuestionId)} />
             )}
             {groupMcGrids(questions.filter((q) => q !== embeddedQuestion), order).map((item) =>
               "kind" in item ? (
                 <McGridCard key={item.key} columns={item.columns} rows={item.rows} order={order}
                   answers={answers} flagged={flagged} focusedId={focusedId}
-                  onAnswer={onAnswer} onFlag={onFlag} />
+                  onAnswer={onAnswer} onFlag={onFlag} review={review} />
               ) : (
                 <QuestionCard key={item.quizQuestionId} index={cardLabel(item, order)}
                   question={item} answer={answers[item.quizQuestionId]} flagged={flagged.has(item.quizQuestionId)}
                   order={order}
                   focused={isFocusedQuestion(focusedId, item.quizQuestionId)}
-                  onChange={(r) => onAnswer(item, r)} onFlag={() => onFlag(item.quizQuestionId)} />
+                  onChange={(r) => onAnswer(item, r)} onFlag={() => onFlag(item.quizQuestionId)}
+                  review={review?.get(item.quizQuestionId)} />
               ),
             )}
           </div>
@@ -1379,7 +1438,7 @@ const TRANSFER_TIME_SECONDS = 600; // 10 phút theo chuẩn IELTS CDT
 
 function ListeningPane({
   page, questions, order, answers, flagged, focusedId, onAnswer, onFlag,
-  started, ended, transferLeft, onStart,
+  started, ended, transferLeft, onStart, review,
 }: {
   page: ExamPage;
   questions: PlayerQuestion[];
@@ -1395,6 +1454,7 @@ function ListeningPane({
   ended: boolean;
   transferLeft: number | null;
   onStart: () => void;
+  review?: Map<number, GradedItem>;
 }) {
   return (
     <div id={`q-page-${page.id}`} className="relative">
@@ -1448,7 +1508,7 @@ function ListeningPane({
             "kind" in item ? (
               <McGridCard key={item.key} columns={item.columns} rows={item.rows} order={order}
                 answers={answers} flagged={flagged} focusedId={focusedId}
-                onAnswer={onAnswer} onFlag={onFlag} />
+                onAnswer={onAnswer} onFlag={onFlag} review={review} />
             ) : (
               <QuestionCard
                 key={item.quizQuestionId}
@@ -1460,6 +1520,7 @@ function ListeningPane({
                 focused={isFocusedQuestion(focusedId, item.quizQuestionId)}
                 onChange={(r) => onAnswer(item, r)}
                 onFlag={() => onFlag(item.quizQuestionId)}
+                review={review?.get(item.quizQuestionId)}
               />
             ),
           )}
@@ -1474,20 +1535,22 @@ function ListeningPane({
 // Writing editor với đếm từ
 // ------------------------------------------------------------------
 function WritingEditor({
-  index, question, value, onChange,
+  index, question, value, onChange, review,
 }: {
   index: number;
   question: PlayerQuestion;
   value: string;
   onChange: (text: string) => void;
+  review?: GradedItem;
 }) {
   const target = 250;
   const wc = wordCount(value);
   return (
     <div id={`q-${question.quizQuestionId}`} className="border-t border-border">
-      <div className="border-b border-border px-6 py-2 text-sm font-medium"
+      <div className="flex items-center justify-between border-b border-border px-6 py-2 text-sm font-medium"
         style={{ background: "#f0f0f0", color: "#000000" }}>
-        Writing Task — Câu {index}
+        <span>Writing Task — Câu {index}</span>
+        {review && <ReviewStatusBadge review={review} />}
       </div>
       <div className="mx-auto grid max-w-6xl gap-4 px-6 py-6 md:grid-cols-2">
         <div className="rounded-card border border-border bg-surface p-5">
@@ -1501,6 +1564,7 @@ function WritingEditor({
         <div className="flex flex-col rounded-card border border-border bg-surface">
           <textarea
             value={value}
+            readOnly={!!review}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Viết bài của bạn tại đây…"
             className="min-h-[280px] flex-1 resize-none rounded-t-card bg-transparent p-4 outline-none"
@@ -1521,8 +1585,80 @@ function WritingEditor({
 // ------------------------------------------------------------------
 // Question card (MC / TFNG / Short answer) + flag
 // ------------------------------------------------------------------
+/** Badge Đúng/Sai/Đúng-một-phần/Chấm-tay — dùng chung mọi nơi hiện kết quả
+ * xem lại (QuestionCard, McGridCard, WritingEditor). */
+function ReviewStatusBadge({ review }: { review: GradedItem }) {
+  if (review.correct === true) {
+    return (
+      <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-green">
+        <CheckCircle2 className="h-3.5 w-3.5" /> Đúng
+      </span>
+    );
+  }
+  if (review.correct === false && review.awardedMark != null && review.awardedMark > 0) {
+    return (
+      <span className="shrink-0 text-xs font-semibold text-accent">
+        Đúng {round2(review.awardedMark)}/{round2(review.mark)}
+      </span>
+    );
+  }
+  if (review.correct === false) {
+    return (
+      <span className="flex shrink-0 items-center gap-1 text-xs font-semibold text-red">
+        <XCircle className="h-3.5 w-3.5" /> Sai
+      </span>
+    );
+  }
+  return <span className="shrink-0 text-xs text-muted">Chấm tay</span>;
+}
+
+/** Khối "Đáp án đúng" hiện ngay dưới câu hỏi khi xem lại — tái dùng đúng
+ * `correctAnswerLines` backend đã định dạng sẵn theo từng loại câu hỏi, kèm
+ * đoạn văn chứa đáp án + giải thích của giáo viên nếu có. */
+function ReviewAnswerBox({ review }: { review: GradedItem }) {
+  const hasAnything =
+    review.correctAnswerLines.length > 0 || review.answerParagraphHtml || review.explanation;
+  if (!hasAnything) return null;
+  return (
+    <div className="mt-3 space-y-2 rounded-lg bg-accent-soft p-3 text-sm">
+      {review.correctAnswerLines.length > 0 && (
+        <div>
+          <p className="mb-1 flex items-center gap-1 text-xs font-semibold text-accent">
+            <Lightbulb className="h-3.5 w-3.5" /> Đáp án đúng
+          </p>
+          <ul className="space-y-0.5">
+            {review.correctAnswerLines.map((line, i) => (
+              <li key={i}>{line}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {review.answerParagraphHtml && (
+        <div>
+          <p className="mb-1 text-xs font-semibold text-accent">
+            Đáp án nằm ở đoạn {review.answerParagraphIndex} trong passage:
+          </p>
+          <div
+            className="prose prose-sm dark:prose-invert"
+            dangerouslySetInnerHTML={{ __html: review.answerParagraphHtml }}
+          />
+        </div>
+      )}
+      {review.explanation && (
+        <div>
+          <p className="mb-1 text-xs font-semibold text-accent">Giải thích:</p>
+          <div
+            className="prose prose-sm dark:prose-invert"
+            dangerouslySetInnerHTML={{ __html: review.explanation }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function QuestionCard({
-  index, question, answer, flagged, focused, order, onChange, onFlag,
+  index, question, answer, flagged, focused, order, onChange, onFlag, review,
 }: {
   index: number | string;
   question: PlayerQuestion;
@@ -1534,6 +1670,9 @@ function QuestionCard({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (r: any) => void;
   onFlag: () => void;
+  /** Có giá trị = đang xem lại SAU khi nộp bài: khóa tương tác, hiện đúng/sai
+   * + đáp án đúng ngay tại chỗ thay vì 1 màn tóm tắt tách riêng. */
+  review?: GradedItem;
 }) {
   // CLOZE's stem IS the full fill-in-the-blank passage (with {n} markers) —
   // QuestionRenderer already renders it complete with working inputs below,
@@ -1543,7 +1682,10 @@ function QuestionCard({
   return (
     <div id={`q-${question.quizQuestionId}`}
       className={`rounded-card border bg-surface p-4 transition-colors ${
-        focused ? "border-primary ring-2 ring-primary/30" : "border-border"
+        focused ? "border-primary ring-2 ring-primary/30"
+          : review?.correct === true ? "border-green/40"
+          : review?.correct === false ? "border-red/40"
+          : "border-border"
       }`}>
       <div className="mb-3 flex items-start gap-3">
         <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold text-primary" style={{ minWidth: "1.75rem" }}>
@@ -1554,6 +1696,7 @@ function QuestionCard({
           data-highlightable="true"
           className="prose prose-sm dark:prose-invert max-w-none flex-1 font-medium"
         />
+        {review && <ReviewStatusBadge review={review} />}
         <button type="button" onClick={onFlag} title="Đánh dấu"
           className={flagged ? "text-accent" : "text-faint hover:text-accent"}>
           <Flag className="h-4 w-4" fill={flagged ? "currentColor" : "none"} />
@@ -1561,16 +1704,19 @@ function QuestionCard({
       </div>
 
       <div className="pl-10">
-        {question.audience === "KIDS" && question.type === "MATCHING" ? (
-          <KidsMatchingGame
-            pairs={question.matchingPairs}
-            pool={question.matchingRightPool}
-            answer={answer}
-            onChange={onChange}
-          />
-        ) : (
-          <QuestionRenderer question={question} answer={answer} onChange={onChange} blankOrder={order} />
-        )}
+        <div className={review ? "pointer-events-none" : undefined}>
+          {question.audience === "KIDS" && question.type === "MATCHING" ? (
+            <KidsMatchingGame
+              pairs={question.matchingPairs}
+              pool={question.matchingRightPool}
+              answer={answer}
+              onChange={onChange}
+            />
+          ) : (
+            <QuestionRenderer question={question} answer={answer} onChange={onChange} blankOrder={order} />
+          )}
+        </div>
+        {review && <ReviewAnswerBox review={review} />}
       </div>
     </div>
   );
@@ -1581,7 +1727,7 @@ function QuestionCard({
  * lập với điểm/chấm/cờ đánh dấu riêng hệt như khi hiện thành thẻ rời (xem
  * groupMcGrids). Style mirror GRID_MATCHING thật (Lát 36). */
 function McGridCard({
-  columns, rows, order, answers, flagged, focusedId, onAnswer, onFlag,
+  columns, rows, order, answers, flagged, focusedId, onAnswer, onFlag, review,
 }: {
   columns: string[];
   rows: PlayerQuestion[];
@@ -1593,6 +1739,7 @@ function McGridCard({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onAnswer: (q: PlayerQuestion, r: any) => void;
   onFlag: (id: number) => void;
+  review?: Map<number, GradedItem>;
 }) {
   return (
     <div className="rounded-card border border-border bg-surface p-4">
@@ -1612,6 +1759,7 @@ function McGridCard({
             {rows.map((q, idx) => {
               const selected: number[] = answers[q.quizQuestionId]?.selectedOptionIds ?? [];
               const isFlagged = flagged.has(q.quizQuestionId);
+              const rowReview = review?.get(q.quizQuestionId);
               return (
                 <tr key={q.quizQuestionId}
                   className={`${idx % 2 === 1 ? "bg-soft/40" : ""} ${
@@ -1623,11 +1771,13 @@ function McGridCard({
                         {order.get(`${q.quizQuestionId}`) ?? ""}
                       </span>
                       <span className="flex-1 font-medium">{q.stem ?? q.name}</span>
+                      {rowReview && <ReviewStatusBadge review={rowReview} />}
                       <button type="button" onClick={() => onFlag(q.quizQuestionId)} title="Đánh dấu"
                         className={isFlagged ? "text-accent" : "text-faint hover:text-accent"}>
                         <Flag className="h-4 w-4" fill={isFlagged ? "currentColor" : "none"} />
                       </button>
                     </div>
+                    {rowReview && <ReviewAnswerBox review={rowReview} />}
                   </td>
                   {q.options.map((opt) => {
                     const checked = selected.includes(opt.id);
@@ -1639,6 +1789,7 @@ function McGridCard({
                             className="h-4 w-4 accent-current"
                             name={`mcgrid-${q.quizQuestionId}`}
                             checked={checked}
+                            disabled={!!rowReview}
                             onChange={() => onAnswer(q, { selectedOptionIds: [opt.id] })}
                           />
                         </label>
@@ -1658,13 +1809,14 @@ function McGridCard({
 /** Pool các mục kéo-thả cho câu DRAG_DROP_TEXT nhúng vào đoạn văn (Lát 17) — ô
  * trống thật sự nằm bên đoạn văn cột trái, thẻ này chỉ hiện các mục chưa dùng. */
 function EmbeddedMatchingInfoCard({
-  index, question, flagged, focused, onFlag,
+  index, question, flagged, focused, onFlag, review,
 }: {
   index: number | string;
   question: PlayerQuestion;
   flagged: boolean;
   focused?: boolean;
   onFlag: () => void;
+  review?: GradedItem;
 }) {
   return (
     <div id={`q-${question.quizQuestionId}`}
@@ -1678,161 +1830,14 @@ function EmbeddedMatchingInfoCard({
         <p className="flex-1 text-sm text-muted">
           Chọn tiêu đề phù hợp cho mỗi đoạn văn bằng ô chọn ngay trong đoạn văn bên trái.
         </p>
+        {review && <ReviewStatusBadge review={review} />}
         <button type="button" onClick={onFlag} title="Đánh dấu"
           className={flagged ? "text-accent" : "text-faint hover:text-accent"}>
           <Flag className="h-4 w-4" fill={flagged ? "currentColor" : "none"} />
         </button>
       </div>
+      {review && <ReviewAnswerBox review={review} />}
     </div>
   );
 }
 
-function ResultView({
-  result,
-  questions,
-  returnTo,
-}: {
-  result: AttemptResult;
-  questions: PlayerQuestion[];
-  returnTo: string | null;
-}) {
-  const pct =
-    result.maxScore && result.maxScore > 0
-      ? Math.round(((result.rawScore ?? 0) / result.maxScore) * 100)
-      : 0;
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
-  function toggle(id: number) {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  const kidsQuestionIds = useMemo(
-    () =>
-      new Set(
-        questions.filter((q) => q.audience === "KIDS").map((q) => q.quizQuestionId),
-      ),
-    [questions],
-  );
-
-  // Phản hồi âm thanh ngay khi có kết quả chấm, chỉ áp dụng cho câu hỏi trẻ em.
-  useEffect(() => {
-    const kidsItems = result.breakdown.filter((b) => kidsQuestionIds.has(b.quizQuestionId));
-    kidsItems.forEach((b, i) => {
-      const play = b.correct ? playCorrectSound : playIncorrectSound;
-      setTimeout(play, i * 250);
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  return (
-    <div className="grid min-h-screen place-items-center bg-bg px-6 py-10">
-      <div className="w-full max-w-xl rounded-[18px] border border-border bg-surface p-8 text-center">
-        <p className="text-sm text-muted">Kết quả bài làm</p>
-        <div className="mt-2 text-5xl font-bold text-primary" style={{ fontFamily: "var(--font-serif)" }}>
-          {round2(result.rawScore)}
-          <span className="text-2xl text-muted">/{round2(result.maxScore)}</span>
-        </div>
-        <p className="mt-1 text-sm text-muted">{pct}% đúng</p>
-        {result.bandScore != null && (
-          <div className="mt-4 inline-block rounded-full bg-accent-soft px-5 py-2 text-lg font-bold text-accent">
-            Band {result.bandScore}
-          </div>
-        )}
-        <div className="mt-6 space-y-2 text-left">
-          {result.breakdown.map((b, i) => {
-            const hasDetail = Boolean(
-              b.explanation || b.answerParagraphHtml || b.correctAnswerLines.length > 0,
-            );
-            const isOpen = expanded.has(b.quizQuestionId);
-            const isKids = kidsQuestionIds.has(b.quizQuestionId);
-            const kidsAnim = isKids ? (b.correct ? "animate-bubble-pop" : "animate-kids-shake") : "";
-            return (
-              <div
-                key={b.quizQuestionId}
-                className={`rounded-lg border border-border text-sm ${kidsAnim}`}
-              >
-                <div className="flex items-center justify-between px-3 py-2">
-                  <span className="text-muted">Câu {i + 1}</span>
-                  <span className="flex-1 truncate px-2">{b.name}</span>
-                  {b.correct === null ? <span className="text-muted">Chấm tay</span>
-                    : b.correct ? (
-                      <span className="flex items-center gap-1 font-semibold text-green">
-                        <CheckCircle2 className="h-4 w-4" /> Đúng
-                      </span>
-                    ) : b.awardedMark != null && b.awardedMark > 0 ? (
-                      // Cloze/MCQ nhiều đáp án chấm từng phần — không hẳn
-                      // "Sai" tuyệt đối, hiện đúng tỉ lệ điểm nhận được.
-                      <span className="font-semibold text-accent">
-                        Đúng {round2(b.awardedMark)}/{round2(b.mark)}
-                      </span>
-                    ) : (
-                      <span className="flex items-center gap-1 font-semibold text-red">
-                        <XCircle className="h-4 w-4" /> Sai
-                      </span>
-                    )}
-                  {hasDetail && (
-                    <button
-                      type="button"
-                      onClick={() => toggle(b.quizQuestionId)}
-                      className="ml-2 flex items-center gap-1 text-xs font-semibold text-accent"
-                    >
-                      <Lightbulb className="h-3.5 w-3.5" />
-                      {isOpen ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                    </button>
-                  )}
-                </div>
-                {hasDetail && isOpen && (
-                  <div className="border-t border-border bg-bg px-3 py-3 text-left">
-                    {b.correctAnswerLines.length > 0 && (
-                      <div className="mb-2">
-                        <p className="mb-1 text-xs font-semibold text-muted">Đáp án đúng:</p>
-                        <ul className="space-y-0.5 text-sm">
-                          {b.correctAnswerLines.map((line, idx) => (
-                            <li key={idx}>{line}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {b.answerParagraphHtml && (
-                      <div className="mb-2">
-                        <p className="mb-1 text-xs font-semibold text-muted">
-                          Đáp án nằm ở đoạn {b.answerParagraphIndex} trong passage:
-                        </p>
-                        <div
-                          className="prose prose-sm dark:prose-invert rounded-lg bg-accent-soft p-3"
-                          dangerouslySetInnerHTML={{ __html: b.answerParagraphHtml }}
-                        />
-                      </div>
-                    )}
-                    {b.explanation && (
-                      <div>
-                        <p className="mb-1 text-xs font-semibold text-muted">Giải thích:</p>
-                        <div
-                          className="prose prose-sm dark:prose-invert"
-                          dangerouslySetInnerHTML={{ __html: b.explanation }}
-                        />
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-        {result.violations > 0 && (
-          <p className="mt-4 text-sm text-red">
-            Ghi nhận {result.violations} lần vi phạm chống gian lận.
-          </p>
-        )}
-        <Link href={returnTo || "/dashboard"}
-          className="mt-6 inline-block rounded-lg bg-primary px-6 py-2.5 font-semibold text-white">
-          {returnTo ? "Về khóa học" : "Về bảng điều khiển"}
-        </Link>
-      </div>
-    </div>
-  );
-}
