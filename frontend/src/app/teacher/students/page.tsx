@@ -90,7 +90,7 @@ export default function TeacherStudentsPage() {
                     <td className="px-4 py-3 text-muted">{s.username}</td>
                     <td className="px-4 py-3 text-muted">{s.email}</td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/teacher/students/${s.id}`} className="text-sm font-semibold text-accent">
+                      <Link href={`/teacher/students/${s.username}`} className="text-sm font-semibold text-accent">
                         Xem kết quả →
                       </Link>
                     </td>

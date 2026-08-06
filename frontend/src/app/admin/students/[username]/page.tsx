@@ -10,7 +10,10 @@ import type { AdminUser, GradebookRow, TypeBreakdown } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
 export default function AdminStudentDetailPage() {
-  const params = useParams<{ id: string }>();
+  // Route dùng username thay vì UUID nội bộ — chỉ để tra ra đúng user; các
+  // lệnh gọi API bên dưới vẫn cần UUID thật (`student.id`) nên phải đợi tra
+  // xong (student != null) mới gọi.
+  const params = useParams<{ username: string }>();
   const router = useRouter();
   const { accessToken, hydrated, loadMe } = useAuthStore();
   const [ready, setReady] = useState(false);
@@ -37,15 +40,20 @@ export default function AdminStudentDetailPage() {
   useEffect(() => {
     if (!allowed) return;
     usersAdminApi.list(token).then((users) => {
-      setStudent(users.find((u) => u.id === params.id) ?? null);
+      setStudent(users.find((u) => u.username === params.username) ?? null);
     });
-    gradebookApi.forStudentAsAdmin(token, params.id).then(setRows).catch(() => setRows([]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowed, params.username]);
+
+  useEffect(() => {
+    if (!student) return;
+    gradebookApi.forStudentAsAdmin(token, student.id).then(setRows).catch(() => setRows([]));
     gradebookApi
-      .wrongTypesAsAdmin(token, params.id)
+      .wrongTypesAsAdmin(token, student.id)
       .then(setWrongTypes)
       .catch(() => setWrongTypes([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allowed, params.id]);
+  }, [student, token]);
 
   if (!hydrated || !ready) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;

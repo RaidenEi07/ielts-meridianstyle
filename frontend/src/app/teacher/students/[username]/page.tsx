@@ -11,7 +11,10 @@ import { useAuthStore } from "@/store/auth";
 import { useToast } from "@/store/toast";
 
 export default function TeacherStudentDetailPage() {
-  const params = useParams<{ id: string }>();
+  // Route dùng username thay vì UUID nội bộ — chỉ để tra ra đúng học sinh
+  // trong danh sách "học sinh của tôi"; các lệnh gọi API bên dưới vẫn cần
+  // UUID thật (`student.id`) nên phải đợi tra xong mới gọi.
+  const params = useParams<{ username: string }>();
   const router = useRouter();
   const { accessToken, hydrated, loadMe } = useAuthStore();
   const [ready, setReady] = useState(false);
@@ -46,21 +49,26 @@ export default function TeacherStudentDetailPage() {
   useEffect(() => {
     if (!allowed) return;
     rosterApi.myStudents(token).then((list) => {
-      setStudent(list.find((s) => s.id === params.id) ?? null);
+      setStudent(list.find((s) => s.username === params.username) ?? null);
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allowed, params.username]);
+
+  useEffect(() => {
+    if (!student) return;
     gradebookApi
-      .forMyStudent(token, params.id)
+      .forMyStudent(token, student.id)
       .then(setRows)
       .catch((err) => {
         setError(err instanceof ApiError ? err.message : "Không tải được kết quả");
         setRows([]);
       });
     gradebookApi
-      .wrongTypesForMyStudent(token, params.id)
+      .wrongTypesForMyStudent(token, student.id)
       .then(setWrongTypes)
       .catch(() => setWrongTypes([]));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allowed, params.id]);
+  }, [student, token]);
 
   useEffect(() => {
     if (!allowed) return;
@@ -82,12 +90,12 @@ export default function TeacherStudentDetailPage() {
   }, [allowed]);
 
   async function handleEnroll() {
-    if (!selectedCourseId) return;
+    if (!selectedCourseId || !student) return;
     setEnrolling(true);
     setEnrollMessage(null);
     setEnrollError(null);
     try {
-      await rosterApi.enrollStudent(token, params.id, Number(selectedCourseId));
+      await rosterApi.enrollStudent(token, student.id, Number(selectedCourseId));
       setEnrollMessage("Đã cấp quyền truy cập khóa học cho học sinh.");
       toast.success("Đã cấp quyền truy cập khóa học cho học sinh.");
     } catch (err) {

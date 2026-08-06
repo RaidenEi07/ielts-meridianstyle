@@ -420,7 +420,7 @@ export default function AdminUsersPage() {
                           Sửa
                         </button>
                         <Link
-                          href={`/admin/users/${u.id}`}
+                          href={`/admin/users/${u.username}`}
                           className="text-xs font-semibold text-accent"
                         >
                           Xem chi tiết →

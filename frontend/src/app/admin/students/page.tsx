@@ -117,7 +117,7 @@ export default function AdminStudentsPage() {
                     <td className="px-4 py-3 text-muted">{s.username}</td>
                     <td className="px-4 py-3 text-muted">{s.email}</td>
                     <td className="px-4 py-3 text-right">
-                      <Link href={`/admin/students/${s.id}`} className="text-sm font-semibold text-accent">
+                      <Link href={`/admin/students/${s.username}`} className="text-sm font-semibold text-accent">
                         Xem kết quả →
                       </Link>
                     </td>

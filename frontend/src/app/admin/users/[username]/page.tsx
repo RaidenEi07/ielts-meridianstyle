@@ -3,9 +3,11 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { GradebookTable } from "@/components/GradebookTable";
 import { PageHeader } from "@/components/PageHeader";
+import { WrongTypesSummary } from "@/components/WrongTypesSummary";
 import { ApiError, enrollmentApi, gradebookApi, usersAdminApi } from "@/lib/api";
-import type { AdminUser, Enrollment, GradebookRow } from "@/lib/types";
+import type { AdminUser, Enrollment, GradebookRow, TypeBreakdown } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
 const ENROLLMENT_STATUS_META: Record<string, { label: string; cls: string }> = {
@@ -15,8 +17,11 @@ const ENROLLMENT_STATUS_META: Record<string, { label: string; cls: string }> = {
 };
 
 export default function AdminStudentDetailPage() {
-  const params = useParams<{ id: string }>();
-  const userId = params.id;
+  // Route dùng username (duy nhất, dễ đọc) thay vì UUID nội bộ — chỉ dùng để
+  // tra ra đúng user trong danh sách; mọi lệnh gọi API bên dưới (ghi danh,
+  // điểm số) vẫn cần UUID thật (`user.id`) nên phải đợi tra xong mới gọi.
+  const params = useParams<{ username: string }>();
+  const username = params.username;
   const router = useRouter();
   const { accessToken, hydrated, loadMe } = useAuthStore();
   const [ready, setReady] = useState(false);
@@ -24,8 +29,10 @@ export default function AdminStudentDetailPage() {
   const token = accessToken ?? "";
 
   const [user, setUser] = useState<AdminUser | null>(null);
+  const [userLookupDone, setUserLookupDone] = useState(false);
   const [enrollments, setEnrollments] = useState<Enrollment[] | null>(null);
   const [gradebook, setGradebook] = useState<GradebookRow[] | null>(null);
+  const [wrongTypes, setWrongTypes] = useState<TypeBreakdown[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -45,17 +52,26 @@ export default function AdminStudentDetailPage() {
     if (!allowed || !token) return;
     usersAdminApi
       .list(token)
-      .then((list) => setUser(list.find((u) => u.id === userId) ?? null))
-      .catch(() => {});
+      .then((list) => setUser(list.find((u) => u.username === username) ?? null))
+      .catch(() => {})
+      .finally(() => setUserLookupDone(true));
+  }, [allowed, token, username]);
+
+  useEffect(() => {
+    if (!user) return;
     enrollmentApi
-      .forStudentAsAdmin(token, userId)
+      .forStudentAsAdmin(token, user.id)
       .then(setEnrollments)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Không tải được danh sách ghi danh"));
     gradebookApi
-      .forStudentAsAdmin(token, userId)
+      .forStudentAsAdmin(token, user.id)
       .then(setGradebook)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Không tải được điểm số"));
-  }, [allowed, token, userId]);
+    gradebookApi
+      .wrongTypesAsAdmin(token, user.id)
+      .then(setWrongTypes)
+      .catch(() => setWrongTypes([]));
+  }, [user, token]);
 
   if (!hydrated || !ready) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
@@ -87,6 +103,10 @@ export default function AdminStudentDetailPage() {
 
       <main className="mx-auto max-w-5xl space-y-8 px-6 py-8">
         {error && <p className="text-sm text-red">{error}</p>}
+
+        {userLookupDone && !user && (
+          <p className="text-sm text-muted">Không tìm thấy tài khoản với tên đăng nhập &quot;{username}&quot;.</p>
+        )}
 
         {user && (
           <div className="grid gap-3 rounded-card border border-border bg-surface p-4 text-sm sm:grid-cols-3">
@@ -160,57 +180,14 @@ export default function AdminStudentDetailPage() {
 
         <section>
           <h2 className="mb-3 text-lg font-semibold">Lượt làm bài & điểm số</h2>
-          <div className="overflow-hidden rounded-card border border-border bg-surface">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-soft text-muted">
-                <tr>
-                  <th className="px-4 py-2.5 font-medium">Quiz</th>
-                  <th className="px-4 py-2.5 font-medium">Khóa học</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Điểm</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Band</th>
-                  <th className="px-4 py-2.5 font-medium">Trạng thái</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Số lượt làm</th>
-                  <th className="px-4 py-2.5 text-right font-medium">Nộp gần nhất</th>
-                </tr>
-              </thead>
-              <tbody>
-                {gradebook === null ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-muted">
-                      Đang tải…
-                    </td>
-                  </tr>
-                ) : gradebook.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="px-4 py-6 text-center text-muted">
-                      Chưa có lượt làm bài nào.
-                    </td>
-                  </tr>
-                ) : (
-                  gradebook.map((row) => (
-                    <tr key={row.quizId} className="border-t border-border">
-                      <td className="px-4 py-3 font-medium">{row.quizTitle}</td>
-                      <td className="px-4 py-3 text-muted">{row.courseName}</td>
-                      <td className="px-4 py-3 text-right font-mono text-muted">
-                        {row.bestScore ?? "—"}
-                        {row.maxScore != null ? ` / ${row.maxScore}` : ""}
-                      </td>
-                      <td className="px-4 py-3 text-right font-mono text-muted">
-                        {row.bandScore ?? "—"}
-                      </td>
-                      <td className="px-4 py-3 text-muted">{row.status}</td>
-                      <td className="px-4 py-3 text-right text-muted">{row.attempts}</td>
-                      <td className="px-4 py-3 text-right text-muted">
-                        {row.lastSubmittedAt
-                          ? new Date(row.lastSubmittedAt).toLocaleDateString("vi-VN")
-                          : "—"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+          {gradebook === null ? (
+            <p className="text-muted">Đang tải…</p>
+          ) : (
+            <div className="space-y-6">
+              <GradebookTable rows={gradebook} emptyLabel="Học sinh này chưa có điểm nào." token={token} />
+              <WrongTypesSummary rows={wrongTypes} />
+            </div>
+          )}
         </section>
       </main>
     </div>

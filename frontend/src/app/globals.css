@@ -25,6 +25,23 @@
   --red: #9b2c2c;
   --red-soft: #f6e3e0;
   --info: #0e7490;
+
+  /* Bảng màu categorical riêng cho biểu đồ (piechart "dạng câu hỏi hay sai"
+     ở admin/users, admin/students, teacher/students) — KHÔNG dùng lại 4 màu
+     thương hiệu ở trên (primary/accent/green/red lặp lại giữa 9 dạng câu hỏi
+     trong TYPE_META, đủ cho badge hiện riêng lẻ nhưng không đủ phân biệt khi
+     nhiều dạng hiện cùng lúc trên 1 biểu đồ). 8 màu theo đúng thứ tự đã kiểm
+     định an toàn cho mù màu (CVD ΔE ≥ 8, normal-vision ΔE ≥ 15) — xem
+     scripts/validate_palette.js của skill dataviz. Giữ NGUYÊN thứ tự khi
+     dùng, không đảo lộn theo dữ liệu. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
+  --series-4: #eda100;
+  --series-5: #e87ba4;
+  --series-6: #008300;
+  --series-7: #4a3aa7;
+  --series-8: #e34948;
 }
 
 .dark {
@@ -45,6 +62,16 @@
   --red: #e08585;
   --red-soft: #3a2220;
   --info: #38bdf8;
+
+  /* Cùng 8 bước, đã kiểm định riêng cho nền tối (xem :root ở trên). */
+  --series-1: #3987e5;
+  --series-2: #d95926;
+  --series-3: #199e70;
+  --series-4: #c98500;
+  --series-5: #d55181;
+  --series-6: #008300;
+  --series-7: #9085e9;
+  --series-8: #e66767;
 }
 
 /* Chế độ thi (Academic/IELTS — đọc chia màn, nghe, viết): trắng-đen tuyệt đối
