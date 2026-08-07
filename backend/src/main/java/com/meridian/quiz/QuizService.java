@@ -168,7 +168,29 @@ public class QuizService {
         return new QuizQuestionDto(qq.getId(), qq.getQuestionId(),
                 q != null ? q.getType().name() : null,
                 q != null ? q.getName() : "(đã xóa)",
-                qq.getMark(), qq.getPageId(), qq.getSortOrder());
+                qq.getMark(), qq.getPageId(), qq.getSortOrder(), qq.getGroupIntro());
+    }
+
+    /**
+     * Đoạn hướng dẫn dùng chung cho 1 nhóm câu hỏi (vd "Questions 14-19 / Do
+     * the following statements agree..." + chú thích YES/NO/NOT GIVEN) — gắn
+     * vào ĐÚNG lượt gán câu hỏi này vào quiz này (quiz_questions), không đụng
+     * tới nội dung câu hỏi dùng chung ở ngân hàng câu hỏi. Truyền rỗng/null để
+     * gỡ (câu hỏi không còn mở đầu nhóm nào nữa).
+     */
+    @Transactional
+    public QuizQuestionDto updateGroupIntro(UUID uid, Long quizQuestionId, String groupIntro) {
+        QuizQuestion qq = quizQuestionRepository.findById(quizQuestionId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy câu trong quiz"));
+        Quiz quiz = requireQuiz(qq.getQuizId());
+        permissionService.requireCapability(uid, CAP, contextId(quiz.getContext()));
+        qq.setGroupIntro(groupIntro == null || groupIntro.isBlank() ? null : groupIntro);
+        qq = quizQuestionRepository.save(qq);
+        Question q = questionRepository.findById(qq.getQuestionId()).orElse(null);
+        return new QuizQuestionDto(qq.getId(), qq.getQuestionId(),
+                q != null ? q.getType().name() : null,
+                q != null ? q.getName() : "(đã xóa)",
+                qq.getMark(), qq.getPageId(), qq.getSortOrder(), qq.getGroupIntro());
     }
 
     @Transactional
@@ -285,7 +307,7 @@ public class QuizService {
                     return new QuizQuestionDto(qq.getId(), qq.getQuestionId(),
                             q != null ? q.getType().name() : null,
                             q != null ? q.getName() : "(đã xóa)",
-                            qq.getMark(), qq.getPageId(), qq.getSortOrder());
+                            qq.getMark(), qq.getPageId(), qq.getSortOrder(), qq.getGroupIntro());
                 })
                 .toList();
     }

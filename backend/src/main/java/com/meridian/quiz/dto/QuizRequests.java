@@ -59,4 +59,7 @@ public final class QuizRequests {
     public record UpdateQuestionMark(
             @NotNull(message = "mark là bắt buộc") BigDecimal mark) {
     }
+
+    public record UpdateGroupIntro(String groupIntro) {
+    }
 }

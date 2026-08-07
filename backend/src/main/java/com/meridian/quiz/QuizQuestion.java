@@ -37,4 +37,12 @@ public class QuizQuestion {
 
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
+
+    /** Đoạn hướng dẫn dùng chung cho cả nhóm câu hỏi (vd "Questions 14-19 / Do
+     * the following statements agree..." + chú thích YES/NO/NOT GIVEN) — chỉ
+     * gán cho câu hỏi ĐẦU TIÊN của nhóm trong quiz NÀY, không đụng tới nội
+     * dung câu hỏi dùng chung ở ngân hàng câu hỏi (bảng questions). null nếu
+     * câu hỏi không mở đầu nhóm nào (đứng riêng, hoặc không phải câu đầu). */
+    @Column(name = "group_intro", columnDefinition = "text")
+    private String groupIntro;
 }

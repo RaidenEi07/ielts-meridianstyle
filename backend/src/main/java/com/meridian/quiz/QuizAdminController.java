@@ -13,6 +13,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -80,6 +81,12 @@ public class QuizAdminController {
     public QuizQuestionDto updateQuestionMark(@PathVariable Long quizQuestionId,
             @Valid @RequestBody QuizRequests.UpdateQuestionMark req) {
         return quizService.updateQuestionMark(uid(), quizQuestionId, req.mark());
+    }
+
+    @PatchMapping("/quiz-questions/{quizQuestionId}/group-intro")
+    public QuizQuestionDto updateGroupIntro(@PathVariable Long quizQuestionId,
+            @Valid @RequestBody QuizRequests.UpdateGroupIntro req) {
+        return quizService.updateGroupIntro(uid(), quizQuestionId, req.groupIntro());
     }
 
     @PostMapping("/quizzes/{id}/pages")

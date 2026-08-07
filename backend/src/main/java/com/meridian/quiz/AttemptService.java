@@ -425,7 +425,8 @@ public class AttemptService {
                     a != null ? a.getCorrect() : Boolean.FALSE,
                     q.explanation(), q.answerParagraphIndex(), paragraphHtml,
                     com.meridian.question.CorrectAnswerFormatter.format(q,
-                            startNumberByQuizQuestionId.getOrDefault(qq.getId(), 0)));
+                            startNumberByQuizQuestionId.getOrDefault(qq.getId(), 0)),
+                    qq.getGroupIntro());
         }).toList();
 
         return new AttemptResult(attempt.getId(), attempt.getStatus().name(),
@@ -506,7 +507,7 @@ public class AttemptService {
                                     q.name(), q.stem(), qq.getMark(), qq.getPageId(), q.passageId(),
                                     settings, options, matchingPairs, matchingRightPool, dragItems,
                                     dragZones, clozeSubAnswers, gridColumns, gridRows, q.audience(),
-                                    correctAnswerCount);
+                                    correctAnswerCount, qq.getGroupIntro());
                         }).toList();
 
         List<PagePlayer> pages = pageRepository.findByQuizIdOrderByPageNumberAsc(quiz.getId())

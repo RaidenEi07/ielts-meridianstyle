@@ -46,7 +46,12 @@ public final class AttemptDtos {
     public record PlayerGridRow(Long id, String rowText) {
     }
 
-    /** Câu hỏi cho thí sinh — đã loại bỏ mọi thông tin đáp án. */
+    /** Câu hỏi cho thí sinh — đã loại bỏ mọi thông tin đáp án.
+     * groupIntro: chỉ khác null ở câu hỏi ĐẦU TIÊN của 1 nhóm câu hỏi chia sẻ
+     * chung 1 đoạn hướng dẫn (vd "Questions 14-19 / Do the following..." +
+     * chú thích YES/NO/NOT GIVEN) — frontend gộp hiển thị các câu liên tiếp
+     * cùng type MULTIPLE_CHOICE/TRUE_FALSE_NOT_GIVEN cho tới câu tiếp theo có
+     * groupIntro riêng (hoặc hết trang) thành 1 khối dùng chung tiêu đề. */
     public record PlayerQuestion(
             Long quizQuestionId,
             Long questionId,
@@ -66,7 +71,8 @@ public final class AttemptDtos {
             List<PlayerGridColumn> gridColumns,
             List<PlayerGridRow> gridRows,
             Audience audience,
-            Integer correctAnswerCount) {
+            Integer correctAnswerCount,
+            String groupIntro) {
     }
 
     /** Một trang thi (Part) kèm passage/audio để render split-pane / listening. */
@@ -114,7 +120,8 @@ public final class AttemptDtos {
             String explanation,
             Integer answerParagraphIndex,
             String answerParagraphHtml,
-            List<String> correctAnswerLines) {
+            List<String> correctAnswerLines,
+            String groupIntro) {
     }
 
     public record AttemptResult(

@@ -37,7 +37,8 @@ public final class QuizDtos {
             String name,
             BigDecimal mark,
             Long pageId,
-            int sortOrder) {
+            int sortOrder,
+            String groupIntro) {
     }
 
     public record QuizPageDto(Long id, int pageNumber, String partLabel, Long passageId) {
