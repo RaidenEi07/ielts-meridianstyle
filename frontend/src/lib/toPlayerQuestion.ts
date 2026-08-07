@@ -27,6 +27,7 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
     gridRows: [],
     audience: q.audience,
     correctAnswerCount: null,
+    groupIntro: null,
   };
 
   switch (q.type) {

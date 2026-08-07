@@ -316,6 +316,7 @@ export interface QuizQuestionAdmin {
   mark: number;
   pageId: number | null;
   sortOrder: number;
+  groupIntro: string | null;
 }
 
 export interface QuizDetailAdmin {
@@ -400,6 +401,12 @@ export interface PlayerQuestion {
   gridRows: PlayerGridRow[];
   audience: Audience | null;
   correctAnswerCount: number | null;
+  /** Chỉ khác null ở câu hỏi ĐẦU TIÊN của 1 nhóm câu hỏi dùng chung 1 đoạn
+   * hướng dẫn (vd "Questions 14-19 / Do the following statements agree..."
+   * + chú thích YES/NO/NOT GIVEN) — quiz/[attemptId]/page.tsx gộp các câu
+   * MULTIPLE_CHOICE/TRUE_FALSE_NOT_GIVEN liên tiếp cùng nhóm này thành 1
+   * khối dùng chung tiêu đề thay vì hiện từng thẻ riêng. */
+  groupIntro: string | null;
 }
 
 export interface ExamPage {
@@ -442,6 +449,7 @@ export interface GradedItem {
   answerParagraphIndex: number | null;
   answerParagraphHtml: string | null;
   correctAnswerLines: string[];
+  groupIntro: string | null;
 }
 
 export interface AttemptResult {

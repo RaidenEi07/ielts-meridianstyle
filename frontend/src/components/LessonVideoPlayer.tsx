@@ -34,6 +34,7 @@ function toPlayerQuestion(q: CheckpointQuestion): PlayerQuestion {
     gridRows: q.gridRows,
     audience: q.audience,
     correctAnswerCount: null,
+    groupIntro: null,
   };
 }
 

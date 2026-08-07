@@ -212,7 +212,10 @@ function cardLabel(q: PlayerQuestion, order: Map<string, number>): string {
  * (vd Yes/No/Not Given lặp lại cho nhiều câu) — nhóm để hiện thành 1 bảng
  * lưới, mỗi câu vẫn là 1 quizQuestion/điểm/chấm riêng hệt như trước (thuần
  * gộp hiển thị, KHÔNG đổi dữ liệu/logic chấm điểm). */
-type QuestionOrGroup = PlayerQuestion | { kind: "mc-grid"; key: string; columns: string[]; rows: PlayerQuestion[] };
+type QuestionOrGroup =
+  | PlayerQuestion
+  | { kind: "mc-grid"; key: string; columns: string[]; rows: PlayerQuestion[] }
+  | { kind: "instruction-group"; key: string; intro: string; items: PlayerQuestion[] };
 
 function optionSignature(q: PlayerQuestion): string | null {
   if (q.type !== "MULTIPLE_CHOICE" || q.options.length < 2) return null;
@@ -269,6 +272,51 @@ function groupMcGrids(questions: PlayerQuestion[], order: Map<string, number>): 
       result.push(q);
     }
   });
+  return result;
+}
+
+/** Chạy SAU groupMcGrids() — gộp thêm các câu Trắc nghiệm/Đúng-Sai-NG liên
+ * tiếp CHƯA bị gộp thành bảng lưới, dùng chung 1 đoạn hướng dẫn
+ * (question.groupIntro, chỉ khác null ở câu ĐẦU của mỗi nhóm — xem
+ * quiz_questions.group_intro) thành 1 khối chung 1 tiêu đề. Mỗi câu bên
+ * trong vẫn giữ nguyên số thứ tự/cờ đánh dấu/ô trả lời/màu đúng-sai riêng
+ * (thuần gộp hiển thị, không đổi dữ liệu/logic chấm điểm) — chỉ khác chỗ
+ * không còn thẻ viền riêng từng câu (xem QuestionCard `bare`). Câu hỏi nào
+ * KHÔNG mở đầu bằng groupIntro thì hiện đứng riêng như cũ (kể cả khi cùng
+ * dạng MC/TFNG với nhóm liền trước — chỉ câu tự khai báo groupIntro mới mở
+ * nhóm mới, ngăn 2 nhóm liền nhau bị dính làm một).
+ */
+function groupByInstructionIntro(items: QuestionOrGroup[]): QuestionOrGroup[] {
+  const isPlainQuestion = (item: QuestionOrGroup): item is PlayerQuestion => !("kind" in item);
+  const isGroupableType = (q: PlayerQuestion) =>
+    q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE_NOT_GIVEN";
+
+  const result: QuestionOrGroup[] = [];
+  let current: { intro: string; items: PlayerQuestion[] } | null = null;
+  const flush = () => {
+    if (current && current.items.length > 0) {
+      result.push({
+        kind: "instruction-group",
+        key: `intro-${current.items[0].quizQuestionId}`,
+        intro: current.intro,
+        items: current.items,
+      });
+    }
+    current = null;
+  };
+
+  for (const item of items) {
+    if (isPlainQuestion(item) && isGroupableType(item) && item.groupIntro) {
+      flush();
+      current = { intro: item.groupIntro, items: [item] };
+    } else if (isPlainQuestion(item) && isGroupableType(item) && current) {
+      current.items.push(item);
+    } else {
+      flush();
+      result.push(item);
+    }
+  }
+  flush();
   return result;
 }
 
@@ -1414,20 +1462,32 @@ function ReadingSplitPane({
                 onFlag={() => onFlag(embeddedQuestion.quizQuestionId)}
                 review={review?.get(embeddedQuestion.quizQuestionId)} />
             )}
-            {groupMcGrids(questions.filter((q) => q !== embeddedQuestion), order).map((item) =>
-              "kind" in item ? (
-                <McGridCard key={item.key} columns={item.columns} rows={item.rows} order={order}
+            {groupByInstructionIntro(
+              groupMcGrids(questions.filter((q) => q !== embeddedQuestion), order),
+            ).map((item) => {
+              if (!("kind" in item)) {
+                return (
+                  <QuestionCard key={item.quizQuestionId} index={cardLabel(item, order)}
+                    question={item} answer={answers[item.quizQuestionId]} flagged={flagged.has(item.quizQuestionId)}
+                    order={order}
+                    focused={isFocusedQuestion(focusedId, item.quizQuestionId)}
+                    onChange={(r) => onAnswer(item, r)} onFlag={() => onFlag(item.quizQuestionId)}
+                    review={review?.get(item.quizQuestionId)} />
+                );
+              }
+              if (item.kind === "mc-grid") {
+                return (
+                  <McGridCard key={item.key} columns={item.columns} rows={item.rows} order={order}
+                    answers={answers} flagged={flagged} focusedId={focusedId}
+                    onAnswer={onAnswer} onFlag={onFlag} review={review} />
+                );
+              }
+              return (
+                <InstructionGroupCard key={item.key} intro={item.intro} items={item.items} order={order}
                   answers={answers} flagged={flagged} focusedId={focusedId}
                   onAnswer={onAnswer} onFlag={onFlag} review={review} />
-              ) : (
-                <QuestionCard key={item.quizQuestionId} index={cardLabel(item, order)}
-                  question={item} answer={answers[item.quizQuestionId]} flagged={flagged.has(item.quizQuestionId)}
-                  order={order}
-                  focused={isFocusedQuestion(focusedId, item.quizQuestionId)}
-                  onChange={(r) => onAnswer(item, r)} onFlag={() => onFlag(item.quizQuestionId)}
-                  review={review?.get(item.quizQuestionId)} />
-              ),
-            )}
+              );
+            })}
           </div>
           <SelectionMenu state={questionsChoice} onHighlight={questionsSel.applyHighlight}
             onNote={questionsSel.openNoteCompose} onClose={questionsSel.closeMenu} />
@@ -1515,26 +1575,36 @@ function ListeningPane({
             dạng câu hỏi (MC, Cloze, Drag-drop...) chấm/hiển thị đúng theo type,
             thay vì coi mọi câu trong Listening đều là note-completion 1 ô trống. */}
         <div className="mt-5 space-y-4">
-          {groupMcGrids(questions, order).map((item) =>
-            "kind" in item ? (
-              <McGridCard key={item.key} columns={item.columns} rows={item.rows} order={order}
+          {groupByInstructionIntro(groupMcGrids(questions, order)).map((item) => {
+            if (!("kind" in item)) {
+              return (
+                <QuestionCard
+                  key={item.quizQuestionId}
+                  index={cardLabel(item, order)}
+                  question={item}
+                  answer={answers[item.quizQuestionId]}
+                  flagged={flagged.has(item.quizQuestionId)}
+                  order={order}
+                  focused={isFocusedQuestion(focusedId, item.quizQuestionId)}
+                  onChange={(r) => onAnswer(item, r)}
+                  onFlag={() => onFlag(item.quizQuestionId)}
+                  review={review?.get(item.quizQuestionId)}
+                />
+              );
+            }
+            if (item.kind === "mc-grid") {
+              return (
+                <McGridCard key={item.key} columns={item.columns} rows={item.rows} order={order}
+                  answers={answers} flagged={flagged} focusedId={focusedId}
+                  onAnswer={onAnswer} onFlag={onFlag} review={review} />
+              );
+            }
+            return (
+              <InstructionGroupCard key={item.key} intro={item.intro} items={item.items} order={order}
                 answers={answers} flagged={flagged} focusedId={focusedId}
                 onAnswer={onAnswer} onFlag={onFlag} review={review} />
-            ) : (
-              <QuestionCard
-                key={item.quizQuestionId}
-                index={cardLabel(item, order)}
-                question={item}
-                answer={answers[item.quizQuestionId]}
-                flagged={flagged.has(item.quizQuestionId)}
-                order={order}
-                focused={isFocusedQuestion(focusedId, item.quizQuestionId)}
-                onChange={(r) => onAnswer(item, r)}
-                onFlag={() => onFlag(item.quizQuestionId)}
-                review={review?.get(item.quizQuestionId)}
-              />
-            ),
-          )}
+            );
+          })}
         </div>
       </div>
     </div>
@@ -1680,8 +1750,52 @@ function ReviewAnswerBox({ review }: { review: GradedItem }) {
   );
 }
 
+/** Nhiều câu Trắc nghiệm/Đúng-Sai-NG liên tiếp dùng chung 1 đoạn hướng dẫn
+ * (vd "Questions 14-19 / Do the following statements agree..." + chú thích
+ * YES/NO/NOT GIVEN) — 1 khung viền DUY NHẤT bao cả nhóm, tiêu đề hiện 1 lần
+ * ở đầu, mỗi câu bên dưới KHÔNG có khung viền riêng (khớp format đề thi
+ * IELTS thật) nhưng vẫn giữ đầy đủ số thứ tự/cờ đánh dấu/ô trả lời/màu
+ * đúng-sai lúc xem lại của riêng nó — xem groupByInstructionIntro(). */
+function InstructionGroupCard({
+  intro, items, order, answers, flagged, focusedId, onAnswer, onFlag, review,
+}: {
+  intro: string;
+  items: PlayerQuestion[];
+  order: Map<string, number>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  answers: Record<number, any>;
+  flagged: Set<number>;
+  focusedId: string | null;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  onAnswer: (q: PlayerQuestion, r: any) => void;
+  onFlag: (id: number) => void;
+  review?: Map<number, GradedItem>;
+}) {
+  const introRef = useImperativeHtml(intro);
+  return (
+    <div className="rounded-card border border-border bg-surface p-4">
+      <div
+        ref={introRef}
+        data-highlightable="true"
+        className="prose prose-sm dark:prose-invert mb-3 max-w-none border-b border-border pb-3"
+        style={{ color: "var(--muted)" }}
+      />
+      <div className="divide-y divide-border">
+        {items.map((q) => (
+          <QuestionCard key={q.quizQuestionId} bare index={cardLabel(q, order)}
+            question={q} answer={answers[q.quizQuestionId]} flagged={flagged.has(q.quizQuestionId)}
+            order={order}
+            focused={isFocusedQuestion(focusedId, q.quizQuestionId)}
+            onChange={(r) => onAnswer(q, r)} onFlag={() => onFlag(q.quizQuestionId)}
+            review={review?.get(q.quizQuestionId)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function QuestionCard({
-  index, question, answer, flagged, focused, order, onChange, onFlag, review,
+  index, question, answer, flagged, focused, order, onChange, onFlag, review, bare,
 }: {
   index: number | string;
   question: PlayerQuestion;
@@ -1696,6 +1810,10 @@ function QuestionCard({
   /** Có giá trị = đang xem lại SAU khi nộp bài: khóa tương tác, hiện đúng/sai
    * + đáp án đúng ngay tại chỗ thay vì 1 màn tóm tắt tách riêng. */
   review?: GradedItem;
+  /** true khi nằm trong InstructionGroupCard (nhiều câu dùng chung 1 tiêu đề)
+   * — bỏ khung viền/bo góc/nền riêng của từng câu (khối cha đã có khung
+   * chung), chỉ giữ lại màu tô đúng/sai lúc xem lại và viền khi đang focus. */
+  bare?: boolean;
 }) {
   // CLOZE's stem IS the full fill-in-the-blank passage (with {n} markers) —
   // QuestionRenderer already renders it complete with working inputs below,
@@ -1704,9 +1822,9 @@ function QuestionCard({
   const stemRef = useImperativeHtml(showStemHeader ? (question.stem ?? question.name) : "");
   return (
     <div id={`q-${question.quizQuestionId}`}
-      className={`rounded-card border p-4 transition-colors ${
+      className={`${bare ? "" : "rounded-card border"} p-4 transition-colors ${
         focused ? "border-primary ring-2 ring-primary/30 bg-surface"
-          : reviewTint(review) || "border-border bg-surface"
+          : reviewTint(review) || (bare ? "" : "border-border bg-surface")
       }`}>
       <div className="mb-3 flex items-start gap-3">
         <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold text-primary" style={{ minWidth: "1.75rem" }}>

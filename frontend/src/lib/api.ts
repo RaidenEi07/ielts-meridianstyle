@@ -421,6 +421,18 @@ export const quizAdminApi = {
       token,
     }),
 
+  /** Đoạn hướng dẫn dùng chung cho 1 nhóm câu hỏi Trắc nghiệm/Đúng-Sai-NG
+   * liên tiếp (vd "Questions 14-19 / Do the following statements agree..."
+   * + chú thích YES/NO/NOT GIVEN) — chỉ gán cho câu hỏi ĐẦU TIÊN của nhóm,
+   * gắn với lượt gán câu hỏi này vào quiz này, không đụng ngân hàng câu hỏi.
+   * Truyền chuỗi rỗng để gỡ (câu hỏi không còn mở đầu nhóm nào nữa). */
+  updateGroupIntro: (token: string, quizQuestionId: number, groupIntro: string) =>
+    apiFetch<QuizQuestionAdmin>(`/api/admin/quiz-questions/${quizQuestionId}/group-intro`, {
+      method: "PATCH",
+      body: { groupIntro },
+      token,
+    }),
+
   setPage: (
     token: string,
     id: number,

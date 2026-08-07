@@ -14,6 +14,7 @@ import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-ki
 import { FileText, PenLine, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { RichTextEditor } from "@/components/RichTextEditor";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { SortableRow } from "@/components/SortableRow";
 import { ApiError, quizAdminApi, questionBankApi } from "@/lib/api";
@@ -628,6 +629,9 @@ function QuestionsPanel({
   const [pageId, setPageId] = useState<number | "">("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingDetail, setEditingDetail] = useState<QuestionDetail | null>(null);
+  const [editingGroupIntroFor, setEditingGroupIntroFor] = useState<number | null>(null);
+  const [groupIntroDraft, setGroupIntroDraft] = useState("");
+  const [savingGroupIntro, setSavingGroupIntro] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const editMode = useEditModeStore((s) => s.enabled);
   const sensors = useSensors(useSensor(PointerSensor));
@@ -794,6 +798,27 @@ function QuestionsPanel({
     }
   }
 
+  function openGroupIntroEditor(q: QuizQuestionAdmin) {
+    setEditingGroupIntroFor(q.quizQuestionId);
+    setGroupIntroDraft(q.groupIntro ?? "");
+  }
+
+  async function saveGroupIntro(quizQuestionId: number) {
+    setSavingGroupIntro(true);
+    try {
+      await quizAdminApi.updateGroupIntro(token, quizQuestionId, groupIntroDraft);
+      setEditingGroupIntroFor(null);
+      onChanged();
+      toast.success(groupIntroDraft.trim() ? "Đã lưu tiêu đề nhóm" : "Đã gỡ tiêu đề nhóm");
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Lưu tiêu đề nhóm thất bại";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSavingGroupIntro(false);
+    }
+  }
+
   const totalMark = detail.questions.reduce((sum, q) => sum + Number(q.mark), 0);
 
   // Reordering only ever happens within one Part's own list (dragging across
@@ -887,7 +912,9 @@ function QuestionsPanel({
                   strategy={verticalListSortingStrategy}
                 >
                   <ul className="space-y-2">
-                    {group.items.map((q) => (
+                    {group.items.map((q) => {
+                      const canGroupIntro = q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE_NOT_GIVEN";
+                      return (
                       <li key={q.quizQuestionId}>
                         <SortableRow id={q.quizQuestionId} editMode={editMode}>
                           <div className="flex items-center gap-3 rounded-lg bg-soft px-3 py-2 text-sm">
@@ -907,6 +934,16 @@ function QuestionsPanel({
                               />
                               điểm
                             </span>
+                            {canGroupIntro && (
+                              <button
+                                type="button"
+                                onClick={() => openGroupIntroEditor(q)}
+                                title="Đoạn hướng dẫn dùng chung cho nhóm câu hỏi bắt đầu từ đây (vd 'Questions 14-19, Choose...') - không đụng nội dung câu hỏi ở ngân hàng câu hỏi"
+                                className={`text-xs font-semibold ${q.groupIntro ? "text-accent" : "text-faint hover:text-accent"}`}
+                              >
+                                {q.groupIntro ? "Tiêu đề nhóm ✓" : "+ Tiêu đề nhóm"}
+                              </button>
+                            )}
                             <button
                               type="button"
                               onClick={() => openEdit(q.questionId)}
@@ -922,9 +959,37 @@ function QuestionsPanel({
                               Gỡ
                             </button>
                           </div>
+                          {editingGroupIntroFor === q.quizQuestionId && (
+                            <div className="mt-2 space-y-2 rounded-lg border border-accent/30 bg-accent-soft/40 p-3">
+                              <p className="text-xs text-muted">
+                                Đoạn này hiện dùng chung phía trên câu <strong>{q.name}</strong> và mọi
+                                câu Trắc nghiệm/Đúng-Sai-NG liền sau nó, cho tới câu kế tiếp có tiêu đề
+                                nhóm riêng (hoặc hết trang). Để trống rồi lưu để gỡ.
+                              </p>
+                              <RichTextEditor value={groupIntroDraft} onChange={setGroupIntroDraft} token={token} />
+                              <div className="flex gap-2">
+                                <button
+                                  type="button"
+                                  disabled={savingGroupIntro}
+                                  onClick={() => saveGroupIntro(q.quizQuestionId)}
+                                  className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                                >
+                                  {savingGroupIntro ? "Đang lưu…" : "Lưu"}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => setEditingGroupIntroFor(null)}
+                                  className="rounded-lg border border-border px-3 py-1.5 text-xs text-muted"
+                                >
+                                  Hủy
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </SortableRow>
                       </li>
-                    ))}
+                      );
+                    })}
                   </ul>
                 </SortableContext>
               </DndContext>
