@@ -120,6 +120,23 @@ public class QuestionService {
         return toDetail(requireQuestion(id));
     }
 
+    /**
+     * Đổi CHỈ tên câu hỏi — không đụng gì khác. updateQuestion() ở trên xóa
+     * sạch rồi tạo lại toàn bộ phần con (options/clozeSubAnswers/...) mỗi lần
+     * gọi (xem clearChildren/saveChildren), tạo ID hoàn toàn mới cho từng
+     * dòng — dùng nó chỉ để đổi tên sẽ âm thầm làm mồ côi mọi câu trả lời cũ
+     * của học viên đang tham chiếu ID cũ (vd quiz_attempt_answers.response
+     * lưu selectedOptionIds theo ID option cũ). Method riêng này chỉ set 1
+     * cột name, không đụng bảng con nào.
+     */
+    @Transactional
+    public QuestionDetailDto renameQuestion(UUID userId, Long id, String name) {
+        Question q = requireQuestion(id);
+        q.setName(name);
+        questionRepository.saveAndFlush(q);
+        return toDetail(requireQuestion(id));
+    }
+
     @Transactional
     public void deleteQuestion(Long id) {
         Question q = requireQuestion(id);

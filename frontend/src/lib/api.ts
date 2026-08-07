@@ -618,6 +618,17 @@ export const questionBankApi = {
       token,
     }),
 
+  /** Đổi CHỈ tên câu hỏi — updateQuestion() ở trên xóa sạch rồi tạo lại toàn
+   * bộ options/clozeSubAnswers/... mỗi lần gọi (ID hoàn toàn mới cho từng
+   * dòng con), dùng nó chỉ để đổi tên sẽ âm thầm làm mồ côi câu trả lời cũ
+   * của học viên tham chiếu ID cũ. Endpoint riêng này chỉ đụng 1 cột name. */
+  renameQuestion: (token: string, id: number, name: string) =>
+    apiFetch<QuestionDetail>(`/api/admin/question-bank/questions/${id}/name`, {
+      method: "PATCH",
+      body: { name },
+      token,
+    }),
+
   deleteQuestion: (token: string, id: number) =>
     apiFetch<void>(`/api/admin/question-bank/questions/${id}`, { method: "DELETE", token }),
 

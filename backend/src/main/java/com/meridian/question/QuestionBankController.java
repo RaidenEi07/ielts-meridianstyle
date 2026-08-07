@@ -20,6 +20,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -169,6 +170,13 @@ public class QuestionBankController {
             @Valid @RequestBody QuestionUpsertRequest req) {
         UUID uid = guard();
         return questionService.updateQuestion(uid, id, req);
+    }
+
+    @PatchMapping("/questions/{id}/name")
+    public QuestionDetailDto renameQuestion(@PathVariable Long id,
+            @Valid @RequestBody QuestionBankRequests.RenameQuestion req) {
+        UUID uid = guard();
+        return questionService.renameQuestion(uid, id, req.name());
     }
 
     @DeleteMapping("/questions/{id}")

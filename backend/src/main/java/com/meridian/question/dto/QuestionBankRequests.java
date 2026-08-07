@@ -44,4 +44,7 @@ public final class QuestionBankRequests {
             Audience audience,
             @NotBlank(message = "text là bắt buộc") String text) {
     }
+
+    public record RenameQuestion(@NotBlank(message = "name là bắt buộc") String name) {
+    }
 }
