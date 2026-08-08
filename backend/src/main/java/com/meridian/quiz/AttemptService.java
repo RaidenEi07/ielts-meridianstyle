@@ -168,18 +168,16 @@ public class AttemptService {
         logEntry.setDetail(req.detail());
         logRepository.save(logEntry);
 
-        boolean autoSubmitted = false;
+        // Chỉ ghi nhận số lần vi phạm — KHÔNG tự nộp bài hộ thí sinh nữa (theo
+        // yêu cầu: chỉ cần theo dõi số lần chuyển tab, không ép nộp). Giữ
+        // nguyên trường autoSubmitted=false trong response để không đổi DTO,
+        // frontend đã bỏ luôn logic tự nộp phía nó nên trường này giờ luôn
+        // false, không còn tác dụng.
         if (VIOLATION_EVENTS.contains(req.eventType().toUpperCase())) {
             attempt.setViolations(attempt.getViolations() + 1);
             attemptRepository.save(attempt);
-            Quiz quiz = attempt.getQuiz();
-            if (quiz.isAntiCheatEnabled()
-                    && attempt.getViolations() >= quiz.getMaxViolations()) {
-                finalizeAttempt(attempt);
-                autoSubmitted = true;
-            }
         }
-        return new ViolationResult(attempt.getViolations(), autoSubmitted);
+        return new ViolationResult(attempt.getViolations(), false);
     }
 
     @Transactional
@@ -187,6 +185,16 @@ public class AttemptService {
         QuizAttempt attempt = requireOwnedAttempt(uid, attemptId);
         if (attempt.getStatus() == AttemptStatus.IN_PROGRESS) {
             finalizeAttempt(attempt);
+        }
+        // Bài đã được chấm/lưu điểm bình thường bên trên bất kể cài đặt này —
+        // chỉ chặn TRẢ VỀ điểm/đáp án cho thí sinh nếu giáo viên đã tắt xem
+        // lại. Trước đây chỉ chặn lúc quay lại xem sau (getResult()), còn lần
+        // đầu ngay-sau-khi-nộp thì luôn hiện — không đúng với tên cài đặt
+        // ("xem lại... SAU KHI NỘP" bao gồm cả lần đầu). Ném 403 giống hệt
+        // getResult() để frontend dùng chung đúng 1 luồng xử lý.
+        Long quizId = attempt.getQuiz().getId();
+        if (quizRepository.existsById(quizId) && !attempt.getQuiz().isAllowReviewAfterSubmit()) {
+            throw ApiException.forbidden("Giáo viên đã tắt xem lại bài làm cho bài này.");
         }
         return buildResult(attempt);
     }
@@ -420,13 +428,18 @@ public class AttemptService {
             QuizAttemptAnswer a = answers.get(qq.getId());
             String paragraphHtml = com.meridian.question.PassageParagraphs
                     .extract(q.passageContent(), q.answerParagraphIndex());
+            List<Long> correctOptionIds =
+                    ("MULTIPLE_CHOICE".equals(q.type()) || "TRUE_FALSE_NOT_GIVEN".equals(q.type()))
+                            ? q.options().stream().filter(QuestionParts.Option::correct)
+                                    .map(QuestionParts.Option::id).toList()
+                            : List.of();
             return new GradedItem(qq.getId(), q.type(), q.name(), qq.getMark(),
                     a != null ? a.getAwardedMark() : BigDecimal.ZERO,
                     a != null ? a.getCorrect() : Boolean.FALSE,
                     q.explanation(), q.answerParagraphIndex(), paragraphHtml,
                     com.meridian.question.CorrectAnswerFormatter.format(q,
                             startNumberByQuizQuestionId.getOrDefault(qq.getId(), 0)),
-                    qq.getGroupIntro());
+                    qq.getGroupIntro(), correctOptionIds);
         }).toList();
 
         return new AttemptResult(attempt.getId(), attempt.getStatus().name(),

@@ -121,7 +121,12 @@ public final class AttemptDtos {
             Integer answerParagraphIndex,
             String answerParagraphHtml,
             List<String> correctAnswerLines,
-            String groupIntro) {
+            String groupIntro,
+            /** ID các lựa chọn ĐÚNG (MULTIPLE_CHOICE/TRUE_FALSE_NOT_GIVEN) — để
+             * tô màu ngay tại đúng vị trí lựa chọn đó lúc xem lại, thay vì chỉ
+             * liệt kê text "Đáp án đúng" tách rời bên dưới. Rỗng với mọi dạng
+             * câu hỏi khác (Cloze/Matching/Kéo-thả/Lưới vẫn chỉ có text). */
+            List<Long> correctOptionIds) {
     }
 
     public record AttemptResult(

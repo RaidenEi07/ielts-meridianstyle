@@ -215,6 +215,11 @@ export function GradebookTable({
                                   {a.rawScore ?? "—"}/{a.maxScore ?? "—"}
                                   {a.bandScore != null ? ` · Band ${a.bandScore}` : ""}
                                 </span>
+                                {a.violations > 0 && (
+                                  <span className="rounded-full bg-red-soft px-2 py-0.5 font-semibold text-red">
+                                    ⚠ {a.violations} lần chuyển tab
+                                  </span>
+                                )}
                                 <button
                                   type="button"
                                   onClick={(e) => {

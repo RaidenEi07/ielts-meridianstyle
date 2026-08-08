@@ -38,9 +38,20 @@ public class EnrollmentService {
         this.contextService = contextService;
     }
 
+    /**
+     * Tự ghi danh — CHỈ còn cho phép với khóa Trẻ em/Tiểu học (miễn phí, mở
+     * sẵn, trang "vào học" tự âm thầm ghi danh khi học sinh vào xem — không
+     * hiện nút, không cần ai duyệt). Khóa IELTS (trả phí/quản lý theo lớp)
+     * bắt buộc phải do admin hoặc giáo viên phụ trách ghi danh, không cho tự
+     * ghi danh nữa — nếu không phải 2 nhóm trên thì chặn ở đây.
+     */
     @Transactional
     public EnrollmentDto enroll(UUID userId, EnrollmentRequests.Enroll req) {
         Course course = getPublishedCourse(req.courseId());
+        if (course.getCategory().getAudienceGroup() == CourseAudienceGroup.IELTS) {
+            throw ApiException.forbidden(
+                    "Khóa học này cần admin hoặc giáo viên phụ trách ghi danh cho bạn.");
+        }
         return doEnroll(requireUser(userId), course);
     }
 

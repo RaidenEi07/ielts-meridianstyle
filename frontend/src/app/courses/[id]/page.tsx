@@ -19,6 +19,9 @@ export default function CourseDetailPage() {
   const { accessToken, hydrated, loadMe, hasCapability } = useAuthStore();
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // Tự ghi danh chỉ còn áp dụng cho khóa Trẻ em/Tiểu học (miễn phí, mở sẵn) —
+  // khóa IELTS bắt buộc admin/giáo viên phụ trách ghi danh, không hiện nút
+  // này nữa (xem khối thông báo thay thế bên dưới JSX nút).
   const [enrollState, setEnrollState] = useState<
     "idle" | "loading" | "done" | "already"
   >("idle");
@@ -47,6 +50,12 @@ export default function CourseDetailPage() {
 
   useEffect(() => {
     if (!hydrated || !accessToken) return;
+    loadMe().catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hydrated, accessToken]);
+
+  useEffect(() => {
+    if (!hydrated || !accessToken || course?.audienceGroup === "IELTS") return;
     enrollmentApi
       .mine(accessToken)
       .then((enrollments) => {
@@ -55,13 +64,32 @@ export default function CourseDetailPage() {
         }
       })
       .catch(() => {});
-  }, [hydrated, accessToken, courseId]);
+  }, [hydrated, accessToken, courseId, course?.audienceGroup]);
 
-  useEffect(() => {
-    if (!hydrated || !accessToken) return;
-    loadMe().catch(() => {});
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, accessToken]);
+  async function handleEnroll() {
+    if (!accessToken) {
+      router.push("/login");
+      return;
+    }
+    setEnrollState("loading");
+    setEnrollMsg(null);
+    try {
+      await enrollmentApi.enroll(courseId, accessToken);
+      setEnrollState("done");
+      setEnrollMsg("Ghi danh thành công! Vào bảng điều khiển để bắt đầu học.");
+      toast.success("Ghi danh thành công!");
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 409) {
+        setEnrollState("already");
+        setEnrollMsg("Bạn đã ghi danh khóa học này rồi.");
+      } else {
+        setEnrollState("idle");
+        const msg = err instanceof ApiError ? err.message : "Ghi danh thất bại";
+        setEnrollMsg(msg);
+        toast.error(msg);
+      }
+    }
+  }
 
   function jumpToSection(id: number) {
     setShowAllSections(true);
@@ -105,31 +133,6 @@ export default function CourseDetailPage() {
       .then(setCourse)
       .catch((e) => setError(e.message));
   }, [courseId]);
-
-  async function handleEnroll() {
-    if (!accessToken) {
-      router.push("/login");
-      return;
-    }
-    setEnrollState("loading");
-    setEnrollMsg(null);
-    try {
-      await enrollmentApi.enroll(courseId, accessToken);
-      setEnrollState("done");
-      setEnrollMsg("Ghi danh thành công! Vào bảng điều khiển để bắt đầu học.");
-      toast.success("Ghi danh thành công!");
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setEnrollState("already");
-        setEnrollMsg("Bạn đã ghi danh khóa học này rồi.");
-      } else {
-        setEnrollState("idle");
-        const msg = err instanceof ApiError ? err.message : "Ghi danh thất bại";
-        setEnrollMsg(msg);
-        toast.error(msg);
-      }
-    }
-  }
 
   if (error) {
     return (
@@ -383,37 +386,49 @@ export default function CourseDetailPage() {
               {course.enrolledCount} học viên đã ghi danh
             </p>
 
-            <button
-              type="button"
-              onClick={handleEnroll}
-              disabled={enrollState === "loading" || enrollState === "done"}
-              className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            >
-              {enrollState === "loading"
-                ? "Đang xử lý…"
-                : enrollState === "done"
-                  ? (
-                    <>
-                      <CheckCircle2 className="h-4 w-4" /> Đã ghi danh
-                    </>
-                  )
-                  : enrollState === "already"
-                    ? "Đã ghi danh trước đó"
-                    : hydrated && !accessToken
-                      ? "Đăng nhập để ghi danh"
-                      : "Ghi danh ngay"}
-            </button>
-
-            {enrollMsg && (
-              <p
-                className={`mt-3 text-sm ${
-                  enrollState === "done" || enrollState === "already"
-                    ? "text-green"
-                    : "text-red"
-                }`}
-              >
-                {enrollMsg}
+            {course.audienceGroup === "IELTS" ? (
+              // Khóa IELTS không cho tự ghi danh nữa — chỉ admin/giáo viên
+              // phụ trách mới cấp quyền truy cập (xem admin/users hoặc trang
+              // "Học sinh của tôi" của giáo viên). Khóa Trẻ em/Tiểu học vẫn
+              // tự ghi danh được (miễn phí, mở sẵn) — xem nhánh else.
+              <p className="mt-5 rounded-lg border border-border bg-soft px-4 py-3 text-sm text-muted">
+                Liên hệ giáo viên hoặc quản trị viên để được ghi danh vào khóa học này.
               </p>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={handleEnroll}
+                  disabled={enrollState === "loading" || enrollState === "done"}
+                  className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                >
+                  {enrollState === "loading"
+                    ? "Đang xử lý…"
+                    : enrollState === "done"
+                      ? (
+                        <>
+                          <CheckCircle2 className="h-4 w-4" /> Đã ghi danh
+                        </>
+                      )
+                      : enrollState === "already"
+                        ? "Đã ghi danh trước đó"
+                        : hydrated && !accessToken
+                          ? "Đăng nhập để ghi danh"
+                          : "Ghi danh ngay"}
+                </button>
+
+                {enrollMsg && (
+                  <p
+                    className={`mt-3 text-sm ${
+                      enrollState === "done" || enrollState === "already"
+                        ? "text-green"
+                        : "text-red"
+                    }`}
+                  >
+                    {enrollMsg}
+                  </p>
+                )}
+              </>
             )}
 
             <Link

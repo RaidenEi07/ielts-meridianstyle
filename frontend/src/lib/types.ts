@@ -450,6 +450,9 @@ export interface GradedItem {
   answerParagraphHtml: string | null;
   correctAnswerLines: string[];
   groupIntro: string | null;
+  /** ID cac lua chon DUNG (MULTIPLE_CHOICE/TRUE_FALSE_NOT_GIVEN) - de to mau
+   * ngay tai vi tri lua chon do luc xem lai. Rong voi cac dang cau hoi khac. */
+  correctOptionIds: number[];
 }
 
 export interface AttemptResult {
@@ -493,6 +496,7 @@ export interface AttemptSummary {
   rawScore: number | null;
   maxScore: number | null;
   bandScore: number | null;
+  violations: number;
 }
 
 /** 1 lượt làm bài của CHÍNH học viên — trả về bởi GET /api/attempts/me, dùng cho trang "Lịch sử làm bài". */

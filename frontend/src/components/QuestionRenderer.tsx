@@ -4,7 +4,18 @@ import { DragDropImageBoard } from "@/components/DragDropImageBoard";
 import { DragDropSentence } from "@/components/DragDropSentence";
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
 import { isTfngOptionSet } from "@/lib/tfngOptionSet";
-import type { PlayerQuestion } from "@/lib/types";
+import type { GradedItem, PlayerQuestion } from "@/lib/types";
+
+/** Màu viền/nền cho 1 lựa chọn MC/TFNG lúc xem lại — đáp án đúng luôn hiện
+ * xanh (dù học sinh có chọn hay không, để biết lẽ ra phải chọn gì), lựa chọn
+ * học sinh chọn SAI thì hiện đỏ, còn lại giữ màu trung tính mặc định. */
+export function optionReviewClass(review: GradedItem | undefined, optionId: number, selected: boolean): string | null {
+  if (!review || review.correctOptionIds.length === 0) return null;
+  const isCorrect = review.correctOptionIds.includes(optionId);
+  if (isCorrect) return "border-green bg-green-soft text-green";
+  if (selected) return "border-red bg-red-soft text-red";
+  return null;
+}
 
 /**
  * Render phần trả lời (không kèm khung thẻ/số thứ tự/cờ đánh dấu) cho 1 câu hỏi,
@@ -17,6 +28,7 @@ export function QuestionRenderer({
   answer,
   onChange,
   blankOrder,
+  review,
 }: {
   question: PlayerQuestion;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -24,6 +36,9 @@ export function QuestionRenderer({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onChange: (response: any) => void;
   blankOrder?: Map<string, number>;
+  /** Có giá trị = đang xem lại SAU khi nộp bài — tô màu ngay tại vị trí từng
+   * lựa chọn MC/TFNG (xanh = đáp án đúng, đỏ = học sinh chọn sai). */
+  review?: GradedItem;
 }) {
   switch (question.type) {
     case "MULTIPLE_CHOICE": {
@@ -31,16 +46,53 @@ export function QuestionRenderer({
       // True/False/Not-Given) dưới dạng MULTIPLE_CHOICE thường, không có
       // settings.singleAnswer — nhưng bản chất luôn chỉ chọn được 1 đáp án,
       // ép về radio bất kể settings để không cho tick nhiều đáp án cùng lúc.
+      const looksLikeTfng = isTfngOptionSet(question.options.map((o) => o.content));
       const singleAnswer =
-        isTfngOptionSet(question.options.map((o) => o.content)) ||
-        Boolean((question.settings as { singleAnswer?: boolean } | null)?.singleAnswer);
+        looksLikeTfng || Boolean((question.settings as { singleAnswer?: boolean } | null)?.singleAnswer);
       const selected: number[] = answer?.selectedOptionIds ?? [];
+
+      if (looksLikeTfng) {
+        // Vẫn là type MULTIPLE_CHOICE thật trong dữ liệu (payload gửi lên
+        // giữ nguyên selectedOptionIds — không đổi được sang shape của
+        // TRUE_FALSE_NOT_GIVEN thật vì backend chấm điểm MULTIPLE_CHOICE
+        // luôn đọc đúng field này), NHƯNG hiện đúng dạng nút tròn riêng biệt
+        // giống TRUE_FALSE_NOT_GIVEN thật ở case bên dưới — trước đây hiện
+        // radio+nhãn như MC thường, nhìn không phân biệt được với MC thật.
+        return (
+          <div className="flex flex-wrap gap-2">
+            {question.options.map((o) => {
+              const checked = selected.includes(o.id);
+              const reviewCls = optionReviewClass(review, o.id, checked);
+              return (
+                <button
+                  key={o.id}
+                  type="button"
+                  onClick={() => onChange({ selectedOptionIds: [o.id] })}
+                  className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
+                    reviewCls
+                      ?? (checked
+                        ? "border-primary bg-primary-soft text-primary"
+                        : "border-border text-muted hover:text-text")
+                  }`}
+                >
+                  {o.content}
+                </button>
+              );
+            })}
+          </div>
+        );
+      }
+
       return (
         <div className="space-y-2">
           {question.options.map((o) => {
             const checked = selected.includes(o.id);
+            const reviewCls = optionReviewClass(review, o.id, checked);
             return (
-              <label key={o.id} className="flex cursor-pointer items-center gap-2 text-sm">
+              <label key={o.id}
+                className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm transition-colors ${
+                  reviewCls ?? "border-transparent"
+                }`}>
                 <input
                   type={singleAnswer ? "radio" : "checkbox"}
                   name={singleAnswer ? `q${question.quizQuestionId}-single` : undefined}
@@ -68,15 +120,17 @@ export function QuestionRenderer({
         <div className="flex flex-wrap gap-2">
           {question.options.map((o) => {
             const active = answer?.selectedOptionId === o.id;
+            const reviewCls = optionReviewClass(review, o.id, active);
             return (
               <button
                 key={o.id}
                 type="button"
                 onClick={() => onChange({ selectedOptionId: o.id })}
                 className={`rounded-full border px-4 py-1.5 text-sm font-medium transition-colors ${
-                  active
-                    ? "border-primary bg-primary-soft text-primary"
-                    : "border-border text-muted hover:text-text"
+                  reviewCls
+                    ?? (active
+                      ? "border-primary bg-primary-soft text-primary"
+                      : "border-border text-muted hover:text-text")
                 }`}
               >
                 {o.content}

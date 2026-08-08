@@ -25,7 +25,7 @@ import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
 import { KidsMatchingGame } from "@/components/kids/KidsMatchingGame";
 import { Logo } from "@/components/Logo";
-import { QuestionRenderer } from "@/components/QuestionRenderer";
+import { optionReviewClass, QuestionRenderer } from "@/components/QuestionRenderer";
 import { ApiError, quizApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
 import { isTfngOptionSet } from "@/lib/tfngOptionSet";
@@ -385,6 +385,10 @@ function QuizPlayerPageInner() {
   const [stepIndex, setStepIndex] = useState(0);
   const [focusId, setFocusId] = useState<string | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
+  // true = đang hiện màn xác nhận nộp bài (chưa nộp thật) — bấm "Nộp bài" ở
+  // thanh dưới chỉ mở màn này, phải bấm xác nhận ở ĐÂY thì mới thật sự gọi
+  // doSubmit(); bấm mũi tên trái thì đóng lại, quay về bài làm, không mất gì.
+  const [confirmingSubmit, setConfirmingSubmit] = useState(false);
   const [notes, setNotes] = useState<Note[]>([]);
   const submittingRef = useRef(false);
   const token = accessToken ?? "";
@@ -434,6 +438,15 @@ function QuizPlayerPageInner() {
       setResult(r);
       toast.success("Đã nộp bài");
     } catch (err) {
+      // Bài ĐÃ được nộp/chấm ở server (throw 403 xảy ra sau khi lưu điểm) —
+      // giáo viên chỉ tắt xem lại, không phải nộp thất bại. Dùng chung đúng
+      // luồng reviewBlocked với lúc quay lại xem sau (xem effect load attempt
+      // bên dưới) thay vì báo lỗi nộp bài.
+      if (err instanceof ApiError && err.status === 403) {
+        setReviewBlocked(true);
+        toast.success("Đã nộp bài");
+        return;
+      }
       toast.error(err instanceof ApiError ? err.message : "Nộp bài thất bại, vui lòng thử lại");
       submittingRef.current = false;
     }
@@ -489,10 +502,12 @@ function QuizPlayerPageInner() {
       if (now - lastLog < 800) return;
       lastLog = now;
       try {
+        // Chỉ ghi nhận + cảnh báo số lần chuyển tab — KHÔNG tự nộp bài hộ thí
+        // sinh nữa (trước đây tự nộp khi đủ số lần vi phạm, đã bỏ theo yêu
+        // cầu: chỉ cần theo dõi, không ép nộp).
         const res = await quizApi.logEvent(attemptId, "TAB_SWITCH", "rời khỏi bài thi", token);
         setViolations(res.violations);
         toast.error(`⚠ Cảnh báo chuyển tab (${res.violations}/${attempt.maxViolations})`);
-        if (res.autoSubmitted) doSubmit();
       } catch {
         /* ignore */
       }
@@ -786,11 +801,38 @@ function QuizPlayerPageInner() {
               </span>
             )}
           </span>
+          <button type="button" onClick={() => setNotesOpen((v) => !v)}
+            title="Ghi chú" aria-label="Ghi chú"
+            className={`relative flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-colors ${
+              notesOpen ? "bg-white/20 text-white" : "text-white/70 hover:bg-white/10 hover:text-white"
+            }`}>
+            <NotebookPen className="h-4 w-4" />
+            {notes.length > 0 && (
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-white">
+                {notes.length}
+              </span>
+            )}
+          </button>
           {result ? (
-            <span className="flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold">
-              <CheckCircle2 className="h-4 w-4" />
-              {round2(result.rawScore)}/{round2(result.maxScore)}
-              {result.bandScore != null && ` · Band ${result.bandScore}`}
+            <span className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-sm font-semibold">
+              <span className="flex items-center gap-1.5">
+                <CheckCircle2 className="h-4 w-4" />
+                {round2(result.rawScore)}/{round2(result.maxScore)} điểm
+                {result.bandScore != null && ` · Band ${result.bandScore}`}
+              </span>
+              {/* Điểm (marks) và số câu đúng có thể lệch nhau với các dạng
+                  chấm 1 phần (vd Cloze nhiều ô) — hiện thêm số câu đúng riêng
+                  cho rõ, không chỉ mỗi điểm. Bỏ qua câu Tự luận (chấm tay
+                  riêng, correct luôn null cho tới khi giáo viên chấm). */}
+              {(() => {
+                const gradable = result.breakdown.filter((b) => b.type !== "ESSAY");
+                const correctCount = gradable.filter((b) => b.correct === true).length;
+                return gradable.length > 0 ? (
+                  <span className="border-l border-white/20 pl-2 font-normal text-white/70">
+                    {correctCount}/{gradable.length} câu đúng
+                  </span>
+                ) : null;
+              })()}
             </span>
           ) : (
             remaining !== null && (
@@ -936,7 +978,7 @@ function QuizPlayerPageInner() {
               {returnTo ? "Về khóa học" : "Về bảng điều khiển"}
             </Link>
           ) : (
-            <button type="button" onClick={doSubmit}
+            <button type="button" onClick={() => setConfirmingSubmit(true)}
               className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
               <CheckCircle2 className="h-3.5 w-3.5" /> Nộp bài
             </button>
@@ -945,35 +987,19 @@ function QuizPlayerPageInner() {
       </nav>
 
       {/*
-        Nút bật/tắt Ghi chú (luôn hiện, không còn ẩn trong menu header nữa)
-        + điều hướng câu trước/sau, góc dưới bên phải. Bấm nút Ghi chú mở
-        panel dạng drawer đẩy toàn bộ giao diện làm bài sang trái (xem
-        <aside> ở cuối), không còn nổi đè lên nữa.
+        Điều hướng câu trước/sau, góc dưới bên phải — nút Ghi chú đã dời lên
+        thanh ngang trên cùng (xem <header>), không còn ở cụm nổi này nữa.
       */}
-      <div className="fixed bottom-20 z-30 flex flex-col items-end gap-2"
+      <div className="fixed bottom-20 z-30 flex items-center gap-2"
         style={{ right: fixedRightOffset + 24 }}>
-        <button type="button" onClick={() => setNotesOpen((v) => !v)}
-          title="Ghi chú" aria-label="Ghi chú"
-          className={`relative grid h-11 w-11 place-items-center rounded-full border shadow-md ${
-            notesOpen ? "border-primary bg-primary text-white" : "border-border bg-surface hover:bg-primary-soft"
-          }`}>
-          <NotebookPen className="h-5 w-5" />
-          {notes.length > 0 && (
-            <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-white">
-              {notes.length}
-            </span>
-          )}
+        <button type="button" onClick={() => stepBy(-1)} title="Câu trước"
+          className="grid h-11 w-11 place-items-center rounded-full border border-border bg-surface shadow-md hover:bg-primary-soft">
+          <ChevronLeft className="h-5 w-5" />
         </button>
-        <div className="flex items-center gap-2">
-          <button type="button" onClick={() => stepBy(-1)} title="Câu trước"
-            className="grid h-11 w-11 place-items-center rounded-full border border-border bg-surface shadow-md hover:bg-primary-soft">
-            <ChevronLeft className="h-5 w-5" />
-          </button>
-          <button type="button" onClick={() => stepBy(1)} title="Câu tiếp theo"
-            className="grid h-11 w-11 place-items-center rounded-full border border-border bg-surface shadow-md hover:bg-primary-soft">
-            <ChevronRight className="h-5 w-5" />
-          </button>
-        </div>
+        <button type="button" onClick={() => stepBy(1)} title="Câu tiếp theo"
+          className="grid h-11 w-11 place-items-center rounded-full border border-border bg-surface shadow-md hover:bg-primary-soft">
+          <ChevronRight className="h-5 w-5" />
+        </button>
       </div>
     </div>
     {notesOpen && (
@@ -987,6 +1013,58 @@ function QuizPlayerPageInner() {
         />
       </aside>
     )}
+    {confirmingSubmit && (
+      <SubmitConfirmScreen
+        answeredCount={answeredCount}
+        totalCount={orderedSlots.length}
+        onBack={() => setConfirmingSubmit(false)}
+        onConfirm={() => {
+          setConfirmingSubmit(false);
+          doSubmit();
+        }}
+      />
+    )}
+    </div>
+  );
+}
+
+/** Màn xác nhận nộp bài — chèn giữa lúc bấm "Nộp bài" và lúc thật sự gọi
+ * doSubmit(), để học sinh không lỡ tay nộp nhầm. Che kín toàn màn hình (thay
+ * vì hộp thoại nhỏ) theo đúng yêu cầu "chuyển sang 1 màn hình" — mũi tên trái
+ * đóng lại, quay về đúng chỗ đang làm dở, không mất gì (chưa gọi submit). */
+function SubmitConfirmScreen({
+  answeredCount, totalCount, onBack, onConfirm,
+}: {
+  answeredCount: number;
+  totalCount: number;
+  onBack: () => void;
+  onConfirm: () => void;
+}) {
+  const unanswered = totalCount - answeredCount;
+  return (
+    <div className="fixed inset-0 z-[200] grid place-items-center bg-bg px-6">
+      <div className="w-full max-w-md rounded-card border border-border bg-surface p-8 text-center shadow-lg">
+        <button type="button" onClick={onBack} title="Quay lại làm bài"
+          className="mb-4 flex items-center gap-1 text-sm font-semibold text-muted hover:text-text">
+          <ChevronLeft className="h-4 w-4" /> Quay lại bài làm
+        </button>
+        <h1 className="text-xl font-bold">Xác nhận nộp bài?</h1>
+        <p className="mt-3 text-sm text-muted">
+          Bạn đã trả lời <span className="font-semibold text-text">{answeredCount}/{totalCount}</span> câu.
+        </p>
+        {unanswered > 0 && (
+          <p className="mt-1 text-sm text-red">
+            Còn {unanswered} câu chưa trả lời — bài sẽ tính là sai/bỏ trống nếu nộp ngay bây giờ.
+          </p>
+        )}
+        <p className="mt-4 text-xs text-muted">
+          Sau khi nộp, bạn sẽ không thể sửa đáp án nữa.
+        </p>
+        <button type="button" onClick={onConfirm}
+          className="mt-6 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white hover:opacity-90">
+          Nộp bài chính thức
+        </button>
+      </div>
     </div>
   );
 }
@@ -1852,7 +1930,7 @@ function QuestionCard({
               onChange={onChange}
             />
           ) : (
-            <QuestionRenderer question={question} answer={answer} onChange={onChange} blankOrder={order} />
+            <QuestionRenderer question={question} answer={answer} onChange={onChange} blankOrder={order} review={review} />
           )}
         </div>
         {review && <ReviewAnswerBox review={review} />}
@@ -1921,8 +1999,9 @@ function McGridCard({
                   </td>
                   {q.options.map((opt) => {
                     const checked = selected.includes(opt.id);
+                    const cellCls = optionReviewClass(rowReview, opt.id, checked);
                     return (
-                      <td key={opt.id} className="border-b border-l border-border p-0 text-center">
+                      <td key={opt.id} className={`border-b border-l border-border p-0 text-center ${cellCls ?? ""}`}>
                         <label className="flex h-full w-full cursor-pointer items-center justify-center p-3 hover:bg-primary-soft">
                           <input
                             type="radio"

@@ -34,7 +34,8 @@ public final class ReportDtos {
             Instant submittedAt,
             BigDecimal rawScore,
             BigDecimal maxScore,
-            BigDecimal bandScore) {
+            BigDecimal bandScore,
+            int violations) {
     }
 
     /** Số câu đúng/sai theo từng dạng câu hỏi, gộp toàn bộ lịch sử làm bài của 1 học viên. */

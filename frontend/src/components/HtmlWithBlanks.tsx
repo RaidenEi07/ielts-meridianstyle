@@ -68,7 +68,7 @@ export function HtmlWithBlanks({
 
   return (
     <>
-      <div ref={containerRef} className={className} />
+      <div ref={containerRef} className={className} data-highlightable="true" />
       {slots.map((s) => createPortal(renderBlank(s.key, s.index), s.node, String(s.index)))}
     </>
   );

@@ -133,7 +133,7 @@ public class ReportService {
                     .sorted(Comparator.comparing(QuizAttempt::getStartedAt).reversed())
                     .map(a -> new AttemptSummary(a.getId(), a.getAttemptNumber(),
                             a.getStatus().name(), a.getSubmittedAt(), a.getRawScore(),
-                            a.getMaxScore(), a.getBandScore()))
+                            a.getMaxScore(), a.getBandScore(), a.getViolations()))
                     .toList();
             rows.add(new GradebookRow(quiz.getId(), quiz.getTitle(), course.getId(),
                     course.getTitle(), best.getRawScore(), best.getMaxScore(),
