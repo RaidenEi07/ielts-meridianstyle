@@ -406,7 +406,8 @@ function PagesPanel({
   }
 
   const usedNumbers = new Set(detail.pages.map((p) => p.pageNumber));
-  const nextNumber = [1, 2, 3].find((n) => !usedNumbers.has(n));
+  // Listening có 4 Part (Reading chỉ có 3 passage) — xem V39 migration.
+  const nextNumber = [1, 2, 3, 4].find((n) => !usedNumbers.has(n));
 
   async function addPage(e: React.FormEvent) {
     e.preventDefault();
@@ -459,7 +460,7 @@ function PagesPanel({
   return (
     <section className="rounded-card border border-border bg-surface p-6">
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Phân trang (Part 1-3)</h2>
+        <h2 className="text-lg font-semibold">Phân trang (Part 1-4)</h2>
         {nextNumber && !adding && (
           <button
             type="button"

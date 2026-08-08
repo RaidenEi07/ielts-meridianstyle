@@ -197,8 +197,11 @@ public class QuizService {
     public QuizPageDto setPage(UUID uid, Long quizId, QuizRequests.SetPage req) {
         Quiz quiz = requireQuiz(quizId);
         permissionService.requireCapability(uid, CAP, contextId(quiz.getContext()));
-        if (req.pageNumber() < 1 || req.pageNumber() > 3) {
-            throw ApiException.badRequest("page_number phải trong khoảng 1..3");
+        // Reading dùng tối đa 3 passage, nhưng Listening có 4 Part (1-10, 11-20,
+        // 21-30, 31-40) — giới hạn cũ ở 3 khiến Part 4 (và đôi khi Part 2) không
+        // bao giờ có chỗ hợp lệ để gắn câu hỏi vào, phải nằm mồ côi page_id=null.
+        if (req.pageNumber() < 1 || req.pageNumber() > 4) {
+            throw ApiException.badRequest("page_number phải trong khoảng 1..4");
         }
         QuizPage page = pageRepository.findByQuizIdOrderByPageNumberAsc(quizId).stream()
                 .filter(p -> p.getPageNumber() == req.pageNumber())
