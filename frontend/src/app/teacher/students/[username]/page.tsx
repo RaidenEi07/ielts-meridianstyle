@@ -174,7 +174,12 @@ export default function TeacherStudentDetailPage() {
         ) : (
           <>
             <WrongTypesSummary rows={wrongTypes} />
-            <GradebookTable rows={rows} emptyLabel="Học sinh này chưa có điểm nào." token={token} />
+            <GradebookTable
+              rows={rows}
+              emptyLabel="Học sinh này chưa có điểm nào."
+              token={token}
+              studentName={student?.fullName}
+            />
           </>
         )}
       </main>

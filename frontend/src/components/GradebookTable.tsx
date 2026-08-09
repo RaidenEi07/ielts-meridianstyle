@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronDown, X } from "lucide-react";
+import { ChevronDown, Download, FileDown, X } from "lucide-react";
 import { Fragment, useEffect, useState } from "react";
 import { gradingAdminApi } from "@/lib/api";
+import { downloadAttemptPdf, downloadGradebookCsv } from "@/lib/export";
 import { TYPE_META } from "@/lib/questionTypes";
-import type { AnswerGradingDto, GradebookRow } from "@/lib/types";
+import type { AnswerGradingDto, AttemptSummary, GradebookRow } from "@/lib/types";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
   GRADED: { label: "Đã chấm", cls: "bg-green-soft text-green" },
@@ -21,10 +22,16 @@ function fmtDate(iso: string | null): string {
 function AttemptDetailModal({
   attemptId,
   token,
+  studentName,
+  quizTitle,
+  attempt,
   onClose,
 }: {
   attemptId: number;
   token: string;
+  studentName: string;
+  quizTitle: string;
+  attempt: AttemptSummary;
   onClose: () => void;
 }) {
   const [answers, setAnswers] = useState<AnswerGradingDto[] | null>(null);
@@ -46,11 +53,34 @@ function AttemptDetailModal({
         className="max-h-[85vh] w-full max-w-xl overflow-y-auto rounded-card border border-border bg-surface p-6 shadow-lg"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="mb-4 flex items-center justify-between">
+        <div className="mb-4 flex items-center justify-between gap-3">
           <h3 className="text-lg font-semibold">Chi tiết lượt làm bài</h3>
-          <button type="button" onClick={onClose} className="text-faint hover:text-text">
-            <X className="h-5 w-5" />
-          </button>
+          <div className="flex items-center gap-3">
+            {answers && (
+              <button
+                type="button"
+                onClick={() =>
+                  downloadAttemptPdf({
+                    studentName,
+                    quizTitle,
+                    attemptNumber: attempt.attemptNumber,
+                    submittedAt: attempt.submittedAt,
+                    rawScore: attempt.rawScore,
+                    maxScore: attempt.maxScore,
+                    bandScore: attempt.bandScore,
+                    violations: attempt.violations,
+                    answers,
+                  })
+                }
+                className="flex items-center gap-1 text-sm font-semibold text-accent hover:underline"
+              >
+                <FileDown className="h-4 w-4" /> Xuất PDF
+              </button>
+            )}
+            <button type="button" onClick={onClose} className="text-faint hover:text-text">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
         </div>
         {error && <p className="text-sm text-red">{error}</p>}
         {!answers && !error ? (
@@ -108,13 +138,16 @@ export function GradebookTable({
   rows,
   emptyLabel,
   token,
+  studentName,
 }: {
   rows: GradebookRow[];
   emptyLabel: string;
   token?: string;
+  /** Tên học viên, chỉ cần khi có `token` — dùng để đặt tên file xuất CSV/PDF. */
+  studentName?: string;
 }) {
   const [expandedQuiz, setExpandedQuiz] = useState<number | null>(null);
-  const [viewingAttemptId, setViewingAttemptId] = useState<number | null>(null);
+  const [viewing, setViewing] = useState<{ attempt: AttemptSummary; quizTitle: string } | null>(null);
 
   const bands = rows.map((r) => r.bandScore).filter((b): b is number => b != null);
   const bestBand = bands.length ? Math.max(...bands) : null;
@@ -124,6 +157,17 @@ export function GradebookTable({
 
   return (
     <div className="space-y-6">
+      {token && rows.length > 0 && (
+        <div className="flex justify-end">
+          <button
+            type="button"
+            onClick={() => downloadGradebookCsv(rows, studentName ?? "hoc-vien")}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-accent hover:bg-soft"
+          >
+            <Download className="h-4 w-4" /> Xuất sổ điểm (CSV)
+          </button>
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-border bg-primary p-5 text-white">
           <p className="text-sm text-white/70">Band cao nhất</p>
@@ -224,7 +268,7 @@ export function GradebookTable({
                                   type="button"
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    setViewingAttemptId(a.attemptId);
+                                    setViewing({ attempt: a, quizTitle: r.quizTitle });
                                   }}
                                   className="ml-auto font-semibold text-accent hover:underline"
                                 >
@@ -244,11 +288,14 @@ export function GradebookTable({
         </table>
       </div>
 
-      {token && viewingAttemptId !== null && (
+      {token && viewing !== null && (
         <AttemptDetailModal
-          attemptId={viewingAttemptId}
+          attemptId={viewing.attempt.attemptId}
           token={token}
-          onClose={() => setViewingAttemptId(null)}
+          studentName={studentName ?? "Học viên"}
+          quizTitle={viewing.quizTitle}
+          attempt={viewing.attempt}
+          onClose={() => setViewing(null)}
         />
       )}
     </div>

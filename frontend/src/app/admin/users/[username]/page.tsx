@@ -184,7 +184,12 @@ export default function AdminStudentDetailPage() {
             <p className="text-muted">Đang tải…</p>
           ) : (
             <div className="space-y-6">
-              <GradebookTable rows={gradebook} emptyLabel="Học sinh này chưa có điểm nào." token={token} />
+              <GradebookTable
+                rows={gradebook}
+                emptyLabel="Học sinh này chưa có điểm nào."
+                token={token}
+                studentName={user?.fullName}
+              />
               <WrongTypesSummary rows={wrongTypes} />
             </div>
           )}
