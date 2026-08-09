@@ -127,9 +127,12 @@ async function htmlToPdf(html: string, widthPx: number, filename: string) {
       const ctx = slice.getContext("2d");
       if (!ctx) break;
       ctx.drawImage(canvas, 0, renderedPx, canvas.width, sliceHeightPx, 0, 0, canvas.width, sliceHeightPx);
-      const imgData = slice.toDataURL("image/png");
+      // JPEG, not PNG: this is a flat text/table report (large plain-white
+      // areas) where PNG's lossless encoding bloats the file 5-10x over a
+      // high-quality JPEG for no visible benefit.
+      const imgData = slice.toDataURL("image/jpeg", 0.92);
       if (!first) doc.addPage();
-      doc.addImage(imgData, "PNG", marginMm, marginMm, usableWidthMm, sliceHeightPx / pxPerMm);
+      doc.addImage(imgData, "JPEG", marginMm, marginMm, usableWidthMm, sliceHeightPx / pxPerMm);
       renderedPx += sliceHeightPx;
       first = false;
     }
