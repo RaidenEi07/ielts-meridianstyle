@@ -944,28 +944,43 @@ function QuizPlayerPageInner() {
               </button>
             ))}
           </div>
-          <div className="flex min-w-0 flex-1 items-center gap-1.5 overflow-x-auto">
+          <div className="flex min-w-0 flex-1 items-end gap-1.5 overflow-x-auto pt-4">
+            {/* overflow-x-auto ép overflow-y thành auto (ẩn phần tràn theo
+                trục dọc) chứ không phải visible như mặc định — pt-4 chừa đủ
+                chỗ để lá cờ nổi lên (-top-3.5) không bị cắt mất. */}
             {stepSlots(steps[stepIndex]).map((slot) => {
               const answered = isSlotAnswered(slot, answers);
               const isFlagged = flagged.has(slot.quizQuestionId);
               const isCurrent = focusId === slot.key;
               return (
-                <button
-                  key={slot.key}
-                  type="button"
-                  onClick={() => goToQuestion(slot.key)}
-                  title={`Câu ${order.get(slot.key)} — ${steps[stepIndex].label}`}
-                  className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-semibold transition-transform ${
-                    isCurrent ? "ring-2 ring-primary ring-offset-1 ring-offset-surface" : ""
-                  } ${
-                    // border-dashed cho cờ đánh dấu (không chỉ dựa vào màu) —
-                    // ở chế độ thi trắng-đen, accent/green trùng màu nhau nên
-                    // phải phân biệt được bằng hình dạng viền, không riêng màu.
-                    isFlagged ? "border-dashed border-accent bg-accent-soft text-accent"
-                      : answered ? "border-green bg-green-soft text-green"
-                      : "border-border text-muted"}`}>
-                  {order.get(slot.key)}
-                </button>
+                // Đánh dấu (bookmark) trước đây chỉ đổi viền/nền của chính nút
+                // số — tester báo không đủ rõ. Giờ thêm hẳn 1 lá cờ + vạch màu
+                // nổi hẳn lên PHÍA TRÊN số câu, nhìn lướt qua cả dải là thấy
+                // ngay câu nào đã đánh dấu, không phải nhìn kỹ từng nút.
+                <div key={slot.key} className="relative flex shrink-0 flex-col items-center">
+                  {isFlagged && (
+                    <>
+                      <Flag
+                        className="absolute -top-3.5 h-3 w-3 text-accent"
+                        fill="currentColor"
+                        aria-hidden="true"
+                      />
+                      <div className="mb-0.5 h-1 w-6 rounded-full bg-accent" />
+                    </>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => goToQuestion(slot.key)}
+                    title={`Câu ${order.get(slot.key)} — ${steps[stepIndex].label}${isFlagged ? " (đã đánh dấu)" : ""}`}
+                    className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-semibold transition-transform ${
+                      isCurrent ? "ring-2 ring-primary ring-offset-1 ring-offset-surface" : ""
+                    } ${
+                      isFlagged ? "border-accent bg-accent-soft text-accent"
+                        : answered ? "border-green bg-green-soft text-green"
+                        : "border-border text-muted"}`}>
+                    {order.get(slot.key)}
+                  </button>
+                </div>
               );
             })}
           </div>
