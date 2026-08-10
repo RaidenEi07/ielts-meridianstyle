@@ -180,7 +180,12 @@ public class AttemptService {
         return new ViolationResult(attempt.getViolations(), false);
     }
 
-    @Transactional
+    // noRollbackFor=ApiException.class: chặn TRẢ VỀ điểm/đáp án cho thí sinh
+    // bên dưới bằng cách ném ApiException, nhưng KHÔNG được để việc đó cuốn
+    // theo rollback luôn finalizeAttempt() ở trên — nếu không bài làm sẽ kẹt
+    // ở IN_PROGRESS mãi mãi (không bao giờ thực sự nộp/chấm được) dù comment
+    // gốc bên dưới khẳng định là chấm điểm vẫn diễn ra bình thường.
+    @Transactional(noRollbackFor = ApiException.class)
     public AttemptResult submit(UUID uid, Long attemptId) {
         QuizAttempt attempt = requireOwnedAttempt(uid, attemptId);
         if (attempt.getStatus() == AttemptStatus.IN_PROGRESS) {
