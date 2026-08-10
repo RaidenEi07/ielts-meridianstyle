@@ -197,6 +197,15 @@ export function QuestionRenderer({
                 {num}
               </span>
             ) : null;
+            // Xem lại sau khi nộp: trước đây mỗi ô trống chỉ đổi màu viền theo
+            // "có gõ gì chưa" (var(--primary)/var(--border)) — học sinh phải tự
+            // đối chiếu bằng mắt với khối "Đáp án đúng" liệt kê text tách rời
+            // bên dưới mới biết ô nào đúng/sai. Giờ tô thẳng tại từng ô: xanh
+            // = đúng, đỏ = sai, giống cách MC/TFNG đã tô ngay tại lựa chọn.
+            const subReview = review?.clozeSubCorrect?.[subIndex];
+            const reviewColor =
+              subReview === true ? "var(--green)" : subReview === false ? "var(--red)" : null;
+            const reviewTextClass = subReview === true ? "text-green" : subReview === false ? "text-red" : "";
             if (sub.subType === "SELECT") {
               const opts: string[] = Array.isArray(sub.options) ? sub.options : [];
               return (
@@ -206,7 +215,8 @@ export function QuestionRenderer({
                     id={blankId}
                     value={subs[subIndex] ?? ""}
                     onChange={(e) => onChange({ subs: { ...subs, [subIndex]: e.target.value } })}
-                    className="input inline-block w-auto text-sm"
+                    className={`input inline-block w-auto text-sm ${reviewTextClass}`}
+                    style={reviewColor ? { borderColor: reviewColor } : undefined}
                   >
                     <option value="">—</option>
                     {opts.map((opt) => (
@@ -226,8 +236,8 @@ export function QuestionRenderer({
                   type="text"
                   value={subs[subIndex] ?? ""}
                   onChange={(e) => onChange({ subs: { ...subs, [subIndex]: e.target.value } })}
-                  className="inline-block w-28 border-0 border-b-2 bg-transparent px-1 text-center outline-none"
-                  style={{ borderColor: subs[subIndex] ? "var(--primary)" : "var(--border)" }}
+                  className={`inline-block w-28 border-0 border-b-2 bg-transparent px-1 text-center font-semibold outline-none ${reviewTextClass}`}
+                  style={{ borderColor: reviewColor ?? (subs[subIndex] ? "var(--primary)" : "var(--border)") }}
                 />
               </span>
             );

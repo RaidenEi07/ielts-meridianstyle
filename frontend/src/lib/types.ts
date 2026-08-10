@@ -453,6 +453,9 @@ export interface GradedItem {
   /** ID cac lua chon DUNG (MULTIPLE_CHOICE/TRUE_FALSE_NOT_GIVEN) - de to mau
    * ngay tai vi tri lua chon do luc xem lai. Rong voi cac dang cau hoi khac. */
   correctOptionIds: number[];
+  /** subIndex (dang chuoi) -> o trong Cloze do dien dung hay sai - de to mau
+   * ngay tai tung o trong luc xem lai. Rong voi cac dang cau hoi khac. */
+  clozeSubCorrect: Record<string, boolean>;
 }
 
 export interface AttemptResult {

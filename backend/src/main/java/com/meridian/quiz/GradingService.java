@@ -128,20 +128,34 @@ public class GradingService {
 
     /** Trả về tỉ lệ số ô trống điền đúng trên tổng số ô trống (0..1). */
     private BigDecimal gradeCloze(QuestionDetailDto q, JsonNode r) {
+        if (q.clozeSubAnswers().isEmpty()) return BigDecimal.ZERO;
+        java.util.Map<Integer, Boolean> results = clozeSubResults(q, r);
+        long correctCount = results.values().stream().filter(Boolean::booleanValue).count();
+        return BigDecimal.valueOf(correctCount)
+                .divide(BigDecimal.valueOf(q.clozeSubAnswers().size()), 6, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * Đúng/sai của TỪNG ô trống Cloze (subIndex -> đúng hay không) — tách khỏi
+     * gradeCloze() để AttemptService dùng lại lúc build kết quả xem lại, tô
+     * màu ngay tại chỗ từng ô thay vì chỉ hiện điểm tổng của cả câu. Trước đây
+     * kết quả này bị tính ra rồi vứt đi ngay (chỉ giữ lại tỉ lệ đúng chung).
+     */
+    public java.util.Map<Integer, Boolean> clozeSubResults(QuestionDetailDto q, JsonNode r) {
         JsonNode subs = r == null ? null : r.get("subs");
-        if (subs == null || q.clozeSubAnswers().isEmpty()) return BigDecimal.ZERO;
-        int correctCount = 0;
+        java.util.Map<Integer, Boolean> result = new java.util.LinkedHashMap<>();
         for (QuestionParts.ClozeSubAnswer c : q.clozeSubAnswers()) {
-            String chosen = subs.path(String.valueOf(c.subIndex())).asString("").trim();
+            String chosen = subs == null ? "" : subs.path(String.valueOf(c.subIndex())).asString("").trim();
+            boolean ok = false;
             JsonNode accepted = c.acceptedAnswers();
             if (accepted != null && accepted.isArray()) {
                 for (JsonNode a : accepted) {
-                    if (stringEquals(a.asString(""), chosen, c.caseSensitive())) { correctCount++; break; }
+                    if (stringEquals(a.asString(""), chosen, c.caseSensitive())) { ok = true; break; }
                 }
             }
+            result.put(c.subIndex(), ok);
         }
-        return BigDecimal.valueOf(correctCount)
-                .divide(BigDecimal.valueOf(q.clozeSubAnswers().size()), 6, RoundingMode.HALF_UP);
+        return result;
     }
 
     private boolean gradeDrag(QuestionDetailDto q, JsonNode r) {

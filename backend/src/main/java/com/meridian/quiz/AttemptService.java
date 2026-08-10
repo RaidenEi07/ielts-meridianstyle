@@ -433,13 +433,23 @@ public class AttemptService {
                             ? q.options().stream().filter(QuestionParts.Option::correct)
                                     .map(QuestionParts.Option::id).toList()
                             : List.of();
+            // Tô màu ngay tại từng ô trống Cloze lúc xem lại (giống cách
+            // correctOptionIds tô màu ngay tại lựa chọn MC/TFNG) — trước đây
+            // học sinh phải tự đối chiếu bằng mắt với khối "Đáp án đúng" liệt
+            // kê text tách rời bên dưới, không biết ô nào mình điền đúng/sai.
+            Map<String, Boolean> clozeSubCorrect = "CLOZE".equals(q.type())
+                    ? gradingService.clozeSubResults(q, a != null ? parse(a.getResponse()) : null)
+                            .entrySet().stream()
+                            .collect(java.util.stream.Collectors.toMap(
+                                    e -> String.valueOf(e.getKey()), Map.Entry::getValue))
+                    : Map.of();
             return new GradedItem(qq.getId(), q.type(), q.name(), qq.getMark(),
                     a != null ? a.getAwardedMark() : BigDecimal.ZERO,
                     a != null ? a.getCorrect() : Boolean.FALSE,
                     q.explanation(), q.answerParagraphIndex(), paragraphHtml,
                     com.meridian.question.CorrectAnswerFormatter.format(q,
                             startNumberByQuizQuestionId.getOrDefault(qq.getId(), 0)),
-                    qq.getGroupIntro(), correctOptionIds);
+                    qq.getGroupIntro(), correctOptionIds, clozeSubCorrect);
         }).toList();
 
         return new AttemptResult(attempt.getId(), attempt.getStatus().name(),

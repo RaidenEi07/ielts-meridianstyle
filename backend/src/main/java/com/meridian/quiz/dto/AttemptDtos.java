@@ -126,7 +126,12 @@ public final class AttemptDtos {
              * tô màu ngay tại đúng vị trí lựa chọn đó lúc xem lại, thay vì chỉ
              * liệt kê text "Đáp án đúng" tách rời bên dưới. Rỗng với mọi dạng
              * câu hỏi khác (Cloze/Matching/Kéo-thả/Lưới vẫn chỉ có text). */
-            List<Long> correctOptionIds) {
+            List<Long> correctOptionIds,
+            /** subIndex (dạng chuỗi, khớp key JSON của response.subs) -> ô
+             * trống đó điền đúng hay sai — chỉ có với CLOZE, để tô màu ngay
+             * tại từng ô trống lúc xem lại thay vì chỉ hiện điểm tổng cả câu.
+             * Rỗng với mọi dạng câu hỏi khác. */
+            java.util.Map<String, Boolean> clozeSubCorrect) {
     }
 
     public record AttemptResult(
