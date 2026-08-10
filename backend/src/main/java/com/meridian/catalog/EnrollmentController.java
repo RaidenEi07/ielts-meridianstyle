@@ -51,6 +51,15 @@ public class EnrollmentController {
         return enrollmentService.adminListEnrollments(uid(), userId);
     }
 
+    /** Admin ghi danh trực tiếp 1 học sinh vào 1 khóa học — không cần học sinh
+     * đã có trong roster của giáo viên nào (khác {@code /api/teacher/roster/.../enroll}). */
+    @PostMapping("/admin/{userId}")
+    public ResponseEntity<EnrollmentDto> enrollByAdmin(@PathVariable UUID userId,
+            @Valid @RequestBody EnrollmentRequests.Enroll req) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(enrollmentService.enrollByAdmin(uid(), userId, req.courseId()));
+    }
+
     @PatchMapping("/{id}/progress")
     public EnrollmentDto updateProgress(@PathVariable Long id,
             @Valid @RequestBody EnrollmentRequests.UpdateProgress req) {

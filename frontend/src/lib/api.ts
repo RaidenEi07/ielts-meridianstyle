@@ -509,6 +509,13 @@ export const enrollmentApi = {
 
   forStudentAsAdmin: (token: string, userId: string) =>
     apiFetch<Enrollment[]>(`/api/enrollments/admin/${userId}`, { token }),
+
+  enrollStudentAsAdmin: (token: string, userId: string, courseId: number) =>
+    apiFetch<Enrollment>(`/api/enrollments/admin/${userId}`, {
+      method: "POST",
+      body: { courseId },
+      token,
+    }),
 };
 
 // ---- Gợi ý khóa học (bản đơn giản, v1) ----

@@ -70,6 +70,20 @@ public class EnrollmentService {
         return doEnroll(requireUser(studentId), course);
     }
 
+    /**
+     * Admin ghi danh trực tiếp 1 học sinh bất kỳ vào 1 khóa học bất kỳ — không
+     * cần học sinh thuộc roster của ai (khác {@link #enrollByTeacher}, vốn chỉ
+     * cho giáo viên ghi danh học sinh MÌNH phụ trách). Phát hiện qua tester QA:
+     * trước đây chỉ giáo viên mới có đường ghi danh, admin hoàn toàn không có,
+     * dù yêu cầu gốc là "chỉ admin HOẶC giáo viên ghi danh mới làm được".
+     */
+    @Transactional
+    public EnrollmentDto enrollByAdmin(UUID adminId, UUID studentId, Long courseId) {
+        permissionService.requireSystemCapability(adminId, "user:manage");
+        Course course = getPublishedCourse(courseId);
+        return doEnroll(requireUser(studentId), course);
+    }
+
     private Course getPublishedCourse(Long courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy khóa học"));
