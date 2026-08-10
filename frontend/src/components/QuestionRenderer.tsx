@@ -83,33 +83,44 @@ export function QuestionRenderer({
         );
       }
 
+      // "Choose TWO letters" kiểu câu hỏi — correctAnswerCount là SỐ LƯỢNG đáp
+      // án đúng (không lộ đáp án nào), tính sẵn ở backend, dùng để chặn học
+      // sinh tick quá số ô đề bài cho phép — trước đây checkbox không giới
+      // hạn gì, tick được cả 5/5 dù đề chỉ hỏi "chọn HAI".
+      const maxSelect = !singleAnswer && (question.correctAnswerCount ?? 0) > 1
+        ? question.correctAnswerCount
+        : null;
       return (
         <div className="space-y-2">
           {question.options.map((o) => {
             const checked = selected.includes(o.id);
             const reviewCls = optionReviewClass(review, o.id, checked);
+            const limitReached = !checked && maxSelect != null && selected.length >= maxSelect;
             return (
               // text-text tường minh — nếu không, label không có class màu
               // chữ nào sẽ THỪA KẾ màu đã tính sẵn của <body> (nằm ngoài
               // .exam-mode), bỏ qua luôn việc exam-mode ép chữ về đen tuyệt
               // đối lúc đang thi, ra màu be nhạt gần như không đọc được.
               <label key={o.id}
-                className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm text-text transition-colors ${
-                  reviewCls ?? "border-transparent"
-                }`}>
+                title={limitReached ? `Chỉ được chọn tối đa ${maxSelect}` : undefined}
+                className={`flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm text-text transition-colors ${
+                  limitReached ? "cursor-not-allowed opacity-50" : "cursor-pointer"
+                } ${reviewCls ?? "border-transparent"}`}>
                 <input
                   type={singleAnswer ? "radio" : "checkbox"}
                   name={singleAnswer ? `q${question.quizQuestionId}-single` : undefined}
                   checked={checked}
-                  onChange={() =>
+                  disabled={limitReached}
+                  onChange={() => {
+                    if (limitReached) return;
                     onChange({
                       selectedOptionIds: singleAnswer
                         ? [o.id]
                         : checked
                           ? selected.filter((x) => x !== o.id)
                           : [...selected, o.id],
-                    })
-                  }
+                    });
+                  }}
                 />
                 {o.content}
               </label>
