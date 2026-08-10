@@ -89,8 +89,12 @@ export function QuestionRenderer({
             const checked = selected.includes(o.id);
             const reviewCls = optionReviewClass(review, o.id, checked);
             return (
+              // text-text tường minh — nếu không, label không có class màu
+              // chữ nào sẽ THỪA KẾ màu đã tính sẵn của <body> (nằm ngoài
+              // .exam-mode), bỏ qua luôn việc exam-mode ép chữ về đen tuyệt
+              // đối lúc đang thi, ra màu be nhạt gần như không đọc được.
               <label key={o.id}
-                className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm transition-colors ${
+                className={`flex cursor-pointer items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm text-text transition-colors ${
                   reviewCls ?? "border-transparent"
                 }`}>
                 <input
@@ -147,7 +151,7 @@ export function QuestionRenderer({
           value={answer?.text ?? ""}
           onChange={(e) => onChange({ text: e.target.value })}
           placeholder="Nhập câu trả lời…"
-          className="w-full max-w-sm border-b-2 border-primary/40 bg-transparent px-1 py-1.5 outline-none focus:border-primary"
+          className="w-full max-w-sm border-b-2 border-primary/40 bg-transparent px-1 py-1.5 text-text outline-none focus:border-primary"
         />
       );
 
@@ -157,7 +161,7 @@ export function QuestionRenderer({
         <div className="space-y-2">
           {question.matchingPairs.map((p) => (
             <div key={p.id} className="flex items-center gap-3 text-sm">
-              <span className="w-40 shrink-0 font-medium">{p.leftItem}</span>
+              <span className="w-40 shrink-0 font-medium text-text">{p.leftItem}</span>
               <span className="text-muted">↔</span>
               <select
                 value={matches[String(p.id)] ?? ""}
@@ -236,7 +240,7 @@ export function QuestionRenderer({
                   type="text"
                   value={subs[subIndex] ?? ""}
                   onChange={(e) => onChange({ subs: { ...subs, [subIndex]: e.target.value } })}
-                  className={`inline-block w-28 border-0 border-b-2 bg-transparent px-1 text-center font-semibold outline-none ${reviewTextClass}`}
+                  className={`inline-block w-28 border-0 border-b-2 bg-transparent px-1 text-center font-semibold outline-none ${reviewTextClass || "text-text"}`}
                   style={{ borderColor: reviewColor ?? (subs[subIndex] ? "var(--primary)" : "var(--border)") }}
                 />
               </span>
@@ -298,7 +302,7 @@ export function QuestionRenderer({
             <tbody>
               {question.gridRows.map((row, idx) => (
                 <tr key={row.id} className={idx % 2 === 1 ? "bg-soft/40" : undefined}>
-                  <td className="border-b border-border p-3 font-medium">{row.rowText}</td>
+                  <td className="border-b border-border p-3 font-medium text-text">{row.rowText}</td>
                   {question.gridColumns.map((c) => {
                     const checked = choices[String(row.id)] === c.label;
                     return (

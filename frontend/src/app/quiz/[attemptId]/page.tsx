@@ -885,6 +885,7 @@ function QuizPlayerPageInner() {
                   focusedId={focusId}
                   onAnswer={setAnswer}
                   onFlag={toggleFlag}
+                  onCaptureNote={addNote}
                   started={result ? true : audioStarted}
                   ended={audioEnded}
                   transferLeft={audioTransferLeft}
@@ -1104,7 +1105,7 @@ function NotesPanel({
   return (
     <div className="flex h-full flex-col p-4">
       <div className="mb-3 flex shrink-0 items-center justify-between">
-        <span className="text-sm font-semibold">Ghi chú của tôi</span>
+        <span className="text-sm font-semibold text-text">Ghi chú của tôi</span>
         <button type="button" onClick={onClose} className="text-muted hover:text-red">
           <X className="h-4 w-4" />
         </button>
@@ -1142,7 +1143,7 @@ function NotesPanel({
               }`}
             >
               {n.markId && <Highlighter className="mt-0.5 h-3.5 w-3.5 shrink-0 text-accent" />}
-              <span className="flex-1 whitespace-pre-wrap break-words">
+              <span className="flex-1 whitespace-pre-wrap break-words text-text">
                 {n.quote && (
                   <span className="mb-0.5 block truncate text-xs italic text-muted">“{n.quote}”</span>
                 )}
@@ -1601,7 +1602,7 @@ function ReadingSplitPane({
 const TRANSFER_TIME_SECONDS = 600; // 10 phút theo chuẩn IELTS CDT
 
 function ListeningPane({
-  page, questions, order, answers, flagged, focusedId, onAnswer, onFlag,
+  page, questions, order, answers, flagged, focusedId, onAnswer, onFlag, onCaptureNote,
   started, ended, transferLeft, onStart, review,
 }: {
   page: ExamPage;
@@ -1614,12 +1615,23 @@ function ListeningPane({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   onAnswer: (q: PlayerQuestion, r: any) => void;
   onFlag: (id: number) => void;
+  onCaptureNote: (text: string, markId: string, stepKey: string, quote: string) => void;
   started: boolean;
   ended: boolean;
   transferLeft: number | null;
   onStart: () => void;
   review?: Map<number, GradedItem>;
 }) {
+  // Bôi đen để highlight/ghi chú — trước đây chỉ gắn cho ReadingSplitPane
+  // (passageRef/questionsRef riêng), Listening dùng CHUNG QuestionCard nhưng
+  // chưa từng gắn useSelectionCapture nên bôi đen không có tác dụng gì (không
+  // mở menu Highlight/Ghi chú) dù các câu hỏi vẫn có data-highlightable.
+  const questionsRef = useRef<HTMLDivElement>(null);
+  const stepKey = `page-${page.id}`;
+  const questionsSel = useSelectionCapture(questionsRef, (text, quote, markId) => onCaptureNote(text, markId, stepKey, quote));
+  const questionsChoice = questionsSel.stage.kind === "choice" ? questionsSel.stage : null;
+  const questionsCompose = questionsSel.stage.kind === "compose" ? questionsSel.stage : null;
+
   return (
     <div id={`q-page-${page.id}`} className="relative">
       <div className="border-b border-border px-6 py-2 text-sm font-medium"
@@ -1652,7 +1664,8 @@ function ListeningPane({
         </div>
       )}
 
-      <div className="mx-auto max-w-3xl px-6 py-6">
+      <div ref={questionsRef} onMouseUp={questionsSel.handleMouseUp}
+        className="relative mx-auto max-w-3xl select-text px-6 py-6">
         {/* Transfer time banner */}
         {ended && transferLeft !== null && transferLeft > 0 && (
           <div className="mt-4 flex items-start gap-2 rounded-lg bg-accent-soft px-4 py-3 text-sm text-accent">
@@ -1699,6 +1712,10 @@ function ListeningPane({
             );
           })}
         </div>
+        <SelectionMenu state={questionsChoice} onHighlight={questionsSel.applyHighlight}
+          onNote={questionsSel.openNoteCompose} onClose={questionsSel.closeMenu} />
+        <NoteComposer key={questionsCompose?.sessionKey ?? "closed"} state={questionsCompose}
+          onSubmit={questionsSel.submitNote} onCancel={questionsSel.closeMenu} />
       </div>
     </div>
   );
@@ -1741,7 +1758,7 @@ function WritingEditor({
             readOnly={!!review}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Viết bài của bạn tại đây…"
-            className="min-h-[280px] flex-1 resize-none rounded-t-card bg-transparent p-4 outline-none"
+            className="min-h-[280px] flex-1 resize-none rounded-t-card bg-transparent p-4 text-text outline-none"
             style={{ fontFamily: "var(--font-serif)", fontSize: "15.5px", lineHeight: 1.9 }}
           />
           <div className="flex items-center justify-between border-t border-border px-4 py-2 text-sm">
@@ -2003,7 +2020,7 @@ function McGridCard({
                       <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
                         {order.get(`${q.quizQuestionId}`) ?? ""}
                       </span>
-                      <span className="flex-1 font-medium">{q.stem ?? q.name}</span>
+                      <span className="flex-1 font-medium text-text">{q.stem ?? q.name}</span>
                       {rowReview && <ReviewStatusBadge review={rowReview} />}
                       <button type="button" onClick={() => onFlag(q.quizQuestionId)} title="Đánh dấu"
                         className={isFlagged ? "text-accent" : "text-faint hover:text-accent"}>

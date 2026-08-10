@@ -97,7 +97,7 @@ export function DragDropSentence({
   return (
     <DndContext onDragEnd={handleDragEnd}>
       <div className="space-y-5">
-        <p className="whitespace-pre-wrap text-lg leading-10">
+        <p className="whitespace-pre-wrap text-lg leading-10 text-text">
           {parts.map((part, i) => {
             if (i % 2 === 0) return <span key={i}>{part}</span>;
             const targetLabel = part;
