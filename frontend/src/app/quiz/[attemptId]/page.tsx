@@ -719,9 +719,14 @@ function QuizPlayerPageInner() {
   }
   if (reviewBlocked) {
     return (
-      <div className="grid min-h-screen place-items-center px-6 text-center text-muted">
-        Giáo viên đã tắt xem lại bài làm cho bài này.{" "}
-        <Link href="/attempts" className="text-accent">Về lịch sử làm bài</Link>
+      <div className="grid min-h-screen place-items-center px-6 text-center">
+        <div>
+          <p className="text-2xl font-semibold">Chúc mừng bạn đã hoàn thành bài kiểm tra!</p>
+          <p className="mt-2 text-sm text-muted">
+            Kết quả và đáp án của bài này sẽ được giáo viên thông báo sau.
+          </p>
+          <Link href="/attempts" className="mt-6 inline-block text-accent">Về lịch sử làm bài</Link>
+        </div>
       </div>
     );
   }
