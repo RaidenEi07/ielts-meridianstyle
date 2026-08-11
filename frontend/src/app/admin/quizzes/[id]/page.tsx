@@ -35,6 +35,7 @@ import { useEditModeStore } from "@/store/editMode";
 import { useToast } from "@/store/toast";
 import { QuestionForm } from "@/app/teacher/questions/QuestionForm";
 import { PreviewModal } from "@/app/teacher/questions/PreviewModal";
+import { PartPreviewModal } from "./PartPreviewModal";
 import { PassageForm } from "./PassageForm";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
@@ -633,6 +634,8 @@ function QuestionsPanel({
   const [editingDetail, setEditingDetail] = useState<QuestionDetail | null>(null);
   const [previewingId, setPreviewingId] = useState<number | null>(null);
   const [previewingDetail, setPreviewingDetail] = useState<QuestionDetail | null>(null);
+  const [previewingPartGroup, setPreviewingPartGroup] = useState<QuestionGroup | null>(null);
+  const [previewingPartQuestions, setPreviewingPartQuestions] = useState<QuestionDetail[] | null>(null);
   const [editingGroupIntroFor, setEditingGroupIntroFor] = useState<number | null>(null);
   const [groupIntroDraft, setGroupIntroDraft] = useState("");
   const [savingGroupIntro, setSavingGroupIntro] = useState(false);
@@ -734,6 +737,25 @@ function QuestionsPanel({
   function closePreview() {
     setPreviewingId(null);
     setPreviewingDetail(null);
+  }
+
+  // Xem trước CẢ Part chứa câu hỏi (đoạn văn/audio + mọi câu cùng Part, đúng
+  // thứ tự) — dùng cho câu ĐÃ gắn vào quiz, thay cho xem 1 câu cô lập.
+  function openPartPreview(group: QuestionGroup) {
+    setPreviewingPartGroup(group);
+    setPreviewingPartQuestions(null);
+    ensureFormData(); // đảm bảo `passages` đã tải để lấy nội dung đoạn văn/audio
+    Promise.all(group.items.map((q) => questionBankApi.question(token, q.questionId)))
+      .then(setPreviewingPartQuestions)
+      .catch(() => {
+        setError("Không tải được câu hỏi để xem trước");
+        setPreviewingPartGroup(null);
+      });
+  }
+
+  function closePartPreview() {
+    setPreviewingPartGroup(null);
+    setPreviewingPartQuestions(null);
   }
 
   function handleQuestionEdited() {
@@ -966,8 +988,9 @@ function QuestionsPanel({
                             )}
                             <button
                               type="button"
-                              onClick={() => openPreview(q.questionId)}
+                              onClick={() => openPartPreview(group)}
                               className="text-xs font-semibold text-muted hover:text-text"
+                              title="Xem trước cả Part (đoạn văn/audio + mọi câu hỏi cùng Part)"
                             >
                               Xem trước
                             </button>
@@ -1060,6 +1083,16 @@ function QuestionsPanel({
 
       {previewingId !== null && previewingDetail && (
         <PreviewModal question={previewingDetail} onClose={closePreview} />
+      )}
+
+      {previewingPartGroup && previewingPartQuestions && (
+        <PartPreviewModal
+          page={previewingPartGroup.page}
+          passage={passages.find((p) => p.id === previewingPartGroup.page?.passageId)}
+          items={previewingPartGroup.items}
+          questions={previewingPartQuestions}
+          onClose={closePartPreview}
+        />
       )}
 
       {picking && (
