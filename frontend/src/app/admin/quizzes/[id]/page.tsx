@@ -34,6 +34,7 @@ import { useConfirm } from "@/store/confirm";
 import { useEditModeStore } from "@/store/editMode";
 import { useToast } from "@/store/toast";
 import { QuestionForm } from "@/app/teacher/questions/QuestionForm";
+import { PreviewModal } from "@/app/teacher/questions/PreviewModal";
 import { PassageForm } from "./PassageForm";
 
 const STATUS_META: Record<string, { label: string; cls: string }> = {
@@ -630,6 +631,8 @@ function QuestionsPanel({
   const [pageId, setPageId] = useState<number | "">("");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editingDetail, setEditingDetail] = useState<QuestionDetail | null>(null);
+  const [previewingId, setPreviewingId] = useState<number | null>(null);
+  const [previewingDetail, setPreviewingDetail] = useState<QuestionDetail | null>(null);
   const [editingGroupIntroFor, setEditingGroupIntroFor] = useState<number | null>(null);
   const [groupIntroDraft, setGroupIntroDraft] = useState("");
   const [savingGroupIntro, setSavingGroupIntro] = useState(false);
@@ -715,6 +718,22 @@ function QuestionsPanel({
   function closeEdit() {
     setEditingId(null);
     setEditingDetail(null);
+  }
+
+  // Xem trước câu hỏi (góc nhìn học viên, không đáp án) ngay tại trang quiz —
+  // tái dùng PreviewModal có sẵn ở ngân hàng câu hỏi.
+  function openPreview(questionId: number) {
+    setPreviewingId(questionId);
+    setPreviewingDetail(null);
+    questionBankApi.question(token, questionId).then(setPreviewingDetail).catch(() => {
+      setError("Không tải được câu hỏi để xem trước");
+      setPreviewingId(null);
+    });
+  }
+
+  function closePreview() {
+    setPreviewingId(null);
+    setPreviewingDetail(null);
   }
 
   function handleQuestionEdited() {
@@ -947,6 +966,13 @@ function QuestionsPanel({
                             )}
                             <button
                               type="button"
+                              onClick={() => openPreview(q.questionId)}
+                              className="text-xs font-semibold text-muted hover:text-text"
+                            >
+                              Xem trước
+                            </button>
+                            <button
+                              type="button"
                               onClick={() => openEdit(q.questionId)}
                               className="text-xs font-semibold text-primary"
                             >
@@ -1030,6 +1056,10 @@ function QuestionsPanel({
             )}
           </div>
         </div>
+      )}
+
+      {previewingId !== null && previewingDetail && (
+        <PreviewModal question={previewingDetail} onClose={closePreview} />
       )}
 
       {picking && (
@@ -1135,6 +1165,17 @@ function QuestionsPanel({
                           </span>
                           <span className="flex-1">{q.name}</span>
                           <span className="text-xs text-muted">{q.categoryName}</span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              openPreview(q.id);
+                            }}
+                            className="text-xs font-semibold text-muted hover:text-text"
+                          >
+                            Xem trước
+                          </button>
                           <button
                             type="button"
                             onClick={(e) => {

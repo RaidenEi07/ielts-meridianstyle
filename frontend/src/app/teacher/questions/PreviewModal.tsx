@@ -15,7 +15,7 @@ export function PreviewModal({ question, onClose }: { question: QuestionDetail; 
   const playerQuestion = toPlayerQuestion(question);
 
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-black/40 px-4" onClick={onClose}>
+    <div className="fixed inset-0 z-[110] grid place-items-center bg-black/40 px-4" onClick={onClose}>
       <div
         className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-card border border-border bg-surface p-6"
         onClick={(e) => e.stopPropagation()}
