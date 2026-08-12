@@ -3,7 +3,7 @@
 import { Star, Trash2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { ApiError, vocabAdminApi } from "@/lib/api";
-import type { AdminVocabRecording, VocabSetSummary } from "@/lib/types";
+import type { AdminVocabRecording, VocabSetDetail, VocabSetSummary } from "@/lib/types";
 import { useConfirm } from "@/store/confirm";
 import { useToast } from "@/store/toast";
 
@@ -70,14 +70,57 @@ export function VocabAdminPanel({ sectionId, token }: { sectionId: number; token
                 </button>
               </div>
               {open && (
-                <div className="border-t border-border p-3">
-                  <VocabSetGradingQueue setId={s.id} token={token} />
+                <div className="space-y-4 border-t border-border p-3">
+                  <div>
+                    <h5 className="mb-2 text-xs font-semibold text-muted">Nội dung bộ thẻ</h5>
+                    <VocabSetContentPreview setId={s.id} token={token} />
+                  </div>
+                  <div>
+                    <h5 className="mb-2 text-xs font-semibold text-muted">Chấm bài học sinh</h5>
+                    <VocabSetGradingQueue setId={s.id} token={token} />
+                  </div>
                 </div>
               )}
             </div>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+/** Xem trước toàn bộ nội dung 1 bộ thẻ (từ/câu + audio mẫu) — dùng API admin
+ * (không cần ghi danh khóa học, khác với vocabApi dành cho học sinh) để admin
+ * duyệt nội dung đã import trước khi xuất bản khóa học. */
+function VocabSetContentPreview({ setId, token }: { setId: number; token: string }) {
+  const [detail, setDetail] = useState<VocabSetDetail | null>(null);
+
+  useEffect(() => {
+    vocabAdminApi
+      .getSet(token, setId)
+      .then(setDetail)
+      .catch(() => setDetail(null));
+  }, [setId, token]);
+
+  if (!detail) return <p className="text-xs text-muted">Đang tải…</p>;
+  if (detail.cards.length === 0) return <p className="text-xs text-muted">Bộ thẻ này chưa có thẻ nào.</p>;
+
+  return (
+    <div className="max-h-96 space-y-1.5 overflow-y-auto pr-1">
+      {detail.cards.map((c, i) => (
+        <div key={c.id} className="flex flex-wrap items-center gap-2 rounded-lg bg-surface px-3 py-2">
+          <span className="w-6 shrink-0 text-xs text-faint">{i + 1}.</span>
+          <span
+            className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${
+              c.cardType === "WORD" ? "bg-accent-soft text-accent" : "bg-soft text-muted"
+            }`}
+          >
+            {c.cardType === "WORD" ? "Từ vựng" : "Câu ví dụ"}
+          </span>
+          <span className="min-w-[160px] flex-1 text-sm">{c.text}</span>
+          <audio src={c.audioUrl} controls className="h-8 w-56 shrink-0" />
+        </div>
+      ))}
     </div>
   );
 }
