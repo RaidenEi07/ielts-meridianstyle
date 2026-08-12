@@ -9,9 +9,11 @@ import com.meridian.catalog.EnrollmentRepository;
 import com.meridian.catalog.dto.CourseSummaryDto;
 import com.meridian.gradebook.ReportService;
 import com.meridian.gradebook.dto.ReportDtos.GradebookRow;
+import com.meridian.gradebook.dto.ReportDtos.SkillBreakdown;
 import com.meridian.recommendation.dto.RecommendedCoursesDto;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -30,6 +32,15 @@ import org.springframework.transaction.annotation.Transactional;
 public class RecommendationService {
 
     private static final int LIMIT = 5;
+    /** Cần ít nhất chừng này câu đã làm ở 1 kỹ năng mới coi là đủ tin cậy để
+     * gọi là "yếu" — tránh 1-2 câu sai đầu tiên đã vội kết luận. */
+    private static final long MIN_SKILL_SAMPLE = 4;
+
+    private static final Map<String, String> SKILL_LABELS = Map.of(
+            "LISTENING", "Nghe",
+            "READING", "Đọc",
+            "WRITING", "Viết",
+            "SPEAKING", "Nói");
 
     private final ReportService reportService;
     private final EnrollmentRepository enrollmentRepository;
@@ -66,6 +77,9 @@ public class RecommendationService {
             });
         }
 
+        List<SkillBreakdown> skillBreakdown = reportService.skillBreakdownForUser(userId);
+        String weakestSkill = weakestSkill(skillBreakdown);
+
         String note;
         List<Course> candidates;
         if (groups.isEmpty()) {
@@ -76,13 +90,35 @@ public class RecommendationService {
             if (candidates.isEmpty()) {
                 candidates = popularPublished(enrolledCourseIds);
             }
-            note = "Gợi ý dựa trên nhóm khóa học bạn đang học — chưa phân tích chi tiết theo kỹ năng.";
+            note = weakestSkill != null
+                    ? buildWeakestSkillNote(weakestSkill, skillBreakdown)
+                    : "Gợi ý dựa trên nhóm khóa học bạn đang học — chưa đủ dữ liệu để phân tích theo kỹ năng.";
         }
 
         List<CourseSummaryDto> summaries = candidates.stream()
                 .map(c -> CourseSummaryDto.from(c, enrollmentRepository.countByCourseId(c.getId())))
                 .toList();
-        return new RecommendedCoursesDto(summaries, averageBandScore, note);
+        return new RecommendedCoursesDto(summaries, averageBandScore, note, skillBreakdown, weakestSkill);
+    }
+
+    /** Kỹ năng có tỷ lệ sai cao nhất trong số các kỹ năng đã có đủ mẫu
+     * ({@link #MIN_SKILL_SAMPLE}) — null nếu chưa kỹ năng nào đủ dữ liệu. */
+    private String weakestSkill(List<SkillBreakdown> breakdown) {
+        return breakdown.stream()
+                .filter(b -> b.correctCount() + b.wrongCount() >= MIN_SKILL_SAMPLE)
+                .max(Comparator.comparingDouble(
+                        b -> (double) b.wrongCount() / (b.correctCount() + b.wrongCount())))
+                .map(SkillBreakdown::skill)
+                .orElse(null);
+    }
+
+    private String buildWeakestSkillNote(String weakestSkill, List<SkillBreakdown> breakdown) {
+        SkillBreakdown b = breakdown.stream().filter(x -> x.skill().equals(weakestSkill)).findFirst().orElseThrow();
+        long total = b.correctCount() + b.wrongCount();
+        String label = SKILL_LABELS.getOrDefault(weakestSkill, weakestSkill);
+        return String.format(
+                "Bạn đang yếu nhất ở kỹ năng %s (sai %d/%d câu gần đây) — ưu tiên luyện tập phần này.",
+                label, b.wrongCount(), total);
     }
 
     private BigDecimal averageBandScore(List<GradebookRow> rows) {

@@ -313,6 +313,13 @@ function MyEnrollments({ token }: { token: string }) {
   );
 }
 
+const SKILL_LABELS: Record<string, string> = {
+  LISTENING: "Nghe",
+  READING: "Đọc",
+  WRITING: "Viết",
+  SPEAKING: "Nói",
+};
+
 function RecommendedCoursesSection({ token }: { token: string }) {
   const [data, setData] = useState<RecommendedCourses | null>(null);
 
@@ -332,7 +339,26 @@ function RecommendedCoursesSection({ token }: { token: string }) {
           </span>
         )}
       </div>
-      <p className="mb-4 text-sm text-muted">{data.note}</p>
+      <p className="mb-3 text-sm text-muted">{data.note}</p>
+      {data.skillBreakdown.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          {data.skillBreakdown.map((s) => {
+            const total = s.correctCount + s.wrongCount;
+            const pct = total > 0 ? Math.round((s.wrongCount / total) * 100) : 0;
+            const isWeakest = s.skill === data.weakestSkill;
+            return (
+              <span
+                key={s.skill}
+                className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                  isWeakest ? "bg-red-soft text-red" : "bg-soft text-muted"
+                }`}
+              >
+                {SKILL_LABELS[s.skill] ?? s.skill}: {s.wrongCount}/{total} sai ({pct}%)
+              </span>
+            );
+          })}
+        </div>
+      )}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {data.courses.map((c) => (
           <CourseCard key={c.id} course={c} />

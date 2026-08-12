@@ -42,6 +42,16 @@ public final class ReportDtos {
     public record TypeBreakdown(String type, long correctCount, long wrongCount) {
     }
 
+    /**
+     * Số câu đúng/sai theo từng kỹ năng IELTS (READING/LISTENING/WRITING),
+     * gộp toàn bộ lịch sử làm bài đã chấm của 1 học viên — suy ra kỹ năng từ
+     * tên quiz (quy ước đặt tên nhất quán trong ngân hàng đề: "reading 36",
+     * "listening 47", "writing 42 Task 1"...), không phải nhãn thủ công nên
+     * không cần gắn tag cho từng câu hỏi.
+     */
+    public record SkillBreakdown(String skill, long correctCount, long wrongCount) {
+    }
+
     public record QuizReportStats(
             long totalAttempts,
             long distinctStudents,

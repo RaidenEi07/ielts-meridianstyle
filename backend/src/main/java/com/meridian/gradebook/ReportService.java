@@ -10,6 +10,7 @@ import com.meridian.gradebook.dto.ReportDtos.MonthlyPoint;
 import com.meridian.gradebook.dto.ReportDtos.QuizReport;
 import com.meridian.gradebook.dto.ReportDtos.QuizReportRow;
 import com.meridian.gradebook.dto.ReportDtos.QuizReportStats;
+import com.meridian.gradebook.dto.ReportDtos.SkillBreakdown;
 import com.meridian.gradebook.dto.ReportDtos.SystemAnalytics;
 import com.meridian.gradebook.dto.ReportDtos.TypeBreakdown;
 import com.meridian.quiz.AttemptStatus;
@@ -197,6 +198,71 @@ public class ReportService {
         return tally.entrySet().stream()
                 .map(e -> new TypeBreakdown(e.getKey(), e.getValue()[0], e.getValue()[1]))
                 .sorted(Comparator.comparingLong(TypeBreakdown::wrongCount).reversed())
+                .toList();
+    }
+
+    private static final String[] SKILL_KEYWORDS = {"listening", "reading", "writing", "speaking"};
+
+    /** Suy ra kỹ năng IELTS của 1 quiz từ tên quiz (vd "reading 36" → READING) —
+     * quy ước đặt tên nhất quán trong toàn bộ ngân hàng đề hiện có. Trả về
+     * null nếu tên quiz không khớp từ khóa nào (vd bài trẻ em không theo kỹ
+     * năng IELTS) — caller bỏ qua câu trả lời đó khỏi thống kê theo kỹ năng. */
+    private String skillOfQuiz(Quiz quiz) {
+        if (quiz == null || quiz.getTitle() == null) {
+            return null;
+        }
+        String lower = quiz.getTitle().toLowerCase();
+        for (String kw : SKILL_KEYWORDS) {
+            if (lower.contains(kw)) {
+                return kw.toUpperCase();
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Gộp toàn bộ câu trả lời (mọi lượt làm, mọi quiz) của 1 user, đếm số câu
+     * đúng/sai theo từng KỸ NĂNG IELTS (Nghe/Đọc/Viết) — khác
+     * {@link #wrongAnswerTypesForUser} vốn gộp theo DẠNG câu hỏi (Trắc
+     * nghiệm/Điền khuyết...). Dùng cho gợi ý khóa học theo điểm yếu thực tế.
+     */
+    @Transactional(readOnly = true)
+    public List<SkillBreakdown> skillBreakdownForUser(UUID targetUserId) {
+        List<Long> gradedAttemptIds = attemptRepository.findByUserIdOrderByStartedAtDesc(targetUserId)
+                .stream()
+                .filter(a -> a.getStatus() == AttemptStatus.GRADED)
+                .map(QuizAttempt::getId)
+                .toList();
+        if (gradedAttemptIds.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, long[]> tally = new LinkedHashMap<>(); // [correctCount, wrongCount]
+        Map<Long, String> skillByQuizId = new java.util.HashMap<>();
+        for (QuizAttemptAnswer answer : answerRepository.findByAttemptIdIn(gradedAttemptIds)) {
+            if (answer.getCorrect() == null) {
+                continue;
+            }
+            QuizQuestion qq = quizQuestionRepository.findById(answer.getQuizQuestionId()).orElse(null);
+            if (qq == null) {
+                continue;
+            }
+            String skill = skillByQuizId.computeIfAbsent(qq.getQuizId(),
+                    id -> skillOfQuiz(quizRepository.findById(id).orElse(null)));
+            if (skill == null) {
+                continue;
+            }
+            long[] counts = tally.computeIfAbsent(skill, s -> new long[2]);
+            if (answer.getCorrect()) {
+                counts[0]++;
+            } else {
+                counts[1]++;
+            }
+        }
+
+        return tally.entrySet().stream()
+                .map(e -> new SkillBreakdown(e.getKey(), e.getValue()[0], e.getValue()[1]))
+                .sorted(Comparator.comparingLong(SkillBreakdown::wrongCount).reversed())
                 .toList();
     }
 

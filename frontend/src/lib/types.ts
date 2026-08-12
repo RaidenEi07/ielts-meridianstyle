@@ -103,10 +103,18 @@ export interface VideoCheckpoint {
   answered: boolean;
 }
 
+export interface SkillBreakdown {
+  skill: string;
+  correctCount: number;
+  wrongCount: number;
+}
+
 export interface RecommendedCourses {
   courses: CourseSummary[];
   averageBandScore: number | null;
   note: string;
+  skillBreakdown: SkillBreakdown[];
+  weakestSkill: string | null;
 }
 
 export interface CheckpointQuestion {
