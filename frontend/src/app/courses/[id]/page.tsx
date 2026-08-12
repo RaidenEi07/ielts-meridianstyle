@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Check, CheckCircle2, ChevronDown, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
+import { VocabPracticeList } from "@/components/VocabPracticeList";
 import { ApiError, catalogApi, enrollmentApi, quizApi } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import type { CourseDetail, QuizSummary } from "@/lib/types";
@@ -298,58 +299,66 @@ export default function CourseDetailPage() {
                                   <Link href="/login" className="text-accent">
                                     Đăng nhập
                                   </Link>{" "}
-                                  để làm bài kiểm tra của section này.
-                                </p>
-                              ) : quizzes === null ? (
-                                <p className="text-sm text-muted">Đang tải…</p>
-                              ) : sectionQuizzes.length === 0 ? (
-                                <p className="text-sm text-muted">
-                                  Section này chưa có bài kiểm tra nào.
+                                  để xem nội dung của section này.
                                 </p>
                               ) : (
                                 <>
-                                  {quizError && (
-                                    <p className="mb-2 text-sm text-red">{quizError}</p>
+                                  {quizzes === null ? (
+                                    <p className="text-sm text-muted">Đang tải…</p>
+                                  ) : sectionQuizzes.length === 0 ? (
+                                    <p className="text-sm text-muted">
+                                      Section này chưa có bài kiểm tra nào.
+                                    </p>
+                                  ) : (
+                                    <>
+                                      {quizError && (
+                                        <p className="mb-2 text-sm text-red">{quizError}</p>
+                                      )}
+                                      <ul className="space-y-2">
+                                        {sectionQuizzes.map((q) => (
+                                          <li
+                                            key={q.id}
+                                            className="flex items-center gap-3 rounded-card border border-border bg-bg px-4 py-3"
+                                          >
+                                            <div className="flex-1">
+                                              <div className="flex items-center gap-2">
+                                                <span className="font-medium">{q.title}</span>
+                                                {q.examTemplateCode && (
+                                                  <span className="rounded-full bg-red px-2 py-0.5 text-[10px] font-bold text-white">
+                                                    {q.examTemplateCode}
+                                                  </span>
+                                                )}
+                                                {q.antiCheatEnabled && (
+                                                  <span className="text-xs text-muted">
+                                                    <Lock className="h-3.5 w-3.5" />
+                                                  </span>
+                                                )}
+                                              </div>
+                                              <p className="text-xs text-muted">
+                                                {q.questionCount} câu
+                                                {q.timeLimitSeconds
+                                                  ? ` · ${Math.round(q.timeLimitSeconds / 60)} phút`
+                                                  : ""}
+                                                {q.maxAttempts > 0 ? ` · tối đa ${q.maxAttempts} lượt` : ""}
+                                              </p>
+                                            </div>
+                                            <button
+                                              type="button"
+                                              onClick={() => startQuiz(q.id)}
+                                              disabled={startingQuiz === q.id}
+                                              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                                            >
+                                              {startingQuiz === q.id ? "Đang mở…" : "Làm bài →"}
+                                            </button>
+                                          </li>
+                                        ))}
+                                      </ul>
+                                    </>
                                   )}
-                                  <ul className="space-y-2">
-                                    {sectionQuizzes.map((q) => (
-                                      <li
-                                        key={q.id}
-                                        className="flex items-center gap-3 rounded-card border border-border bg-bg px-4 py-3"
-                                      >
-                                        <div className="flex-1">
-                                          <div className="flex items-center gap-2">
-                                            <span className="font-medium">{q.title}</span>
-                                            {q.examTemplateCode && (
-                                              <span className="rounded-full bg-red px-2 py-0.5 text-[10px] font-bold text-white">
-                                                {q.examTemplateCode}
-                                              </span>
-                                            )}
-                                            {q.antiCheatEnabled && (
-                                              <span className="text-xs text-muted">
-                                                <Lock className="h-3.5 w-3.5" />
-                                              </span>
-                                            )}
-                                          </div>
-                                          <p className="text-xs text-muted">
-                                            {q.questionCount} câu
-                                            {q.timeLimitSeconds
-                                              ? ` · ${Math.round(q.timeLimitSeconds / 60)} phút`
-                                              : ""}
-                                            {q.maxAttempts > 0 ? ` · tối đa ${q.maxAttempts} lượt` : ""}
-                                          </p>
-                                        </div>
-                                        <button
-                                          type="button"
-                                          onClick={() => startQuiz(q.id)}
-                                          disabled={startingQuiz === q.id}
-                                          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                                        >
-                                          {startingQuiz === q.id ? "Đang mở…" : "Làm bài →"}
-                                        </button>
-                                      </li>
-                                    ))}
-                                  </ul>
+                                  {/* Tự ẩn nếu section này không có bộ thẻ từ vựng nào — không cần
+                                      biết trước để chỉnh sửa thông báo "chưa có bài kiểm tra" ở trên,
+                                      2 khối độc lập với nhau. Component tự có margin-top riêng. */}
+                                  <VocabPracticeList sectionId={s.id} token={accessToken} />
                                 </>
                               )}
                             </div>
