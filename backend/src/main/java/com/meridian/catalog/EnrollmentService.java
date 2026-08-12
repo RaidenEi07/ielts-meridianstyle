@@ -152,6 +152,20 @@ public class EnrollmentService {
         enrollmentRepository.delete(enrollment);
     }
 
+    /**
+     * Admin hủy ghi danh trực tiếp 1 học sinh khỏi 1 khóa học bất kỳ — đối
+     * xứng với {@link #enrollByAdmin}, không cần là ghi danh của chính admin
+     * (khác {@link #unenroll}, vốn chỉ cho tự hủy ghi danh của chính mình).
+     * Trước đây không có đường nào cho admin/giáo viên gỡ nhầm 1 ghi danh.
+     */
+    @Transactional
+    public void unenrollByAdmin(UUID adminId, Long enrollmentId) {
+        permissionService.requireSystemCapability(adminId, "user:manage");
+        Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy ghi danh"));
+        enrollmentRepository.delete(enrollment);
+    }
+
     private Enrollment getOwned(UUID userId, Long enrollmentId) {
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy ghi danh"));

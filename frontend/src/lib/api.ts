@@ -516,6 +516,12 @@ export const enrollmentApi = {
       body: { courseId },
       token,
     }),
+
+  unenrollAsAdmin: (token: string, enrollmentId: number) =>
+    apiFetch<void>(`/api/enrollments/admin/${enrollmentId}`, {
+      method: "DELETE",
+      token,
+    }),
 };
 
 // ---- Gợi ý khóa học (bản đơn giản, v1) ----

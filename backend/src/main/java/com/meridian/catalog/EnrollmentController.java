@@ -71,4 +71,12 @@ public class EnrollmentController {
         enrollmentService.unenroll(uid(), id);
         return ResponseEntity.noContent().build();
     }
+
+    /** Admin hủy ghi danh bất kỳ học sinh nào khỏi bất kỳ khóa học nào —
+     * đối xứng với {@link #enrollByAdmin}. */
+    @DeleteMapping("/admin/{id}")
+    public ResponseEntity<Void> unenrollByAdmin(@PathVariable Long id) {
+        enrollmentService.unenrollByAdmin(uid(), id);
+        return ResponseEntity.noContent().build();
+    }
 }

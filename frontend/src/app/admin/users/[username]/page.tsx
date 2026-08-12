@@ -9,6 +9,8 @@ import { WrongTypesSummary } from "@/components/WrongTypesSummary";
 import { ApiError, enrollmentApi, gradebookApi, usersAdminApi } from "@/lib/api";
 import type { AdminUser, Enrollment, GradebookRow, TypeBreakdown } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
+import { useConfirm } from "@/store/confirm";
+import { useToast } from "@/store/toast";
 
 const ENROLLMENT_STATUS_META: Record<string, { label: string; cls: string }> = {
   ACTIVE: { label: "Đang học", cls: "bg-primary-soft text-primary" },
@@ -34,6 +36,8 @@ export default function AdminStudentDetailPage() {
   const [gradebook, setGradebook] = useState<GradebookRow[] | null>(null);
   const [wrongTypes, setWrongTypes] = useState<TypeBreakdown[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const confirm = useConfirm();
+  const toast = useToast();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -72,6 +76,19 @@ export default function AdminStudentDetailPage() {
       .then(setWrongTypes)
       .catch(() => setWrongTypes([]));
   }, [user, token]);
+
+  async function handleUnenroll(enrollmentId: number, courseTitle: string) {
+    if (!(await confirm(`Hủy ghi danh khỏi "${courseTitle}"? Tiến độ và điểm số của khóa này sẽ không còn hiển thị.`))) {
+      return;
+    }
+    try {
+      await enrollmentApi.unenrollAsAdmin(token, enrollmentId);
+      setEnrollments((prev) => (prev ? prev.filter((e) => e.id !== enrollmentId) : prev));
+      toast.success("Đã hủy ghi danh");
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Hủy ghi danh thất bại");
+    }
+  }
 
   if (!hydrated || !ready) {
     return <div className="grid min-h-screen place-items-center text-muted">Đang tải…</div>;
@@ -137,18 +154,19 @@ export default function AdminStudentDetailPage() {
                   <th className="px-4 py-2.5 font-medium">Trạng thái</th>
                   <th className="px-4 py-2.5 text-right font-medium">Tiến độ</th>
                   <th className="px-4 py-2.5 text-right font-medium">Ngày ghi danh</th>
+                  <th className="px-4 py-2.5 text-right font-medium">Thao tác</th>
                 </tr>
               </thead>
               <tbody>
                 {enrollments === null ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-muted">
+                    <td colSpan={5} className="px-4 py-6 text-center text-muted">
                       Đang tải…
                     </td>
                   </tr>
                 ) : enrollments.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-4 py-6 text-center text-muted">
+                    <td colSpan={5} className="px-4 py-6 text-center text-muted">
                       Chưa ghi danh khóa học nào.
                     </td>
                   </tr>
@@ -168,6 +186,15 @@ export default function AdminStudentDetailPage() {
                         </td>
                         <td className="px-4 py-3 text-right text-muted">
                           {new Date(e.enrolledAt).toLocaleDateString("vi-VN")}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => handleUnenroll(e.id, e.courseTitle)}
+                            className="text-xs font-semibold text-red"
+                          >
+                            Hủy ghi danh
+                          </button>
                         </td>
                       </tr>
                     );
