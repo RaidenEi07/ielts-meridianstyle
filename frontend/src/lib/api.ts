@@ -54,6 +54,11 @@ import type {
   TeacherPublic,
   TypeBreakdown,
   ViolationResult,
+  VocabSetSummary,
+  VocabSetDetail,
+  VocabRecording,
+  AdminVocabRecording,
+  VocabCardInput,
 } from "./types";
 
 const API_BASE_URL =
@@ -1131,6 +1136,57 @@ export const recordingAdminApi = {
 
   rate: (token: string, recordingId: number, starRating: number) =>
     apiFetch<void>(`/api/admin/recordings/${recordingId}/rating`, {
+      method: "PUT",
+      body: { starRating },
+      token,
+    }),
+};
+
+// ---- Luyện từ vựng & phát âm (di trú H5P) ----
+
+export const vocabApi = {
+  listSets: (sectionId: number, token: string) =>
+    apiFetch<VocabSetSummary[]>(`/api/vocab/sections/${sectionId}`, { token }),
+
+  getSet: (setId: number, token: string) =>
+    apiFetch<VocabSetDetail>(`/api/vocab/sets/${setId}`, { token }),
+
+  saveRecording: (cardId: number, audioUrl: string, token: string) =>
+    apiFetch<VocabRecording>(`/api/vocab/cards/${cardId}/recordings`, {
+      method: "POST",
+      body: { audioUrl },
+      token,
+    }),
+
+  myRecordings: (cardId: number, token: string) =>
+    apiFetch<VocabRecording[]>(`/api/vocab/cards/${cardId}/recordings`, { token }),
+
+  deleteRecording: (recordingId: number, token: string) =>
+    apiFetch<void>(`/api/vocab/recordings/${recordingId}`, { method: "DELETE", token }),
+};
+
+export const vocabAdminApi = {
+  listSets: (token: string, sectionId: number) =>
+    apiFetch<VocabSetSummary[]>(`/api/admin/vocab/sections/${sectionId}/sets`, { token }),
+
+  createSet: (token: string, sectionId: number, title: string, cards: VocabCardInput[]) =>
+    apiFetch<VocabSetDetail>(`/api/admin/vocab/sections/${sectionId}/sets`, {
+      method: "POST",
+      body: { title, cards },
+      token,
+    }),
+
+  getSet: (token: string, setId: number) =>
+    apiFetch<VocabSetDetail>(`/api/admin/vocab/sets/${setId}`, { token }),
+
+  deleteSet: (token: string, setId: number) =>
+    apiFetch<void>(`/api/admin/vocab/sets/${setId}`, { method: "DELETE", token }),
+
+  recordingsForSet: (token: string, setId: number) =>
+    apiFetch<AdminVocabRecording[]>(`/api/admin/vocab/sets/${setId}/recordings`, { token }),
+
+  rate: (token: string, recordingId: number, starRating: number) =>
+    apiFetch<void>(`/api/admin/vocab/recordings/${recordingId}/rating`, {
       method: "PUT",
       body: { starRating },
       token,

@@ -9,6 +9,7 @@ import { HomeworkMaterialsList } from "@/components/HomeworkMaterialsList";
 import { LessonVideoPlayer } from "@/components/LessonVideoPlayer";
 import { KidsVoiceRecorder } from "@/components/kids/KidsVoiceRecorder";
 import { SiteHeader } from "@/components/SiteHeader";
+import { VocabPracticeList } from "@/components/VocabPracticeList";
 import { ApiError, catalogApi, checkpointApi, progressApi, quizApi } from "@/lib/api";
 import type { CourseDetail, QuizSummary, Section, VideoCheckpoint } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
@@ -196,6 +197,8 @@ export default function VaoHocLessonPage() {
             <KidsVoiceRecorder sectionId={sectionId} token={accessToken} />
           </div>
         )}
+
+        {accessToken && <VocabPracticeList sectionId={sectionId} token={accessToken} />}
 
         {error && <p className="mt-4 text-sm text-red">{error}</p>}
 

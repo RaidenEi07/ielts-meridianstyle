@@ -23,3 +23,8 @@ npm-debug.log*
 # Claude Code local/session state (per-developer, not shared)
 .claude/settings.local.json
 .claude/*.lock
+
+# Local-only source material for the academic-course H5P migration (huge
+# binaries: raw Moodle .mbz backups + extracted .h5p/audio backup) — never
+# meant to be pushed, kept local as working material only.
+academic course/

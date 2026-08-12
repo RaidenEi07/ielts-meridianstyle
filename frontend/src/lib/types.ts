@@ -749,3 +749,52 @@ export interface AdminLessonRecording {
   starRating: number | null;
   createdAt: string;
 }
+
+// ---- Luyện từ vựng & phát âm (di trú H5P) ----
+
+export interface VocabSetSummary {
+  id: number;
+  title: string;
+  sortOrder: number;
+  cardCount: number;
+}
+
+export interface VocabCard {
+  id: number;
+  cardType: "WORD" | "SENTENCE";
+  text: string;
+  audioUrl: string;
+  sortOrder: number;
+}
+
+export interface VocabSetDetail {
+  id: number;
+  title: string;
+  cards: VocabCard[];
+}
+
+export interface VocabRecording {
+  id: number;
+  cardId: number;
+  audioUrl: string;
+  starRating: number | null;
+  createdAt: string;
+}
+
+export interface AdminVocabRecording {
+  id: number;
+  userId: string;
+  userFullName: string;
+  cardId: number;
+  cardText: string;
+  audioUrl: string;
+  starRating: number | null;
+  createdAt: string;
+}
+
+export interface VocabCardInput {
+  cardType: "WORD" | "SENTENCE";
+  text: string;
+  acceptedAnswer: string | null;
+  audioUrl: string;
+}

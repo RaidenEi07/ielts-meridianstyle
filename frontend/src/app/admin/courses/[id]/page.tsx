@@ -22,6 +22,7 @@ import { RecordingsGradingPanel } from "@/components/RecordingsGradingPanel";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { SectionDescriptionField } from "@/components/SectionDescriptionField";
 import { SortableRow } from "@/components/SortableRow";
+import { VocabAdminPanel } from "@/components/VocabAdminPanel";
 import { VideoCheckpointsEditor } from "@/components/VideoCheckpointsEditor";
 import { VideoUploadField } from "@/components/VideoUploadField";
 import { ApiError, catalogAdminApi, catalogApi, childSiteAdminApi, quizAdminApi } from "@/lib/api";
@@ -1226,6 +1227,10 @@ function SectionCard({
           <CharacterDubbingEditor sectionId={section.id} token={token} videoUrl={section.videoUrl} />
         </div>
       )}
+
+      <div className="mb-3">
+        <VocabAdminPanel sectionId={section.id} token={token} />
+      </div>
 
       {creating && (
         <form onSubmit={createQuiz} className="mb-3 flex gap-2">
