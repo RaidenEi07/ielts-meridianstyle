@@ -85,7 +85,7 @@ public class VocabService {
     @Transactional(readOnly = true)
     public List<VocabSetSummaryDto> listSetsForSection(UUID userId, Long sectionId) {
         CourseSection section = requireSection(sectionId);
-        requireEnrolled(userId, section.getCourse());
+        requireEnrolledOrManaging(userId, section.getCourse());
         return summarize(sectionId);
     }
 
@@ -106,7 +106,7 @@ public class VocabService {
     @Transactional(readOnly = true)
     public VocabSetDetailDto getSetDetail(UUID userId, Long setId) {
         VocabSet set = requireSet(setId);
-        requireEnrolled(userId, set.getSection().getCourse());
+        requireEnrolledOrManaging(userId, set.getSection().getCourse());
         return toDetail(set);
     }
 
@@ -147,10 +147,13 @@ public class VocabService {
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy section"));
     }
 
-    private void requireEnrolled(UUID userId, Course course) {
-        if (!enrollmentRepository.existsByUserIdAndCourseId(userId, course.getId())) {
-            throw ApiException.forbidden("Bạn cần được ghi danh khóa học này trước");
-        }
+    /** Cho xem như học sinh nếu đã ghi danh, HOẶC nếu có quyền quản lý khóa học
+     * (admin/giáo viên phụ trách) — để họ xem trước nội dung giống hệt học
+     * sinh sẽ thấy mà không cần tự ghi danh vào khóa của chính mình quản lý. */
+    private void requireEnrolledOrManaging(UUID userId, Course course) {
+        if (enrollmentRepository.existsByUserIdAndCourseId(userId, course.getId())) return;
+        if (permissionService.hasCapability(userId, CAP, contextIdOf(course.getContext()))) return;
+        throw ApiException.forbidden("Bạn cần được ghi danh khóa học này trước");
     }
 
     Long contextIdOf(Context ctx) {
