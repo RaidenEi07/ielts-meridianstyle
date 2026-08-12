@@ -1016,6 +1016,9 @@ function SectionCard({
   const [quizzes, setQuizzes] = useState<QuizSummary[] | null>(null);
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState(section.title);
+  const [savingTitle, setSavingTitle] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const editMode = useEditModeStore((s) => s.enabled);
   const sensors = useSensors(useSensor(PointerSensor));
@@ -1060,6 +1063,33 @@ function SectionCard({
     }
   }
 
+  function startEditTitle() {
+    setTitleDraft(section.title);
+    setEditingTitle(true);
+  }
+
+  async function saveTitle() {
+    const trimmed = titleDraft.trim();
+    if (!trimmed || trimmed === section.title) {
+      setEditingTitle(false);
+      return;
+    }
+    setSavingTitle(true);
+    setError(null);
+    try {
+      await catalogAdminApi.updateSection(token, section.id, { title: trimmed });
+      onChanged();
+      toast.success("Đã đổi tên section");
+      setEditingTitle(false);
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Đổi tên section thất bại";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSavingTitle(false);
+    }
+  }
+
   async function toggleHidden() {
     setError(null);
     try {
@@ -1094,14 +1124,51 @@ function SectionCard({
   return (
     <div className="rounded-lg border border-border p-4">
       <div className="mb-3 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <h3 className="font-semibold">{section.title}</h3>
-          {section.hidden && (
-            <span className="rounded-full bg-soft px-2 py-0.5 text-xs font-semibold text-muted">
-              Đã ẩn
-            </span>
-          )}
-        </div>
+        {editingTitle ? (
+          <div className="flex flex-1 items-center gap-2">
+            <input
+              autoFocus
+              value={titleDraft}
+              onChange={(e) => setTitleDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") saveTitle();
+                if (e.key === "Escape") setEditingTitle(false);
+              }}
+              className="input flex-1 py-1 text-sm font-semibold"
+            />
+            <button
+              type="button"
+              onClick={saveTitle}
+              disabled={savingTitle}
+              className="text-xs font-semibold text-accent disabled:opacity-60"
+            >
+              {savingTitle ? "Đang lưu…" : "Lưu"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setEditingTitle(false)}
+              className="text-xs text-muted"
+            >
+              Hủy
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <h3 className="font-semibold">{section.title}</h3>
+            {section.hidden && (
+              <span className="rounded-full bg-soft px-2 py-0.5 text-xs font-semibold text-muted">
+                Đã ẩn
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={startEditTitle}
+              className="text-xs font-semibold text-accent"
+            >
+              Sửa tên
+            </button>
+          </div>
+        )}
         <div className="flex items-center gap-3">
           <button type="button" onClick={toggleHidden} className="text-xs font-semibold text-muted">
             {section.hidden ? "Hiện" : "Ẩn"}
