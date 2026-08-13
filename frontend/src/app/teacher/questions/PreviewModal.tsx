@@ -44,7 +44,12 @@ export function PreviewModal({ question, onClose }: { question: QuestionDetail; 
             <FileText className="h-3.5 w-3.5" /> Passage: {question.passageTitle}
           </p>
         )}
-        {question.type !== "CLOZE" && question.type !== "DRAG_DROP_TEXT" && question.stem && (
+        {/* Chỉ CLOZE loại trừ — stem của CLOZE CHÍNH LÀ đoạn điền khuyết (đã
+            render đủ bên dưới qua QuestionRenderer). DRAG_DROP_TEXT tưởng
+            giống CLOZE nhưng KHÔNG phải — mẫu câu điền khuyết của nó nằm ở
+            settings.template riêng, còn stem vẫn là đề bài thật (vd "What
+            comment is made about..."), trước đây bị loại nhầm nên mất đề. */}
+        {question.type !== "CLOZE" && question.stem && (
           <div
             className="prose prose-sm dark:prose-invert mb-4 max-w-none text-sm font-medium"
             dangerouslySetInnerHTML={{ __html: question.stem }}

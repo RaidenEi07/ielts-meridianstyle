@@ -119,7 +119,12 @@ export function PartPreviewModal({
                       </div>
                     ) : (
                       <>
-                        {q.type !== "CLOZE" && q.type !== "DRAG_DROP_TEXT" && q.stem && (
+                        {/* Chỉ CLOZE loại trừ (stem của nó CHÍNH LÀ đoạn điền
+                            khuyết, QuestionRenderer render đủ bên dưới rồi).
+                            DRAG_DROP_TEXT trước đây bị loại nhầm theo CLOZE —
+                            mẫu câu điền khuyết của nó nằm ở settings.template
+                            riêng, stem vẫn là đề bài thật, không nên ẩn. */}
+                        {q.type !== "CLOZE" && q.stem && (
                           <div
                             className="prose prose-sm dark:prose-invert mb-3 max-w-none text-sm font-medium"
                             dangerouslySetInnerHTML={{ __html: q.stem }}

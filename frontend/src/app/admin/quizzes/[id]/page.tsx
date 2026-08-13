@@ -943,6 +943,14 @@ function QuestionsPanel({
                     : "Chưa gán trang"}
                 </span>
                 <span className="text-xs text-faint">{group.items.length} câu</span>
+                <button
+                  type="button"
+                  onClick={() => openPartPreview(group)}
+                  className="text-xs font-semibold text-muted hover:text-text"
+                  title="Xem trước cả Part (đoạn văn/audio + mọi câu hỏi cùng Part, đúng thứ tự thi thật)"
+                >
+                  Xem trước cả Part →
+                </button>
               </div>
               <DndContext
                 sensors={sensors}
@@ -988,9 +996,9 @@ function QuestionsPanel({
                             )}
                             <button
                               type="button"
-                              onClick={() => openPartPreview(group)}
+                              onClick={() => openPreview(q.questionId)}
                               className="text-xs font-semibold text-muted hover:text-text"
-                              title="Xem trước cả Part (đoạn văn/audio + mọi câu hỏi cùng Part)"
+                              title="Xem trước riêng câu hỏi này (không kèm đoạn văn/audio/câu khác cùng Part — bấm 'Xem trước cả Part' ở đầu nhóm nếu cần đủ ngữ cảnh)"
                             >
                               Xem trước
                             </button>
