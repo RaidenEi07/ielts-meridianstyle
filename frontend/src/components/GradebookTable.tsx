@@ -1,6 +1,7 @@
 "use client";
 
 import { ChevronDown, Download, FileDown, X } from "lucide-react";
+import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
 import { gradingAdminApi } from "@/lib/api";
 import { downloadAttemptPdf, downloadGradebookCsv } from "@/lib/export";
@@ -139,15 +140,23 @@ export function GradebookTable({
   emptyLabel,
   token,
   studentName,
+  selfView,
 }: {
   rows: GradebookRow[];
   emptyLabel: string;
   token?: string;
   /** Tên học viên, chỉ cần khi có `token` — dùng để đặt tên file xuất CSV/PDF. */
   studentName?: string;
+  /** true khi CHÍNH học viên đang xem điểm của mình (trang "Điểm số của tôi")
+   * — vẫn cho mở rộng từng lượt như admin/giáo viên, nhưng "Xem chi tiết"
+   * dẫn thẳng tới trang làm bài ở chế độ xem lại (/quiz/[attemptId], học
+   * viên tự có quyền xem lượt của chính mình) thay vì gọi API chấm điểm
+   * admin-only (quiz:regrade) mà học viên không có quyền. */
+  selfView?: boolean;
 }) {
   const [expandedQuiz, setExpandedQuiz] = useState<number | null>(null);
   const [viewing, setViewing] = useState<{ attempt: AttemptSummary; quizTitle: string } | null>(null);
+  const canExpand = Boolean(token) || Boolean(selfView);
 
   const bands = rows.map((r) => r.bandScore).filter((b): b is number => b != null);
   const bestBand = bands.length ? Math.max(...bands) : null;
@@ -197,6 +206,7 @@ export function GradebookTable({
               <th className="px-4 py-2.5 font-medium">Bài</th>
               <th className="px-4 py-2.5 font-medium">Khóa học</th>
               <th className="px-4 py-2.5 text-center font-medium">Lượt</th>
+              <th className="px-4 py-2.5 font-medium">Ngày giờ làm bài</th>
               <th className="px-4 py-2.5 text-center font-medium">Trạng thái</th>
               <th className="px-4 py-2.5 text-right font-medium">Điểm</th>
               <th className="px-4 py-2.5 text-right font-medium">Band</th>
@@ -205,7 +215,7 @@ export function GradebookTable({
           <tbody>
             {rows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="px-4 py-8 text-center text-muted">
+                <td colSpan={8} className="px-4 py-8 text-center text-muted">
                   {emptyLabel}
                 </td>
               </tr>
@@ -217,10 +227,10 @@ export function GradebookTable({
                   <Fragment key={r.quizId}>
                     <tr
                       className="cursor-pointer border-t border-border hover:bg-soft/50"
-                      onClick={() => token && setExpandedQuiz(isExpanded ? null : r.quizId)}
+                      onClick={() => canExpand && setExpandedQuiz(isExpanded ? null : r.quizId)}
                     >
                       <td className="px-2 py-3 text-center">
-                        {token && r.attemptList.length > 0 && (
+                        {canExpand && r.attemptList.length > 0 && (
                           <ChevronDown
                             className={`mx-auto h-4 w-4 text-muted transition-transform ${
                               isExpanded ? "rotate-180" : ""
@@ -231,6 +241,7 @@ export function GradebookTable({
                       <td className="px-4 py-3 font-medium">{r.quizTitle}</td>
                       <td className="px-4 py-3 text-muted">{r.courseName}</td>
                       <td className="px-4 py-3 text-center text-muted">{r.attempts}</td>
+                      <td className="px-4 py-3 text-muted">{fmtDate(r.lastSubmittedAt)}</td>
                       <td className="px-4 py-3 text-center">
                         <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>
                           {st.label}
@@ -244,9 +255,9 @@ export function GradebookTable({
                         {r.bandScore != null ? r.bandScore : "—"}
                       </td>
                     </tr>
-                    {token && isExpanded && (
+                    {canExpand && isExpanded && (
                       <tr className="border-t border-border bg-bg">
-                        <td colSpan={7} className="px-4 py-3">
+                        <td colSpan={8} className="px-4 py-3">
                           <ul className="space-y-1.5">
                             {r.attemptList.map((a) => (
                               <li
@@ -264,16 +275,26 @@ export function GradebookTable({
                                     ⚠ {a.violations} lần chuyển tab
                                   </span>
                                 )}
-                                <button
-                                  type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setViewing({ attempt: a, quizTitle: r.quizTitle });
-                                  }}
-                                  className="ml-auto font-semibold text-accent hover:underline"
-                                >
-                                  Xem chi tiết →
-                                </button>
+                                {selfView ? (
+                                  <Link
+                                    href={`/quiz/${a.attemptId}`}
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="ml-auto font-semibold text-accent hover:underline"
+                                  >
+                                    Xem chi tiết →
+                                  </Link>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setViewing({ attempt: a, quizTitle: r.quizTitle });
+                                    }}
+                                    className="ml-auto font-semibold text-accent hover:underline"
+                                  >
+                                    Xem chi tiết →
+                                  </button>
+                                )}
                               </li>
                             ))}
                           </ul>

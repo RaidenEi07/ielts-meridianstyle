@@ -32,7 +32,11 @@ export default function GradesPage() {
 
       <main className="mx-auto max-w-5xl space-y-6 px-6 py-8">
         <h1 className="text-2xl font-bold">Điểm số của tôi</h1>
-        <GradebookTable rows={rows} emptyLabel="Bạn chưa có điểm nào. Hãy làm một bài kiểm tra!" />
+        <GradebookTable
+          rows={rows}
+          emptyLabel="Bạn chưa có điểm nào. Hãy làm một bài kiểm tra!"
+          selfView
+        />
       </main>
     </div>
   );
