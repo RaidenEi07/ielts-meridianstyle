@@ -4,6 +4,7 @@ import { Eye, FileText, X } from "lucide-react";
 import { useState } from "react";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
 import { TYPE_META } from "@/lib/questionTypes";
+import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 import { toPlayerQuestion } from "@/lib/toPlayerQuestion";
 import type { QuestionDetail } from "@/lib/types";
 
@@ -52,7 +53,7 @@ export function PreviewModal({ question, onClose }: { question: QuestionDetail; 
         {question.type !== "CLOZE" && question.stem && (
           <div
             className="prose prose-sm dark:prose-invert mb-4 max-w-none text-sm font-medium"
-            dangerouslySetInnerHTML={{ __html: question.stem }}
+            dangerouslySetInnerHTML={{ __html: stripInlineTextColors(question.stem) }}
           />
         )}
 
@@ -61,7 +62,7 @@ export function PreviewModal({ question, onClose }: { question: QuestionDetail; 
             <div>
               <div
                 className="prose prose-sm dark:prose-invert mb-2 max-w-none font-medium"
-                dangerouslySetInnerHTML={{ __html: question.stem ?? "" }}
+                dangerouslySetInnerHTML={{ __html: stripInlineTextColors(question.stem ?? "") }}
               />
               {typeof settings.wordLimit === "number" && (
                 <p className="text-xs text-muted">Giới hạn: {settings.wordLimit} từ</p>

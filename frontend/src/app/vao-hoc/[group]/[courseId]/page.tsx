@@ -7,6 +7,7 @@ import { Check, Lock, Search } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { ApiError, catalogApi, enrollmentApi, progressApi } from "@/lib/api";
 import { groupLabel, isGroupSlug } from "@/lib/audienceGroups";
+import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 import type { CourseDetail, Section } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
@@ -142,7 +143,7 @@ export default function VaoHocCoursePage() {
         {course.descriptionHtml && (
           <div
             className="prose prose-sm dark:prose-invert mt-4 max-w-none"
-            dangerouslySetInnerHTML={{ __html: course.descriptionHtml }}
+            dangerouslySetInnerHTML={{ __html: stripInlineTextColors(course.descriptionHtml) }}
           />
         )}
 

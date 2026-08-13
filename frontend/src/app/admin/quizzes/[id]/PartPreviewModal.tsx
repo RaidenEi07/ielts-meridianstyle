@@ -4,6 +4,7 @@ import { Eye, FileText, X } from "lucide-react";
 import { useState } from "react";
 import { QuestionRenderer } from "@/components/QuestionRenderer";
 import { TYPE_META } from "@/lib/questionTypes";
+import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 import { toPlayerQuestion } from "@/lib/toPlayerQuestion";
 import type { PassageSummary, QuestionDetail, QuizPageAdmin, QuizQuestionAdmin } from "@/lib/types";
 
@@ -74,7 +75,7 @@ export function PartPreviewModal({
                 ) : (
                   <div
                     className="prose prose-sm dark:prose-invert max-w-none"
-                    dangerouslySetInnerHTML={{ __html: passage.content ?? "" }}
+                    dangerouslySetInnerHTML={{ __html: stripInlineTextColors(passage.content ?? "") }}
                   />
                 )}
               </div>
@@ -93,7 +94,7 @@ export function PartPreviewModal({
                   {item.groupIntro && (
                     <div
                       className="prose prose-sm dark:prose-invert mb-3 max-w-none border-b border-border pb-3 text-muted"
-                      dangerouslySetInnerHTML={{ __html: item.groupIntro }}
+                      dangerouslySetInnerHTML={{ __html: stripInlineTextColors(item.groupIntro) }}
                     />
                   )}
                   <div className="rounded-card border border-border bg-soft/40 p-4">
@@ -107,7 +108,7 @@ export function PartPreviewModal({
                       <div>
                         <div
                           className="prose prose-sm dark:prose-invert mb-2 max-w-none font-medium"
-                          dangerouslySetInnerHTML={{ __html: q.stem ?? "" }}
+                          dangerouslySetInnerHTML={{ __html: stripInlineTextColors(q.stem ?? "") }}
                         />
                         <textarea
                           placeholder="Học viên sẽ viết bài tại đây…"
@@ -127,7 +128,7 @@ export function PartPreviewModal({
                         {q.type !== "CLOZE" && q.stem && (
                           <div
                             className="prose prose-sm dark:prose-invert mb-3 max-w-none text-sm font-medium"
-                            dangerouslySetInnerHTML={{ __html: q.stem }}
+                            dangerouslySetInnerHTML={{ __html: stripInlineTextColors(q.stem) }}
                           />
                         )}
                         <QuestionRenderer

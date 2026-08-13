@@ -8,6 +8,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { VocabPracticeList } from "@/components/VocabPracticeList";
 import { ApiError, catalogApi, enrollmentApi, quizApi } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
+import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 import type { CourseDetail, QuizSummary } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useToast } from "@/store/toast";
@@ -229,7 +230,7 @@ export default function CourseDetailPage() {
               <h2 className="mb-2 text-xl font-semibold">Mô tả chi tiết</h2>
               <div
                 className="prose prose-sm dark:prose-invert max-w-none"
-                dangerouslySetInnerHTML={{ __html: course.descriptionHtml }}
+                dangerouslySetInnerHTML={{ __html: stripInlineTextColors(course.descriptionHtml) }}
               />
             </section>
           )}

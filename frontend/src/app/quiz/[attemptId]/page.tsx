@@ -28,6 +28,7 @@ import { Logo } from "@/components/Logo";
 import { optionReviewClass, QuestionRenderer } from "@/components/QuestionRenderer";
 import { ApiError, quizApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
+import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 import { isTfngOptionSet } from "@/lib/tfngOptionSet";
 import { useToast } from "@/store/toast";
 import type {
@@ -65,7 +66,13 @@ function useImperativeHtml(html: string) {
     const container = ref.current;
     if (!container) return;
     const temp = document.createElement("div");
-    temp.innerHTML = html;
+    // Nội dung dán từ Google Docs luôn kèm color:#000000 tuyệt đối trên
+    // từng span (inline style — thắng mọi token màu) — vô hại ở đây vì
+    // .exam-mode ép nền trắng nên đen-trên-trắng vẫn đúng, nhưng xóa sẵn để
+    // không lặp lại lỗi "chữ vô hình" nếu sau này màn nào dùng hook này mà
+    // không nằm trong .exam-mode (vd xem lại lịch sử làm bài không phải lúc
+    // đang thi thật).
+    temp.innerHTML = stripInlineTextColors(html);
     container.replaceChildren(...temp.childNodes);
   }, [html]);
   return ref;

@@ -2,6 +2,7 @@
 
 import { useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 
 interface Slot {
   node: HTMLElement;
@@ -44,7 +45,8 @@ export function HtmlWithBlanks({
       markerPattern.source,
       markerPattern.flags.includes("g") ? markerPattern.flags : `${markerPattern.flags}g`,
     );
-    const processedHtml = html.replace(pattern, (_match, capture) => {
+    const cleanHtml = stripInlineTextColors(html);
+    const processedHtml = cleanHtml.replace(pattern, (_match, capture) => {
       const key = capture ?? String(index);
       const span = `<span data-blank-slot="${index}" data-blank-key="${key}"></span>`;
       index += 1;
