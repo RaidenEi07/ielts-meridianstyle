@@ -262,8 +262,10 @@ export function QuestionRenderer({
     }
 
     case "DRAG_DROP_TEXT": {
-      const template: string =
-        (question.settings as { template?: string } | null)?.template ?? "";
+      const dragDropSettings = question.settings as
+        | { template?: string; templateHeading?: string; bankHeading?: string }
+        | null;
+      const template: string = dragDropSettings?.template ?? "";
       // Câu hỏi đứng riêng (không nhúng vào đoạn văn — dạng đó render thẳng
       // trong ReadingSplitPane bằng dropdown, không qua đây) luôn kéo-thả
       // thật, mọi audience — khớp IELTS CD thật cho Sentence/Summary
@@ -271,6 +273,8 @@ export function QuestionRenderer({
       return (
         <DragDropSentence
           template={template}
+          templateHeading={dragDropSettings?.templateHeading}
+          bankHeading={dragDropSettings?.bankHeading}
           dragItems={question.dragItems}
           answer={answer}
           onChange={onChange}

@@ -54,14 +54,24 @@ function BlankSlot({
 }
 
 /** Kéo-thả từ/cụm từ vào chỗ trống trong câu (Sentence/Summary Completion
- * kiểu word-bank) — dùng cho mọi audience, khớp IELTS CD thật. */
+ * kiểu word-bank) — dùng cho mọi audience, khớp IELTS CD thật.
+ *
+ * templateHeading/bankHeading: tiêu đề phụ TÙY CHỌN phía trên từng khối —
+ * dùng cho dạng "Matching Features" mượn cơ chế này để hiện 1 danh sách mục
+ * kèm chỗ trống (vd "Businesses") + 1 khối đáp án dùng chung (vd "Comments").
+ * Câu Sentence/Summary Completion thường (1 câu văn liền mạch) không cần đặt
+ * — để trống thì không hiện gì, không đổi layout hiện có. */
 export function DragDropSentence({
   template,
+  templateHeading,
+  bankHeading,
   dragItems,
   answer,
   onChange,
 }: {
   template: string;
+  templateHeading?: string | null;
+  bankHeading?: string | null;
   dragItems: PlayerDragItem[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   answer: any;
@@ -97,30 +107,38 @@ export function DragDropSentence({
   return (
     <DndContext onDragEnd={handleDragEnd}>
       <div className="space-y-5">
-        <p className="whitespace-pre-wrap text-lg leading-10 text-text">
-          {parts.map((part, i) => {
-            if (i % 2 === 0) return <span key={i}>{part}</span>;
-            const targetLabel = part;
-            const itemId = Object.keys(placements).find((id) => placements[id] === targetLabel);
-            const filledItem = itemId
-              ? (dragItems.find((d) => String(d.id) === itemId) ?? null)
-              : null;
-            return (
-              <BlankSlot
-                key={i}
-                targetLabel={targetLabel}
-                filledItem={filledItem}
-                onClear={() => clearBlank(targetLabel)}
-              />
-            );
-          })}
-        </p>
-        <div className="flex flex-wrap justify-center gap-3 rounded-xl border border-border bg-surface p-4">
-          {dragItems
-            .filter((item) => !usedItemIds.has(String(item.id)))
-            .map((item) => (
-              <DraggableWordChip key={item.id} item={item} />
-            ))}
+        <div>
+          {templateHeading && (
+            <p className="mb-2 text-base font-semibold text-text">{templateHeading}</p>
+          )}
+          <p className="whitespace-pre-wrap text-lg leading-10 text-text">
+            {parts.map((part, i) => {
+              if (i % 2 === 0) return <span key={i}>{part}</span>;
+              const targetLabel = part;
+              const itemId = Object.keys(placements).find((id) => placements[id] === targetLabel);
+              const filledItem = itemId
+                ? (dragItems.find((d) => String(d.id) === itemId) ?? null)
+                : null;
+              return (
+                <BlankSlot
+                  key={i}
+                  targetLabel={targetLabel}
+                  filledItem={filledItem}
+                  onClear={() => clearBlank(targetLabel)}
+                />
+              );
+            })}
+          </p>
+        </div>
+        <div>
+          {bankHeading && <p className="mb-2 text-base font-semibold text-text">{bankHeading}</p>}
+          <div className="flex flex-wrap justify-center gap-3 rounded-xl border border-border bg-surface p-4">
+            {dragItems
+              .filter((item) => !usedItemIds.has(String(item.id)))
+              .map((item) => (
+                <DraggableWordChip key={item.id} item={item} />
+              ))}
+          </div>
         </div>
       </div>
     </DndContext>

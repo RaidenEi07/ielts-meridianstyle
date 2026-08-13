@@ -13,11 +13,19 @@ function detectBlanks(template: string): string[] {
 export function DragDropTextForm({
   template,
   onTemplateChange,
+  templateHeading,
+  onTemplateHeadingChange,
+  bankHeading,
+  onBankHeadingChange,
   items,
   onItemsChange,
 }: {
   template: string;
   onTemplateChange: (v: string) => void;
+  templateHeading: string;
+  onTemplateHeadingChange: (v: string) => void;
+  bankHeading: string;
+  onBankHeadingChange: (v: string) => void;
   items: QuestionDragItem[];
   onItemsChange: (v: QuestionDragItem[]) => void;
 }) {
@@ -40,6 +48,18 @@ export function DragDropTextForm({
     <div className="space-y-3">
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-muted">
+          Tiêu đề danh sách (tùy chọn) — chỉ cần khi mẫu câu thực ra là 1 danh sách mục cần gắn nhãn
+          chung, vd &ldquo;Businesses&rdquo;. Để trống với câu điền khuyết thông thường.
+        </span>
+        <input
+          value={templateHeading}
+          onChange={(e) => onTemplateHeadingChange(e.target.value)}
+          placeholder="VD: Businesses"
+          className="input text-sm"
+        />
+      </label>
+      <label className="block">
+        <span className="mb-1 block text-xs font-medium text-muted">
           Mẫu câu — dùng <code>[[1]]</code>, <code>[[2]]</code>… để đánh dấu chỗ trống
         </span>
         <textarea
@@ -56,6 +76,18 @@ export function DragDropTextForm({
           : "Chưa phát hiện ô trống nào — dùng [[1]], [[2]]… trong mẫu câu ở trên."}
       </p>
       <div>
+        <label className="mb-2 block">
+          <span className="mb-1 block text-xs font-medium text-muted">
+            Tiêu đề khối đáp án (tùy chọn) — nhãn chung cho các mục kéo-thả bên dưới, vd
+            &ldquo;Comments&rdquo;.
+          </span>
+          <input
+            value={bankHeading}
+            onChange={(e) => onBankHeadingChange(e.target.value)}
+            placeholder="VD: Comments"
+            className="input text-sm"
+          />
+        </label>
         <span className="mb-1 block text-xs font-medium text-muted">
           Các mục kéo-thả — chọn ô trống mà mục này là đáp án đúng, hoặc để làm mồi nhử
         </span>

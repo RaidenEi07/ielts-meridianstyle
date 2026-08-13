@@ -149,6 +149,12 @@ export function QuestionForm({
   const [dragDropTemplate, setDragDropTemplate] = useState(
     typeof initSettings?.template === "string" ? initSettings.template : "",
   );
+  const [dragDropTemplateHeading, setDragDropTemplateHeading] = useState(
+    typeof initSettings?.templateHeading === "string" ? initSettings.templateHeading : "",
+  );
+  const [dragDropBankHeading, setDragDropBankHeading] = useState(
+    typeof initSettings?.bankHeading === "string" ? initSettings.bankHeading : "",
+  );
   const [backgroundImageUrl, setBackgroundImageUrl] = useState(
     typeof initSettings?.backgroundImageUrl === "string" ? initSettings.backgroundImageUrl : "",
   );
@@ -179,7 +185,11 @@ export function QuestionForm({
           rubric: essayRubric.filter((r) => r.trim().length > 0),
         };
       case "DRAG_DROP_TEXT":
-        return { template: dragDropTemplate };
+        return {
+          template: dragDropTemplate,
+          templateHeading: dragDropTemplateHeading || undefined,
+          bankHeading: dragDropBankHeading || undefined,
+        };
       case "DRAG_DROP_MARKER":
         return { backgroundImageUrl };
       default:
@@ -494,6 +504,10 @@ export function QuestionForm({
             <DragDropTextForm
               template={dragDropTemplate}
               onTemplateChange={setDragDropTemplate}
+              templateHeading={dragDropTemplateHeading}
+              onTemplateHeadingChange={setDragDropTemplateHeading}
+              bankHeading={dragDropBankHeading}
+              onBankHeadingChange={setDragDropBankHeading}
               items={dragItems}
               onItemsChange={setDragItems}
             />
