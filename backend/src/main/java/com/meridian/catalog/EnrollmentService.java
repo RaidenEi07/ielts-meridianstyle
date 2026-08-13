@@ -71,15 +71,18 @@ public class EnrollmentService {
     }
 
     /**
-     * Admin ghi danh trực tiếp 1 học sinh bất kỳ vào 1 khóa học bất kỳ — không
-     * cần học sinh thuộc roster của ai (khác {@link #enrollByTeacher}, vốn chỉ
-     * cho giáo viên ghi danh học sinh MÌNH phụ trách). Phát hiện qua tester QA:
-     * trước đây chỉ giáo viên mới có đường ghi danh, admin hoàn toàn không có,
-     * dù yêu cầu gốc là "chỉ admin HOẶC giáo viên ghi danh mới làm được".
+     * Admin/manager ghi danh trực tiếp 1 học sinh bất kỳ vào 1 khóa học bất
+     * kỳ — không cần học sinh thuộc roster của ai (khác {@link #enrollByTeacher},
+     * vốn chỉ cho giáo viên ghi danh học sinh MÌNH phụ trách). Kiểm quyền qua
+     * 'enrollment:manage' (V41) — admin có capability này qua CROSS JOIN toàn
+     * bộ capability ở V2, manager được gán riêng, giáo viên thường thì không.
+     * Phát hiện qua tester QA: trước đây chỉ giáo viên mới có đường ghi danh,
+     * admin hoàn toàn không có, dù yêu cầu gốc là "chỉ admin HOẶC giáo viên
+     * ghi danh mới làm được".
      */
     @Transactional
     public EnrollmentDto enrollByAdmin(UUID adminId, UUID studentId, Long courseId) {
-        permissionService.requireSystemCapability(adminId, "user:manage");
+        permissionService.requireSystemCapability(adminId, "enrollment:manage");
         Course course = getPublishedCourse(courseId);
         return doEnroll(requireUser(studentId), course);
     }
@@ -125,7 +128,7 @@ public class EnrollmentService {
     /** Admin xem danh sách khóa học đã ghi danh của MỘT học viên bất kỳ. */
     @Transactional(readOnly = true)
     public List<EnrollmentDto> adminListEnrollments(UUID adminUserId, UUID targetUserId) {
-        permissionService.requireSystemCapability(adminUserId, "user:manage");
+        permissionService.requireSystemCapability(adminUserId, "enrollment:manage");
         return listMyEnrollments(targetUserId);
     }
 
@@ -160,7 +163,7 @@ public class EnrollmentService {
      */
     @Transactional
     public void unenrollByAdmin(UUID adminId, Long enrollmentId) {
-        permissionService.requireSystemCapability(adminId, "user:manage");
+        permissionService.requireSystemCapability(adminId, "enrollment:manage");
         Enrollment enrollment = enrollmentRepository.findById(enrollmentId)
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy ghi danh"));
         enrollmentRepository.delete(enrollment);

@@ -18,7 +18,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-/** Admin gán/gỡ học sinh cho giáo viên quản lý. Yêu cầu capability 'user:manage'. */
+/** Admin/manager gán/gỡ học sinh cho giáo viên quản lý. Yêu cầu capability
+ * 'enrollment:manage' (V41) — admin có sẵn qua CROSS JOIN, role 'manager'
+ * được gán riêng, giáo viên thường thì không. */
 @RestController
 @RequestMapping("/api/admin/roster")
 public class AdminRosterController {
@@ -35,7 +37,7 @@ public class AdminRosterController {
     }
 
     private void guard() {
-        permissionService.requireSystemCapability(currentUser.require().id(), "user:manage");
+        permissionService.requireSystemCapability(currentUser.require().id(), "enrollment:manage");
     }
 
     @PostMapping("/assign")

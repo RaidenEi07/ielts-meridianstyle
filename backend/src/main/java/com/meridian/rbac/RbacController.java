@@ -1,6 +1,7 @@
 package com.meridian.rbac;
 
 import com.meridian.auth.dto.RoleAssignmentDto;
+import com.meridian.common.ApiException;
 import com.meridian.rbac.dto.AdminUserDto;
 import com.meridian.rbac.dto.AssignRoleRequest;
 import com.meridian.rbac.dto.CreateUserRequest;
@@ -43,9 +44,17 @@ public class RbacController {
         this.permissionService = permissionService;
     }
 
+    /** Đọc danh sách user — cho cả 'user:manage' (admin) lẫn 'enrollment:manage'
+     * (manager, V41): manager cần duyệt danh sách học sinh/giáo viên để chọn
+     * ghi danh/gán roster, dù không có quyền tạo/sửa tài khoản hay gán role. */
     @GetMapping("/users")
     public List<AdminUserDto> listUsers(@RequestParam(required = false) String search) {
-        requireSystem("user:manage");
+        UUID uid = currentUserProvider.require().id();
+        boolean allowed = permissionService.hasSystemCapability(uid, "user:manage")
+                || permissionService.hasSystemCapability(uid, "enrollment:manage");
+        if (!allowed) {
+            throw ApiException.forbidden("Thiếu quyền 'user:manage'");
+        }
         return rbacService.listUsers(search);
     }
 

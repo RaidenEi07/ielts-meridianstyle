@@ -81,15 +81,26 @@ public class ReportService {
     }
 
     /**
-     * Admin xem sổ điểm của bất kỳ học sinh nào (theo dõi toàn bộ kết quả).
-     * Không dùng {@link #myGradebook} vì capability ở đó kiểm tra trên chính
-     * {@code uid} — ở đây cần kiểm tra quyền của ADMIN, còn dữ liệu lấy theo
-     * {@code targetUserId}.
+     * Admin/manager xem sổ điểm của bất kỳ học sinh nào (theo dõi toàn bộ kết
+     * quả). Không dùng {@link #myGradebook} vì capability ở đó kiểm tra trên
+     * chính {@code uid} (học sinh tự xem điểm mình) — ở đây cần kiểm tra
+     * quyền của ADMIN/MANAGER, còn dữ liệu lấy theo {@code targetUserId}.
+     * Kiểm 'user:manage' HOẶC 'enrollment:manage' (V41, không phải
+     * 'grade:view' — capability đó học sinh cũng có, dùng nhầm sẽ lộ điểm
+     * học sinh khác cho chính học sinh).
      */
     @Transactional(readOnly = true)
     public List<GradebookRow> adminStudentGradebook(UUID adminUid, UUID targetUserId, Long courseId) {
-        permissionService.requireSystemCapability(adminUid, "user:manage");
+        requireAdminOrManager(adminUid);
         return gradebookForUser(targetUserId, courseId);
+    }
+
+    private void requireAdminOrManager(UUID uid) {
+        boolean allowed = permissionService.hasSystemCapability(uid, "user:manage")
+                || permissionService.hasSystemCapability(uid, "enrollment:manage");
+        if (!allowed) {
+            throw ApiException.forbidden("Thiếu quyền 'user:manage'");
+        }
     }
 
     /**
@@ -151,7 +162,7 @@ public class ReportService {
      */
     @Transactional(readOnly = true)
     public List<TypeBreakdown> adminWrongAnswerTypes(UUID adminUid, UUID targetUserId) {
-        permissionService.requireSystemCapability(adminUid, "user:manage");
+        requireAdminOrManager(adminUid);
         return wrongAnswerTypesForUser(targetUserId);
     }
 

@@ -202,7 +202,7 @@ export default function DashboardPage() {
                 <Users className="h-4 w-4" /> Quản lý tài khoản →
               </Link>
             )}
-            {hasCapability("user:manage") && (
+            {(hasCapability("user:manage") || hasCapability("enrollment:manage")) && (
               <Link
                 href="/admin/students"
                 className="flex items-center gap-2 rounded-lg border border-border px-4 py-3 text-sm font-medium transition-transform hover:-translate-y-0.5 hover:bg-soft"

@@ -37,7 +37,10 @@ export default function AdminStudentDetailPage() {
       return;
     }
     loadMe()
-      .then(() => setAllowed(useAuthStore.getState().systemCapabilities.includes("user:manage")))
+      .then(() => {
+        const caps = useAuthStore.getState().systemCapabilities;
+        setAllowed(caps.includes("user:manage") || caps.includes("enrollment:manage"));
+      })
       .catch(() => {})
       .finally(() => setReady(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
