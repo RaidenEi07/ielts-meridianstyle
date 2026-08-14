@@ -184,7 +184,7 @@ public class QuizService {
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy câu trong quiz"));
         Quiz quiz = requireQuiz(qq.getQuizId());
         permissionService.requireCapability(uid, CAP, contextId(quiz.getContext()));
-        qq.setGroupIntro(groupIntro == null || groupIntro.isBlank() ? null : groupIntro);
+        qq.setGroupIntro(isBlankHtml(groupIntro) ? null : groupIntro);
         qq = quizQuestionRepository.save(qq);
         Question q = questionRepository.findById(qq.getQuestionId()).orElse(null);
         return new QuizQuestionDto(qq.getId(), qq.getQuestionId(),
@@ -372,5 +372,18 @@ public class QuizService {
 
     private Long contextId(Context ctx) {
         return ctx == null ? contextService.requireSystemContext().getId() : ctx.getId();
+    }
+
+    /**
+     * "Rỗng" theo nghĩa người dùng thấy trên trình soạn thảo rich-text, không
+     * chỉ theo String.isBlank(). Khi người dùng bôi đen xóa hết nội dung,
+     * trình soạn thảo (TipTap) vẫn để lại 1 thẻ đoạn rỗng như "&lt;p&gt;&lt;/p&gt;"
+     * — chuỗi đó trông trống trơn nhưng isBlank() trả về false, nên trước đây
+     * bị lưu lại y nguyên thay vì null, khiến "Tiêu đề nhóm ✓" vẫn hiện dù đã
+     * xóa (và preview thi thật vẫn bị chia nhóm theo đoạn rỗng đó).
+     */
+    private static boolean isBlankHtml(String html) {
+        if (html == null) return true;
+        return html.replaceAll("<[^>]+>", "").replace("&nbsp;", " ").isBlank();
     }
 }

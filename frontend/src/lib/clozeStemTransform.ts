@@ -22,7 +22,11 @@ export function preprocessClozeStemForEditing(
     const found = clozeSubAnswers.find((c) => c.subIndex === subIndex);
     const attrs: ClozeBlankAttrs = {
       answers: Array.isArray(found?.acceptedAnswers) ? found.acceptedAnswers : [],
-      caseSensitive: Boolean(found?.caseSensitive),
+      // found=undefined nghĩa là marker {n} trong stem bị mồ côi (không có
+      // dòng đáp án khớp subIndex — dữ liệu cũ lệch), không phải "ô mới tạo"
+      // thật sự — nhưng vẫn áp mặc định phân biệt hoa/thường cho nhất quán
+      // với insertClozeBlank() (RichTextEditor.tsx) khi tạo ô thật sự mới.
+      caseSensitive: found ? Boolean(found.caseSensitive) : true,
       subType: found?.subType === "SELECT" ? "SELECT" : "TEXT",
       options: Array.isArray(found?.options) ? found.options : null,
     };

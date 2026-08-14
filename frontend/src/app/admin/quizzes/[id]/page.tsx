@@ -640,6 +640,26 @@ function QuestionsPanel({
   const [groupIntroDraft, setGroupIntroDraft] = useState("");
   const [savingGroupIntro, setSavingGroupIntro] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Điểm đang gõ dở cho từng câu, trước khi blur/lưu — input mark bên dưới
+  // để dạng "chưa kiểm soát" (defaultValue + key theo q.mark) nên không tự
+  // đẩy giá trị mới lên state cha; nếu "Tổng điểm" ở trên chỉ tính theo
+  // detail.questions thì nó sẽ đứng yên (nhìn như "tăng điểm không lên tổng")
+  // cho tới khi blur xong + fetch lại xong. Overlay số đang gõ vào tổng ngay
+  // khi onChange để tổng luôn khớp với những gì đang hiển thị trên các ô.
+  const [markDrafts, setMarkDrafts] = useState<Record<number, number>>({});
+  useEffect(() => {
+    setMarkDrafts((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const q of detail.questions) {
+        if (next[q.quizQuestionId] !== undefined && Number(q.mark) === next[q.quizQuestionId]) {
+          delete next[q.quizQuestionId];
+          changed = true;
+        }
+      }
+      return changed ? next : prev;
+    });
+  }, [detail]);
   const editMode = useEditModeStore((s) => s.enabled);
   const sensors = useSensors(useSensor(PointerSensor));
   const confirm = useConfirm();
@@ -837,6 +857,14 @@ function QuestionsPanel({
       const msg = err instanceof ApiError ? err.message : "Sửa điểm câu hỏi thất bại";
       setError(msg);
       toast.error(msg);
+      // Lưu thất bại — bỏ giá trị đang gõ dở khỏi "Tổng điểm" (nó chỉ nên
+      // cộng theo điểm đã thực sự lưu), field tự resync lại giá trị cũ nhờ
+      // key={quizQuestionId-mark} đổi khi onChanged() không chạy.
+      setMarkDrafts((prev) => {
+        const next = { ...prev };
+        delete next[quizQuestionId];
+        return next;
+      });
     }
   }
 
@@ -861,7 +889,10 @@ function QuestionsPanel({
     }
   }
 
-  const totalMark = detail.questions.reduce((sum, q) => sum + Number(q.mark), 0);
+  const totalMark = detail.questions.reduce(
+    (sum, q) => sum + (markDrafts[q.quizQuestionId] ?? Number(q.mark)),
+    0,
+  );
 
   // Reordering only ever happens within one Part's own list (dragging across
   // Parts would silently snap back, since group membership comes from pageId,
@@ -979,6 +1010,11 @@ function QuestionsPanel({
                                 step="0.5"
                                 defaultValue={q.mark}
                                 key={`${q.quizQuestionId}-${q.mark}`}
+                                onChange={(e) => {
+                                  const parsed = Number(e.target.value);
+                                  if (!Number.isFinite(parsed) || parsed < 0) return;
+                                  setMarkDrafts((prev) => ({ ...prev, [q.quizQuestionId]: parsed }));
+                                }}
                                 onBlur={(e) => updateMark(q.quizQuestionId, e.target.value)}
                                 className="w-16 rounded border border-border bg-surface px-1.5 py-0.5 text-right font-mono text-xs"
                               />

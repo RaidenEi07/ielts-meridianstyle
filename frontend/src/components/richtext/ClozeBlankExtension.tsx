@@ -48,7 +48,7 @@ export const ClozeBlankExtension = Node.create({
         renderHTML: (attrs) => ({ "data-answers": encodeAttr(attrs.answers) }),
       },
       caseSensitive: {
-        default: false,
+        default: true,
         parseHTML: (el) => el.getAttribute("data-case-sensitive") === "true",
         renderHTML: (attrs) => ({ "data-case-sensitive": String(Boolean(attrs.caseSensitive)) }),
       },
