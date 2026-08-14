@@ -522,7 +522,7 @@ public class AttemptService {
                                         .toList();
                                 case "GRID_MATCHING" -> {
                                     gridColumns = q.gridColumns().stream()
-                                            .map(c -> new PlayerGridColumn(c.label()))
+                                            .map(c -> new PlayerGridColumn(c.label(), c.description()))
                                             .toList();
                                     gridRows = q.gridRows().stream()
                                             .map(r -> new PlayerGridRow(r.id(), r.rowText()))

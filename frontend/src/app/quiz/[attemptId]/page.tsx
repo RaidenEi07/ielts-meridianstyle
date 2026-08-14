@@ -104,12 +104,18 @@ interface Slot {
 /** Các mốc `[[n]]` phát hiện được trong mẫu câu Kéo-thả văn bản, đúng công
  * thức `detectBlanks()` đã dùng ở form soạn (`DragDropTextForm.tsx`) — mỗi
  * mốc là 1 số thứ tự IELTS thật riêng, không phải cả câu chỉ tính 1 số. */
+/** Thứ tự XUẤT HIỆN trong template (không sort theo giá trị số marker nội
+ * bộ) — số [[n]] chỉ là ký hiệu nội bộ để khớp với dragItems.correctTarget,
+ * KHÔNG nhất thiết tăng dần theo đúng thứ tự dòng/câu thật (vd template
+ * "James Lundy [[4]]\nGraham Bodman [[1]]" — dòng 1 mang marker "4"). Số thứ
+ * tự đề thi thật (Questions 21-23) phải gán theo thứ tự ĐỌC (dòng 1 = số nhỏ
+ * nhất) để khớp đúng với that đề gốc, không phải theo giá trị marker. */
 function dragTextBlankLabels(template: string): string[] {
   const found = new Set<string>();
   for (const m of template.matchAll(/\[\[(\d+)\]\]/g)) {
     found.add(m[1]);
   }
-  return [...found].sort((a, b) => Number(a) - Number(b));
+  return [...found];
 }
 
 function expandSlots(q: PlayerQuestion): Slot[] {

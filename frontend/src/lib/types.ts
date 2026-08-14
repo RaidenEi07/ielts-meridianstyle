@@ -223,6 +223,9 @@ export interface QuestionClozeSubAnswer {
 export interface QuestionGridColumn {
   id: number | null;
   label: string;
+  /** Chú giải riêng cho cột (vd "The alone condition") — hiện trong bảng
+   * chú giải SAU lưới chấm điểm, tách khỏi stem. Rỗng = không có chú giải. */
+  description: string | null;
   sortOrder: number;
 }
 
@@ -381,6 +384,7 @@ export interface PlayerClozeSubAnswer {
 
 export interface PlayerGridColumn {
   label: string;
+  description: string | null;
 }
 
 export interface PlayerGridRow {

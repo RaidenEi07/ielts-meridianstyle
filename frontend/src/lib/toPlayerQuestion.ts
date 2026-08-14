@@ -76,7 +76,7 @@ export function toPlayerQuestion(q: QuestionDetail): PlayerQuestion {
       }));
       break;
     case "GRID_MATCHING":
-      base.gridColumns = q.gridColumns.map((c) => ({ label: c.label }));
+      base.gridColumns = q.gridColumns.map((c) => ({ label: c.label, description: c.description }));
       base.gridRows = q.gridRows.map((r) => ({ id: r.id ?? 0, rowText: r.rowText }));
       break;
     default:

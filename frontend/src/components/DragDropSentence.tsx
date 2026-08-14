@@ -29,26 +29,37 @@ function DraggableWordChip({ item }: { item: PlayerDragItem }) {
 function BlankSlot({
   targetLabel,
   filledItem,
+  number,
   onClear,
 }: {
   targetLabel: string;
   filledItem: PlayerDragItem | null;
+  /** Số thứ tự câu hỏi thật (vd 21) — hiện thành 1 huy hiệu tròn ngay trước ô
+   * thả, khớp cách CLOZE đánh số từng chỗ trống (xem QuestionRenderer.tsx). */
+  number?: number;
   onClear: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: targetLabel });
   return (
-    <span
-      ref={setNodeRef}
-      onClick={filledItem ? onClear : undefined}
-      className={`mx-1 inline-flex min-w-[64px] items-center justify-center rounded-full border-2 px-3 py-1.5 align-middle text-sm font-semibold transition-colors ${
-        filledItem
-          ? "cursor-pointer border-solid border-primary bg-primary-soft text-primary"
-          : isOver
-            ? "border-dashed border-primary bg-primary-soft text-faint"
-            : "border-dashed border-border bg-soft text-faint"
-      }`}
-    >
-      {filledItem ? filledItem.content : "….."}
+    <span className="mx-1 inline-flex items-center align-middle">
+      {number != null && (
+        <span className="mr-1 inline-grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">
+          {number}
+        </span>
+      )}
+      <span
+        ref={setNodeRef}
+        onClick={filledItem ? onClear : undefined}
+        className={`inline-flex min-w-[64px] items-center justify-center rounded-full border-2 px-3 py-1.5 text-sm font-semibold transition-colors ${
+          filledItem
+            ? "cursor-pointer border-solid border-primary bg-primary-soft text-primary"
+            : isOver
+              ? "border-dashed border-primary bg-primary-soft text-faint"
+              : "border-dashed border-border bg-soft text-faint"
+        }`}
+      >
+        {filledItem ? filledItem.content : "….."}
+      </span>
     </span>
   );
 }
@@ -68,6 +79,8 @@ export function DragDropSentence({
   dragItems,
   answer,
   onChange,
+  quizQuestionId,
+  blankOrder,
 }: {
   template: string;
   templateHeading?: string | null;
@@ -76,6 +89,12 @@ export function DragDropSentence({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   answer: any;
   onChange: (r: { placements: Record<string, string> }) => void;
+  /** Cần cả 2 để tra đúng số thứ tự đề thi thật cho từng ô — khớp key
+   * "<quizQuestionId>:dd<label>" mà expandSlots() dùng để đánh số toàn quiz
+   * (xem quiz/[attemptId]/page.tsx). Không truyền = không hiện số (vd màn
+   * xem trước ở admin không có khái niệm thứ tự toàn quiz). */
+  quizQuestionId?: number;
+  blankOrder?: Map<string, number>;
 }) {
   const placements: Record<string, string> = answer?.placements ?? {};
   const parts = template.split(/\[\[(\d+)\]\]/);
@@ -119,11 +138,16 @@ export function DragDropSentence({
               const filledItem = itemId
                 ? (dragItems.find((d) => String(d.id) === itemId) ?? null)
                 : null;
+              const number =
+                quizQuestionId != null
+                  ? blankOrder?.get(`${quizQuestionId}:dd${targetLabel}`)
+                  : undefined;
               return (
                 <BlankSlot
                   key={i}
                   targetLabel={targetLabel}
                   filledItem={filledItem}
+                  number={number}
                   onClear={() => clearBlank(targetLabel)}
                 />
               );

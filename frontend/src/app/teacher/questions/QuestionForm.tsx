@@ -168,6 +168,9 @@ export function QuestionForm({
     initial?.gridColumns ?? [],
   );
   const [gridRows, setGridRows] = useState<QuestionGridRow[]>(initial?.gridRows ?? []);
+  const [gridKeyTableHeading, setGridKeyTableHeading] = useState(
+    typeof initSettings?.keyTableHeading === "string" ? initSettings.keyTableHeading : "",
+  );
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -192,6 +195,8 @@ export function QuestionForm({
         };
       case "DRAG_DROP_MARKER":
         return { backgroundImageUrl };
+      case "GRID_MATCHING":
+        return { keyTableHeading: gridKeyTableHeading || undefined };
       default:
         return undefined;
     }
@@ -534,6 +539,8 @@ export function QuestionForm({
               onColumnsChange={setGridColumns}
               rows={gridRows}
               onRowsChange={setGridRows}
+              keyTableHeading={gridKeyTableHeading}
+              onKeyTableHeadingChange={setGridKeyTableHeading}
             />
           )}
         </section>

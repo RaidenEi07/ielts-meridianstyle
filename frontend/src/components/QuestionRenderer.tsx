@@ -278,6 +278,8 @@ export function QuestionRenderer({
           dragItems={question.dragItems}
           answer={answer}
           onChange={onChange}
+          quizQuestionId={question.quizQuestionId}
+          blankOrder={blankOrder}
         />
       );
     }
@@ -298,48 +300,74 @@ export function QuestionRenderer({
 
     case "GRID_MATCHING": {
       const choices: Record<string, string> = answer?.choices ?? {};
+      // Bảng chú giải (vd "List of Conditions" -> A. The alone condition...)
+      // hiện SAU lưới chấm điểm — trước đây phải gõ lẫn vào stem nên luôn bị
+      // đẩy lên TRƯỚC lưới; giờ tách riêng vào từng cột.gridColumns[].description
+      // + settings.keyTableHeading, chỉ hiện khi có ít nhất 1 cột có chú giải.
+      const keyTableHeading = (question.settings as { keyTableHeading?: string } | null)
+        ?.keyTableHeading;
+      const columnsWithDescription = question.gridColumns.filter((c) => c.description);
       return (
-        <div className="overflow-x-auto rounded-card border border-border">
-          <table className="w-full min-w-max border-collapse text-sm">
-            <thead>
-              <tr className="bg-soft">
-                <th className="border-b border-border p-3 text-left font-semibold text-text" />
-                {question.gridColumns.map((c) => (
-                  <th
-                    key={c.label}
-                    className="min-w-14 border-b border-l border-border p-3 text-center font-semibold text-text"
-                  >
-                    {c.label}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {question.gridRows.map((row, idx) => (
-                <tr key={row.id} className={idx % 2 === 1 ? "bg-soft/40" : undefined}>
-                  <td className="border-b border-border p-3 font-medium text-text">{row.rowText}</td>
-                  {question.gridColumns.map((c) => {
-                    const checked = choices[String(row.id)] === c.label;
-                    return (
-                      <td key={c.label} className="border-b border-l border-border p-0 text-center">
-                        <label className="flex h-full w-full cursor-pointer items-center justify-center p-3 hover:bg-primary-soft">
-                          <input
-                            type="radio"
-                            className="h-4 w-4 accent-current"
-                            name={`grid-${question.quizQuestionId}-${row.id}`}
-                            checked={checked}
-                            onChange={() =>
-                              onChange({ choices: { ...choices, [String(row.id)]: c.label } })
-                            }
-                          />
-                        </label>
-                      </td>
-                    );
-                  })}
+        <div className="space-y-4">
+          <div className="overflow-x-auto rounded-card border border-border">
+            <table className="w-full min-w-max border-collapse text-sm">
+              <thead>
+                <tr className="bg-soft">
+                  <th className="border-b border-border p-3 text-left font-semibold text-text" />
+                  {question.gridColumns.map((c) => (
+                    <th
+                      key={c.label}
+                      className="min-w-14 border-b border-l border-border p-3 text-center font-semibold text-text"
+                    >
+                      {c.label}
+                    </th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {question.gridRows.map((row, idx) => (
+                  <tr key={row.id} className={idx % 2 === 1 ? "bg-soft/40" : undefined}>
+                    <td className="border-b border-border p-3 font-medium text-text">{row.rowText}</td>
+                    {question.gridColumns.map((c) => {
+                      const checked = choices[String(row.id)] === c.label;
+                      return (
+                        <td key={c.label} className="border-b border-l border-border p-0 text-center">
+                          <label className="flex h-full w-full cursor-pointer items-center justify-center p-3 hover:bg-primary-soft">
+                            <input
+                              type="radio"
+                              className="h-4 w-4 accent-current"
+                              name={`grid-${question.quizQuestionId}-${row.id}`}
+                              checked={checked}
+                              onChange={() =>
+                                onChange({ choices: { ...choices, [String(row.id)]: c.label } })
+                              }
+                            />
+                          </label>
+                        </td>
+                      );
+                    })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          {columnsWithDescription.length > 0 && (
+            <div className="overflow-hidden rounded-card border border-border">
+              {keyTableHeading && (
+                <p className="border-b border-border bg-soft px-3 py-2 font-semibold text-text">
+                  {keyTableHeading}
+                </p>
+              )}
+              <div className="divide-y divide-border">
+                {columnsWithDescription.map((c) => (
+                  <div key={c.label} className="flex gap-3 px-3 py-2 text-sm">
+                    <span className="font-semibold text-text">{c.label}.</span>
+                    <span className="text-text">{c.description}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       );
     }

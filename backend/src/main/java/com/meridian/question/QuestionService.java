@@ -301,6 +301,7 @@ public class QuestionService {
                     QuestionGridColumn e = new QuestionGridColumn();
                     e.setQuestionId(qid);
                     e.setLabel(c.label());
+                    e.setDescription(c.description());
                     e.setSortOrder(c.sortOrder() != 0 ? c.sortOrder() : i++);
                     gridColumnRepository.save(e);
                 }
@@ -447,7 +448,7 @@ public class QuestionService {
                 .toList();
         List<QuestionParts.GridColumn> gridColumns = gridColumnRepository
                 .findByQuestionIdOrderBySortOrderAsc(id).stream()
-                .map(e -> new QuestionParts.GridColumn(e.getId(), e.getLabel(), e.getSortOrder()))
+                .map(e -> new QuestionParts.GridColumn(e.getId(), e.getLabel(), e.getDescription(), e.getSortOrder()))
                 .toList();
         List<QuestionParts.GridRow> gridRows = gridRowRepository
                 .findByQuestionIdOrderBySortOrderAsc(id).stream()

@@ -28,6 +28,12 @@ public class QuestionGridColumn {
     @Column(nullable = false, length = 120)
     private String label;
 
+    /** Đoạn mô tả cho cột này (vd "The alone condition") — hiện trong bảng
+     * chú giải SAU lưới chấm điểm, tách khỏi stem. null/rỗng = cột không có
+     * mô tả riêng, không hiện dòng nào trong bảng chú giải cho cột đó. */
+    @Column(columnDefinition = "text")
+    private String description;
+
     @Column(name = "sort_order", nullable = false)
     private int sortOrder;
 }

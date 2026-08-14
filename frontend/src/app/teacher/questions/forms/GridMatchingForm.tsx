@@ -7,19 +7,28 @@ export function GridMatchingForm({
   onColumnsChange,
   rows,
   onRowsChange,
+  keyTableHeading,
+  onKeyTableHeadingChange,
 }: {
   columns: QuestionGridColumn[];
   onColumnsChange: (v: QuestionGridColumn[]) => void;
   rows: QuestionGridRow[];
   onRowsChange: (v: QuestionGridRow[]) => void;
+  /** Tiêu đề bảng chú giải hiện SAU lưới (vd "List of Conditions") — tùy
+   * chọn, để trống thì không hiện bảng chú giải dù cột có mô tả. */
+  keyTableHeading?: string;
+  onKeyTableHeadingChange?: (v: string) => void;
 }) {
   const columnLabels = columns.map((c) => c.label).filter(Boolean);
 
-  function updateColumn(i: number, label: string) {
-    onColumnsChange(columns.map((c, idx) => (idx === i ? { ...c, label } : c)));
+  function updateColumn(i: number, patch: Partial<QuestionGridColumn>) {
+    onColumnsChange(columns.map((c, idx) => (idx === i ? { ...c, ...patch } : c)));
   }
   function addColumn() {
-    onColumnsChange([...columns, { id: null, label: "", sortOrder: columns.length }]);
+    onColumnsChange([
+      ...columns,
+      { id: null, label: "", description: "", sortOrder: columns.length },
+    ]);
   }
   function removeColumn(i: number) {
     onColumnsChange(columns.filter((_, idx) => idx !== i));
@@ -48,8 +57,14 @@ export function GridMatchingForm({
           <div key={i} className="mb-1 flex items-center gap-2">
             <input
               value={c.label}
-              onChange={(e) => updateColumn(i, e.target.value)}
+              onChange={(e) => updateColumn(i, { label: e.target.value })}
               placeholder={`Cột ${i + 1}`}
+              className="input w-20 shrink-0 text-sm"
+            />
+            <input
+              value={c.description ?? ""}
+              onChange={(e) => updateColumn(i, { description: e.target.value })}
+              placeholder="Chú giải (tùy chọn, vd: The alone condition)"
               className="input flex-1 text-sm"
             />
             <button type="button" onClick={() => removeColumn(i)} className="text-xs text-red">
@@ -60,6 +75,19 @@ export function GridMatchingForm({
         <button type="button" onClick={addColumn} className="text-sm font-semibold text-accent">
           + Thêm cột
         </button>
+        {onKeyTableHeadingChange && (
+          <div className="mt-2">
+            <span className="mb-1 block text-xs font-medium text-muted">
+              Tiêu đề bảng chú giải (tùy chọn, hiện SAU lưới — vd &quot;List of Conditions&quot;. Để trống nếu không có cột nào cần chú giải)
+            </span>
+            <input
+              value={keyTableHeading ?? ""}
+              onChange={(e) => onKeyTableHeadingChange(e.target.value)}
+              placeholder="VD: List of Conditions"
+              className="input w-full text-sm"
+            />
+          </div>
+        )}
       </div>
 
       <div>

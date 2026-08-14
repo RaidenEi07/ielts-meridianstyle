@@ -38,8 +38,9 @@ public final class AttemptDtos {
     public record PlayerClozeSubAnswer(Long id, int subIndex, String subType, JsonNode options) {
     }
 
-    /** Cột dùng chung của câu hỏi Grid Matching. */
-    public record PlayerGridColumn(String label) {
+    /** Cột dùng chung của câu hỏi Grid Matching. description = đoạn chú giải
+     * hiện trong bảng chú giải SAU lưới (vd "The alone condition"). */
+    public record PlayerGridColumn(String label, String description) {
     }
 
     /** Một hàng của Grid Matching — KHÔNG kèm cột đúng. */

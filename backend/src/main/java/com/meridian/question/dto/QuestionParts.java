@@ -40,8 +40,10 @@ public final class QuestionParts {
             boolean caseSensitive) {
     }
 
-    /** Grid Matching: cột dùng chung cho mọi hàng. */
-    public record GridColumn(Long id, String label, int sortOrder) {
+    /** Grid Matching: cột dùng chung cho mọi hàng. description = đoạn chú
+     * giải riêng cho cột này (vd "The alone condition"), hiện trong bảng chú
+     * giải SAU lưới chấm điểm — null/rỗng = không có mô tả. */
+    public record GridColumn(Long id, String label, String description, int sortOrder) {
     }
 
     /** Grid Matching: một hàng — đúng khi khớp correctColumnLabel. */
