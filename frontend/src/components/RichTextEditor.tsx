@@ -90,7 +90,7 @@ export function RichTextEditor({
   if (!editor) return null;
 
   function insertClozeBlank() {
-    const attrs: ClozeBlankAttrs = { answers: [], caseSensitive: true, subType: "TEXT", options: null };
+    const attrs: ClozeBlankAttrs = { answers: [], caseSensitive: false, subType: "TEXT", options: null };
     editor?.chain().focus().insertContent({ type: "clozeBlank", attrs }).run();
   }
 
