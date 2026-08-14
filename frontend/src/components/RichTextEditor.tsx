@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "@tiptap/extension-image";
 import Link from "@tiptap/extension-link";
 import { TableKit } from "@tiptap/extension-table";
 import TextAlign from "@tiptap/extension-text-align";
@@ -35,6 +34,7 @@ import {
 import { useEffect, useRef, useState } from "react";
 import { ApiError, mediaApi } from "@/lib/api";
 import { ClozeBlankExtension, type ClozeBlankAttrs } from "@/components/richtext/ClozeBlankExtension";
+import { ResizableImage } from "@/components/richtext/ResizableImageExtension";
 
 /** Danh sách extension nền dùng chung — soạn (ở đây) VÀ chuyển JSON→HTML lúc
  * lưu Cloze (`serializeClozeEditorState` trong `@/lib/clozeStemTransform`)
@@ -44,7 +44,7 @@ export const BASE_RICH_TEXT_EXTENSIONS: Extensions = [
   Underline,
   TextAlign.configure({ types: ["heading", "paragraph"] }),
   Link.configure({ openOnClick: false }),
-  Image,
+  ResizableImage,
   TableKit.configure({ table: { resizable: true } }),
 ];
 
