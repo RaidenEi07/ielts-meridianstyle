@@ -38,26 +38,35 @@ export function ResizableImageView({ node, updateAttributes, selected }: ReactNo
     [updateAttributes],
   );
 
+  // node.attrs.textAlign đến từ TextAlign extension dùng chung (đã thêm
+  // "image" vào types trong RichTextEditor.tsx) — bọc ngoài 1 khối block
+  // dùng text-align để căn trái/giữa/phải, khối trong giữ position:relative
+  // canh theo ĐÚNG kích thước ảnh (không phải cả bề rộng khối ngoài) để núm
+  // resize luôn nằm sát góc ảnh dù ảnh đang được căn giữa.
+  const textAlign = (node.attrs.textAlign as string | null) ?? "left";
+
   return (
-    <NodeViewWrapper as="span" className="relative inline-block align-bottom" style={{ lineHeight: 0 }}>
-      <img
-        ref={imgRef}
-        src={node.attrs.src}
-        alt={node.attrs.alt ?? ""}
-        title={node.attrs.title ?? undefined}
-        style={{ width: width ? `${width}px` : undefined, maxWidth: "100%", height: "auto" }}
-        className={`rounded ${selected ? "outline outline-2 outline-primary" : ""}`}
-        draggable={false}
-      />
-      {selected && (
-        <span
-          onMouseDown={onHandleMouseDown}
-          role="presentation"
-          className={`absolute bottom-0 right-0 h-3.5 w-3.5 translate-x-1/2 translate-y-1/2 cursor-se-resize rounded-full border-2 border-white bg-primary shadow ${
-            resizing ? "opacity-100" : "opacity-80 hover:opacity-100"
-          }`}
+    <NodeViewWrapper as="div" style={{ textAlign: textAlign as React.CSSProperties["textAlign"] }}>
+      <span className="relative inline-block align-bottom" style={{ lineHeight: 0 }}>
+        <img
+          ref={imgRef}
+          src={node.attrs.src}
+          alt={node.attrs.alt ?? ""}
+          title={node.attrs.title ?? undefined}
+          style={{ width: width ? `${width}px` : undefined, maxWidth: "100%", height: "auto" }}
+          className={`rounded ${selected ? "outline outline-2 outline-primary" : ""}`}
+          draggable={false}
         />
-      )}
+        {selected && (
+          <span
+            onMouseDown={onHandleMouseDown}
+            role="presentation"
+            className={`absolute bottom-0 right-0 h-3.5 w-3.5 translate-x-1/2 translate-y-1/2 cursor-se-resize rounded-full border-2 border-white bg-primary shadow ${
+              resizing ? "opacity-100" : "opacity-80 hover:opacity-100"
+            }`}
+          />
+        )}
+      </span>
     </NodeViewWrapper>
   );
 }

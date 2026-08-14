@@ -310,14 +310,19 @@ export function QuestionRenderer({
       return (
         <div className="space-y-4">
           <div className="overflow-x-auto rounded-card border border-border">
-            <table className="w-full min-w-max border-collapse text-sm">
+            {/* table-fixed + width chỉ trên các cột lựa chọn (không đặt trên
+            cột nội dung) ép trình duyệt dồn hết chỗ còn lại cho cột nội dung
+            và NGẮT DÒNG chữ dài thay vì đẩy cả bảng tràn ra kéo thanh cuộn
+            ngang — trước đây min-w-max buộc bảng rộng theo đúng nội dung dài
+            nhất, không bao giờ wrap được. */}
+            <table className="w-full table-fixed border-collapse text-sm">
               <thead>
                 <tr className="bg-soft">
                   <th className="border-b border-border p-3 text-left font-semibold text-text" />
                   {question.gridColumns.map((c) => (
                     <th
                       key={c.label}
-                      className="min-w-14 border-b border-l border-border p-3 text-center font-semibold text-text"
+                      className="w-14 border-b border-l border-border p-3 text-center font-semibold text-text"
                     >
                       {c.label}
                     </th>
@@ -327,7 +332,7 @@ export function QuestionRenderer({
               <tbody>
                 {question.gridRows.map((row, idx) => (
                   <tr key={row.id} className={idx % 2 === 1 ? "bg-soft/40" : undefined}>
-                    <td className="border-b border-border p-3 font-medium text-text">{row.rowText}</td>
+                    <td className="break-words border-b border-border p-3 font-medium text-text">{row.rowText}</td>
                     {question.gridColumns.map((c) => {
                       const checked = choices[String(row.id)] === c.label;
                       return (

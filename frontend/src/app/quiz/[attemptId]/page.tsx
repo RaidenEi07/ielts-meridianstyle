@@ -1776,7 +1776,7 @@ function WritingEditor({
             readOnly={!!review}
             onChange={(e) => onChange(e.target.value)}
             placeholder="Viết bài của bạn tại đây…"
-            className="min-h-[280px] flex-1 resize-none rounded-t-card bg-transparent p-4 text-text outline-none"
+            className="min-h-[280px] flex-1 resize-y rounded-t-card bg-transparent p-4 text-text outline-none"
             style={{ fontFamily: "var(--font-serif)", fontSize: "15.5px", lineHeight: 1.9 }}
           />
           <div className="flex items-center justify-between border-t border-border px-4 py-2 text-sm">

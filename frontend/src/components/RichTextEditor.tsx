@@ -42,7 +42,7 @@ import { ResizableImage } from "@/components/richtext/ResizableImageExtension";
 export const BASE_RICH_TEXT_EXTENSIONS: Extensions = [
   StarterKit,
   Underline,
-  TextAlign.configure({ types: ["heading", "paragraph"] }),
+  TextAlign.configure({ types: ["heading", "paragraph", "image"] }),
   Link.configure({ openOnClick: false }),
   ResizableImage,
   TableKit.configure({ table: { resizable: true } }),
@@ -66,6 +66,27 @@ export function RichTextEditor({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // handlePaste/handleDrop chạy trong editorProps (đóng gói lúc dựng editor)
+  // nên không chắc chắn tham chiếu được biến "token" mới nhất qua closure —
+  // dùng ref để luôn đọc giá trị hiện tại, khỏi phải dựng lại editor mỗi khi
+  // token đổi (vd sau khi refresh access token).
+  const tokenRef = useRef(token);
+  tokenRef.current = token;
+
+  async function uploadAndInsertAt(view: import("@tiptap/pm/view").EditorView, file: File) {
+    setError(null);
+    setUploading(true);
+    try {
+      const { url } = await mediaApi.uploadImage(tokenRef.current, file);
+      const node = view.state.schema.nodes.image.create({ src: url });
+      const tr = view.state.tr.replaceSelectionWith(node);
+      view.dispatch(tr);
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Tải ảnh thất bại");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   const editor = useEditor({
     extensions: enableClozeBlanks
@@ -77,6 +98,18 @@ export function RichTextEditor({
     editorProps: {
       attributes: {
         class: "prose prose-sm dark:prose-invert max-w-none min-h-[220px] px-3 py-2 focus:outline-none",
+      },
+      // Cho phép Ctrl+V dán trực tiếp ảnh chụp màn hình (clipboard) vào bài,
+      // không bắt buộc phải lưu file rồi chọn qua nút "Ảnh" nữa. Chỉ bắt khi
+      // clipboard THỰC SỰ có file ảnh — dán text bình thường vẫn đi qua xử lý
+      // mặc định của TipTap như cũ.
+      handlePaste: (view, event) => {
+        const files = Array.from(event.clipboardData?.files ?? []);
+        const imageFile = files.find((f) => f.type.startsWith("image/"));
+        if (!imageFile) return false;
+        event.preventDefault();
+        uploadAndInsertAt(view, imageFile);
+        return true;
       },
     },
   });
