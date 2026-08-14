@@ -521,6 +521,7 @@ export function QuestionForm({
               onBankHeadingChange={setDragDropBankHeading}
               items={dragItems}
               onItemsChange={setDragItems}
+              token={token}
             />
           )}
           {type === "DRAG_DROP_MARKER" && (

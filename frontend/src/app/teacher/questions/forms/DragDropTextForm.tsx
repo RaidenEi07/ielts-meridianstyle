@@ -1,5 +1,6 @@
 "use client";
 
+import { RichTextEditor } from "@/components/RichTextEditor";
 import type { QuestionDragItem } from "@/lib/types";
 
 function detectBlanks(template: string): string[] {
@@ -19,6 +20,7 @@ export function DragDropTextForm({
   onBankHeadingChange,
   items,
   onItemsChange,
+  token,
 }: {
   template: string;
   onTemplateChange: (v: string) => void;
@@ -28,6 +30,9 @@ export function DragDropTextForm({
   onBankHeadingChange: (v: string) => void;
   items: QuestionDragItem[];
   onItemsChange: (v: QuestionDragItem[]) => void;
+  /** Cho trình soạn thảo đầy đủ (in đậm/nghiêng, chèn ảnh…) — [[1]], [[2]]…
+   * vẫn gõ là văn bản thường ngay trong đó, không cần cú pháp riêng. */
+  token: string;
 }) {
   const blanks = detectBlanks(template);
 
@@ -58,18 +63,13 @@ export function DragDropTextForm({
           className="input text-sm"
         />
       </label>
-      <label className="block">
+      <div>
         <span className="mb-1 block text-xs font-medium text-muted">
-          Mẫu câu — dùng <code>[[1]]</code>, <code>[[2]]</code>… để đánh dấu chỗ trống
+          Mẫu câu — dùng <code>[[1]]</code>, <code>[[2]]</code>… để đánh dấu chỗ trống (gõ ngay
+          trong nội dung, có thể định dạng in đậm/nghiêng/chèn ảnh như văn bản thường)
         </span>
-        <textarea
-          value={template}
-          onChange={(e) => onTemplateChange(e.target.value)}
-          rows={2}
-          placeholder="The [[1]] orbits the [[2]]."
-          className="input text-sm"
-        />
-      </label>
+        <RichTextEditor value={template} onChange={onTemplateChange} token={token} />
+      </div>
       <p className="text-xs text-muted">
         {blanks.length > 0
           ? `Đã phát hiện ${blanks.length} ô trống: ${blanks.map((b) => `[[${b}]]`).join(", ")}`

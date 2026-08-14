@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "@tiptap/extension-link";
-import { TableKit } from "@tiptap/extension-table";
 import TextAlign from "@tiptap/extension-text-align";
 import Underline from "@tiptap/extension-underline";
 import type { Editor, Extensions } from "@tiptap/core";
@@ -11,6 +10,9 @@ import {
   AlignCenter,
   AlignLeft,
   AlignRight,
+  AlignVerticalJustifyCenter,
+  AlignVerticalJustifyEnd,
+  AlignVerticalJustifyStart,
   Bold,
   Columns3,
   Heading2,
@@ -35,6 +37,12 @@ import { useEffect, useRef, useState } from "react";
 import { ApiError, mediaApi } from "@/lib/api";
 import { ClozeBlankExtension, type ClozeBlankAttrs } from "@/components/richtext/ClozeBlankExtension";
 import { ResizableImage } from "@/components/richtext/ResizableImageExtension";
+import {
+  CustomTable,
+  CustomTableCell,
+  CustomTableHeader,
+  CustomTableRow,
+} from "@/components/richtext/TableExtensions";
 
 /** Danh sách extension nền dùng chung — soạn (ở đây) VÀ chuyển JSON→HTML lúc
  * lưu Cloze (`serializeClozeEditorState` trong `@/lib/clozeStemTransform`)
@@ -42,10 +50,15 @@ import { ResizableImage } from "@/components/richtext/ResizableImageExtension";
 export const BASE_RICH_TEXT_EXTENSIONS: Extensions = [
   StarterKit,
   Underline,
-  TextAlign.configure({ types: ["heading", "paragraph", "image"] }),
+  // "tableCell"/"tableHeader" cho phép nút căn trái/giữa/phải sẵn có hoạt
+  // động luôn khi con trỏ đang ở trong 1 ô bảng — không cần nút riêng.
+  TextAlign.configure({ types: ["heading", "paragraph", "image", "tableCell", "tableHeader"] }),
   Link.configure({ openOnClick: false }),
   ResizableImage,
-  TableKit.configure({ table: { resizable: true } }),
+  CustomTable,
+  CustomTableRow,
+  CustomTableCell,
+  CustomTableHeader,
 ];
 
 export function RichTextEditor({
@@ -66,6 +79,9 @@ export function RichTextEditor({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [borderWidth, setBorderWidth] = useState("1");
+  const [borderStyle, setBorderStyle] = useState("solid");
+  const [borderColor, setBorderColor] = useState("#000000");
   // handlePaste/handleDrop chạy trong editorProps (đóng gói lúc dựng editor)
   // nên không chắc chắn tham chiếu được biến "token" mới nhất qua closure —
   // dùng ref để luôn đọc giá trị hiện tại, khỏi phải dựng lại editor mỗi khi
@@ -134,6 +150,41 @@ export function RichTextEditor({
 
   function insertTable() {
     editor?.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run();
+  }
+
+  /** setCellAttribute (lệnh có sẵn của TipTap) chỉ áp cho Ô/vùng đang CHỌN —
+   * "Áp viền cho cả bảng" cần duyệt tay mọi ô con của bảng đang chứa con
+   * trỏ rồi gộp thành 1 transaction duy nhất (undo/redo vẫn 1 bước). */
+  function applyBorderToWholeTable() {
+    if (!editor) return;
+    const { state } = editor;
+    const $from = state.selection.$from;
+    let tableNode: import("@tiptap/pm/model").Node | null = null;
+    let tablePos = -1;
+    for (let d = $from.depth; d > 0; d--) {
+      if ($from.node(d).type.name === "table") {
+        tableNode = $from.node(d);
+        tablePos = $from.before(d);
+        break;
+      }
+    }
+    if (!tableNode || tablePos < 0) return;
+    const width = Number(borderWidth);
+    if (!Number.isFinite(width) || width < 0) return;
+    const tr = state.tr;
+    tableNode.descendants((node, relPos) => {
+      if (node.type.name === "tableCell" || node.type.name === "tableHeader") {
+        tr.setNodeMarkup(tablePos + 1 + relPos, undefined, {
+          ...node.attrs,
+          borderWidth: width,
+          borderStyle,
+          borderColor,
+        });
+      }
+      return true;
+    });
+    editor.view.dispatch(tr);
+    editor.commands.focus();
   }
 
   function openImagePicker() {
@@ -267,6 +318,61 @@ export function RichTextEditor({
             icon={Trash2}
             label="Xóa bảng"
             onClick={() => editor.chain().focus().deleteTable().run()}
+          />
+          <Divider />
+          {/* Căn ngang (trái/giữa/phải) dùng chung 3 nút Align phía trên —
+          "tableCell"/"tableHeader" đã nằm trong types của TextAlign nên tự
+          áp cho đúng ô đang chọn, không cần lặp lại nút ở đây. */}
+          <ToolbarButton
+            icon={AlignVerticalJustifyStart}
+            label="Căn trên (theo chiều dọc)"
+            onClick={() => editor.chain().focus().setCellAttribute("verticalAlign", "top").run()}
+          />
+          <ToolbarButton
+            icon={AlignVerticalJustifyCenter}
+            label="Căn giữa (theo chiều dọc)"
+            onClick={() => editor.chain().focus().setCellAttribute("verticalAlign", "middle").run()}
+          />
+          <ToolbarButton
+            icon={AlignVerticalJustifyEnd}
+            label="Căn dưới (theo chiều dọc)"
+            onClick={() => editor.chain().focus().setCellAttribute("verticalAlign", "bottom").run()}
+          />
+          <Divider />
+          <span className="flex items-center gap-1 text-xs text-muted">
+            Viền:
+            <input
+              type="number"
+              min={0}
+              value={borderWidth}
+              onChange={(e) => setBorderWidth(e.target.value)}
+              title="Độ dày viền (px)"
+              className="input w-12 px-1 py-0.5 text-xs"
+            />
+            px
+            <select
+              value={borderStyle}
+              onChange={(e) => setBorderStyle(e.target.value)}
+              title="Loại viền"
+              className="input px-1 py-0.5 text-xs"
+            >
+              <option value="solid">Nét liền</option>
+              <option value="dashed">Nét đứt</option>
+              <option value="dotted">Chấm chấm</option>
+              <option value="double">Viền đôi</option>
+            </select>
+            <input
+              type="color"
+              value={borderColor}
+              onChange={(e) => setBorderColor(e.target.value)}
+              title="Màu viền"
+              className="h-6 w-8 cursor-pointer rounded border border-border p-0.5"
+            />
+          </span>
+          <ToolbarButton
+            icon={TableIcon}
+            label="Áp viền cho cả bảng"
+            onClick={applyBorderToWholeTable}
           />
         </div>
       )}

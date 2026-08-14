@@ -1,6 +1,7 @@
 "use client";
 
 import { DndContext, useDraggable, useDroppable, type DragEndEvent } from "@dnd-kit/core";
+import { HtmlWithBlanks } from "@/components/HtmlWithBlanks";
 import type { PlayerDragItem } from "@/lib/types";
 
 function DraggableWordChip({ item }: { item: PlayerDragItem }) {
@@ -97,7 +98,6 @@ export function DragDropSentence({
   blankOrder?: Map<string, number>;
 }) {
   const placements: Record<string, string> = answer?.placements ?? {};
-  const parts = template.split(/\[\[(\d+)\]\]/);
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -130,10 +130,15 @@ export function DragDropSentence({
           {templateHeading && (
             <p className="mb-2 text-base font-semibold text-text">{templateHeading}</p>
           )}
-          <p className="whitespace-pre-wrap text-lg leading-10 text-text">
-            {parts.map((part, i) => {
-              if (i % 2 === 0) return <span key={i}>{part}</span>;
-              const targetLabel = part;
+          {/* HtmlWithBlanks portals mỗi BlankSlot vào đúng vị trí [[n]] trong
+          cây DOM thật của HTML đã soạn (giữ nguyên in đậm/nghiêng/ảnh...) —
+          cùng cơ chế đã dùng cho ô trống CLOZE {n} và dropdown Matching
+          Heading nhúng trong đoạn văn, xem HtmlWithBlanks.tsx. */}
+          <HtmlWithBlanks
+            html={template}
+            markerPattern={/\[\[(\d+)\]\]/g}
+            className="prose prose-lg dark:prose-invert max-w-none leading-10 text-text"
+            renderBlank={(targetLabel) => {
               const itemId = Object.keys(placements).find((id) => placements[id] === targetLabel);
               const filledItem = itemId
                 ? (dragItems.find((d) => String(d.id) === itemId) ?? null)
@@ -144,15 +149,14 @@ export function DragDropSentence({
                   : undefined;
               return (
                 <BlankSlot
-                  key={i}
                   targetLabel={targetLabel}
                   filledItem={filledItem}
                   number={number}
                   onClear={() => clearBlank(targetLabel)}
                 />
               );
-            })}
-          </p>
+            }}
+          />
         </div>
         <div>
           {bankHeading && <p className="mb-2 text-base font-semibold text-text">{bankHeading}</p>}
