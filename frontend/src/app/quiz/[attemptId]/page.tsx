@@ -221,6 +221,20 @@ function cardLabel(q: PlayerQuestion, order: Map<string, number>): string {
   return min === max ? `${min}` : `${min}-${max}`;
 }
 
+/** Dải số câu hỏi thật của TOÀN BỘ 1 trang Reading (vd "1-13") — dùng để
+ * dựng dòng hướng dẫn "Part 1 - Read the text and answer questions 1-13"
+ * thay cho page.passageTitle (thường là tiêu đề nội bộ thô từ nguồn gốc,
+ * dạng "B5-P63 Questions 1-7 ..." không phù hợp hiện cho học viên). */
+function partQuestionRange(questions: PlayerQuestion[], order: Map<string, number>): string | null {
+  const nums = questions
+    .flatMap((q) => expandSlots(q).map((s) => order.get(s.key)))
+    .filter((n): n is number => n != null);
+  if (nums.length === 0) return null;
+  const min = Math.min(...nums);
+  const max = Math.max(...nums);
+  return min === max ? `${min}` : `${min}-${max}`;
+}
+
 /** 1 câu MULTIPLE_CHOICE độc lập, hoặc 1 nhóm câu cùng dùng chung 1 bộ đáp án
  * (vd Yes/No/Not Given lặp lại cho nhiều câu) — nhóm để hiện thành 1 bảng
  * lưới, mỗi câu vẫn là 1 quizQuestion/điểm/chấm riêng hệt như trước (thuần
@@ -1511,7 +1525,12 @@ function ReadingSplitPane({
         <div className="relative overflow-y-auto border-r border-border" style={{ width: `${leftPct}%` }}>
           <div className="sticky top-0 flex items-center justify-between border-b border-border bg-bg/90 px-6 py-2 backdrop-blur">
             <span className="flex items-center gap-1 text-xs font-semibold text-muted">
-              <BookOpen className="h-3.5 w-3.5" /> {page.passageTitle}
+              <BookOpen className="h-3.5 w-3.5" />
+              {(() => {
+                const range = partQuestionRange(questions, order);
+                const partName = page.partLabel ?? `Part ${page.pageNumber}`;
+                return range ? `${partName} - Read the text and answer questions ${range}` : partName;
+              })()}
             </span>
             <span className="text-xs text-muted">Bôi đen văn bản để highlight hoặc ghi chú</span>
           </div>
@@ -1752,7 +1771,16 @@ function WritingEditor({
   onChange: (text: string) => void;
   review?: GradedItem;
 }) {
-  const target = 250;
+  // wordLimit/timeLimit lấy từ settings riêng của câu (đặt qua EssayForm) —
+  // trước đây target đếm từ bị cố định cứng 250 cho MỌI Task, sai với Task 1
+  // (150 từ) dù settings.wordLimit đã đặt đúng từ lâu, chỉ là màn làm bài
+  // chưa từng đọc tới nó.
+  const essaySettings = question.settings as { wordLimit?: number; timeLimit?: number } | null;
+  const target = essaySettings?.wordLimit ?? 250;
+  const timeLimit = essaySettings?.timeLimit;
+  const instruction = timeLimit
+    ? `You should spend about ${timeLimit} minutes on this task. Write at least ${target} words.`
+    : `Write at least ${target} words.`;
   const wc = wordCount(value);
   return (
     <div id={`q-${question.quizQuestionId}`} className="border-t border-border">
@@ -1764,6 +1792,7 @@ function WritingEditor({
       <div className="mx-auto grid max-w-6xl gap-4 px-6 py-6 md:grid-cols-2">
         <div className="rounded-card border border-border bg-surface p-5">
           <p className="text-sm text-muted">Đề bài</p>
+          <p className="mt-1 text-sm italic text-muted">{instruction}</p>
           <div
             className="prose prose-sm dark:prose-invert mt-2 max-w-none"
             style={{ fontFamily: "var(--font-serif)", lineHeight: 1.7 }}

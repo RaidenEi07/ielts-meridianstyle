@@ -143,6 +143,9 @@ export function QuestionForm({
   const [essayWordLimit, setEssayWordLimit] = useState(
     initSettings?.wordLimit != null ? String(initSettings.wordLimit) : "",
   );
+  const [essayTimeLimit, setEssayTimeLimit] = useState(
+    initSettings?.timeLimit != null ? String(initSettings.timeLimit) : "",
+  );
   const [essayRubric, setEssayRubric] = useState<string[]>(
     Array.isArray(initSettings?.rubric) ? (initSettings!.rubric as string[]) : [],
   );
@@ -185,6 +188,7 @@ export function QuestionForm({
       case "ESSAY":
         return {
           wordLimit: essayWordLimit ? Number(essayWordLimit) : undefined,
+          timeLimit: essayTimeLimit ? Number(essayTimeLimit) : undefined,
           rubric: essayRubric.filter((r) => r.trim().length > 0),
         };
       case "DRAG_DROP_TEXT":
@@ -501,6 +505,8 @@ export function QuestionForm({
             <EssayForm
               wordLimit={essayWordLimit}
               onWordLimitChange={setEssayWordLimit}
+              timeLimit={essayTimeLimit}
+              onTimeLimitChange={setEssayTimeLimit}
               rubric={essayRubric}
               onRubricChange={setEssayRubric}
             />
