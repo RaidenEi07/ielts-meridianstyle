@@ -516,6 +516,11 @@ public class AttemptService {
                                             .toList();
                                     settings = q.settings();
                                 }
+                                // wordLimit/timeLimit (WritingEditor) sống trong settings — thiếu
+                                // nhánh này thì settings luôn null cho ESSAY, câu nào cũng rơi về
+                                // giá trị mặc định cứng phía frontend bất kể đã đặt gì trong ngân
+                                // hàng câu hỏi.
+                                case "ESSAY" -> settings = q.settings();
                                 case "CLOZE" -> clozeSubAnswers = q.clozeSubAnswers().stream()
                                         .map(c -> new PlayerClozeSubAnswer(c.id(), c.subIndex(),
                                                 c.subType(), c.options()))
