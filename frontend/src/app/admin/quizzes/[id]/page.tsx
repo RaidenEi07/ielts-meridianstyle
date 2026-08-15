@@ -78,6 +78,30 @@ function groupQuestionsByPage(
   return groups;
 }
 
+/** So sánh "tự nhiên" — tách chuỗi thành từng đoạn số/không-số rồi so số
+ * theo GIÁ TRỊ (không phải so ký tự), nên "Question 2" đứng trước "Question
+ * 10" (so ký tự thường thì "1" < "2" nên "10" lại đứng trước "2", sai thứ tự
+ * mong muốn). Dùng cho nút "Sắp xếp theo tên" — tên câu hỏi kiểu "...Question
+ * 5", "...Question 1-4" rất phổ biến trong ngân hàng câu hỏi hiện tại. */
+function naturalCompare(a: string, b: string): number {
+  const chunk = /(\d+)|(\D+)/g;
+  const aParts = a.match(chunk) ?? [];
+  const bParts = b.match(chunk) ?? [];
+  const len = Math.max(aParts.length, bParts.length);
+  for (let i = 0; i < len; i++) {
+    const ap = aParts[i] ?? "";
+    const bp = bParts[i] ?? "";
+    if (ap === bp) continue;
+    if (/^\d+$/.test(ap) && /^\d+$/.test(bp)) {
+      const diff = Number(ap) - Number(bp);
+      if (diff !== 0) return diff;
+    } else if (ap !== bp) {
+      return ap < bp ? -1 : 1;
+    }
+  }
+  return 0;
+}
+
 /** id của vùng thả (kéo-thả GIỮA các Part) — khác với id của từng item (là
  * chính quizQuestionId, số) nên onDragEnd luôn phân biệt được "thả lên 1 câu
  * khác" (di chuyển tới đúng vị trí đó) và "thả vào vùng trống của 1 Part"
@@ -708,6 +732,11 @@ function QuestionsPanel({
     });
   }, [detail]);
   const editMode = useEditModeStore((s) => s.enabled);
+  // Part nào đang bật "Đổi tên câu hỏi" (đổi trực tiếp trong danh sách thay
+  // vì phải mở form Sửa đầy đủ) — theo groupContainerId(pageId), riêng từng
+  // Part, tắt hết khi rời chế độ chỉnh sửa nói chung.
+  const [renameModeParts, setRenameModeParts] = useState<Set<string>>(new Set());
+  const [sortingPartId, setSortingPartId] = useState<string | null>(null);
   const sensors = useSensors(useSensor(PointerSensor));
   const confirm = useConfirm();
   const toast = useToast();
@@ -1001,6 +1030,57 @@ function QuestionsPanel({
     }
   }
 
+  function toggleRenameMode(pageId: number | null) {
+    const id = groupContainerId(pageId);
+    setRenameModeParts((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  // Đổi CHỈ tên (questionBankApi.renameQuestion) — tên câu hỏi sống ở NGÂN
+  // HÀNG câu hỏi (dùng chung cho mọi quiz đang gắn câu này), không phải
+  // riêng của quiz_question, nên đổi ở đây cũng đổi luôn ở mọi nơi khác đang
+  // dùng câu hỏi này — đã cảnh báo ngay trên nút bật chế độ (title).
+  async function renameQuestionName(questionId: number, name: string) {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    try {
+      await questionBankApi.renameQuestion(token, questionId, trimmed);
+      onChanged();
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Đổi tên câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
+    }
+  }
+
+  // Sắp xếp lại câu hỏi trong 1 Part theo tên (naturalCompare) — chỉ đụng thứ
+  // tự trong ĐÚNG Part đó, dùng lại đúng cơ chế reorderQuestions() như kéo-thả.
+  async function sortPartByName(group: QuestionGroup) {
+    const containerId = groupContainerId(group.pageId);
+    setSortingPartId(containerId);
+    const sorted = [...group.items].sort((a, b) => naturalCompare(a.name ?? "", b.name ?? ""));
+    const fullOrder = questionGroups.flatMap((g) => (g.pageId === group.pageId ? sorted : g.items));
+    try {
+      await quizAdminApi.reorderQuestions(
+        token,
+        detail.quiz.id,
+        fullOrder.map((q) => q.quizQuestionId),
+      );
+      onChanged();
+      toast.success("Đã sắp xếp lại theo tên");
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : "Sắp xếp câu hỏi thất bại";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSortingPartId(null);
+    }
+  }
+
   // Self-heal: if the persisted sortOrder doesn't already match Part grouping
   // (e.g. content imported before this grouping existed, with sortOrder that
   // jumps between Parts), normalize it once so the exam-taking order always
@@ -1064,6 +1144,31 @@ function QuestionsPanel({
                 >
                   Xem trước cả Part →
                 </button>
+                {editMode && (
+                  <div className="ml-auto flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => toggleRenameMode(group.pageId)}
+                      className={`text-xs font-semibold ${
+                        renameModeParts.has(groupContainerId(group.pageId))
+                          ? "text-accent"
+                          : "text-muted hover:text-text"
+                      }`}
+                      title="Đổi tên câu hỏi trực tiếp trong danh sách, không cần mở form Sửa — LƯU Ý: tên câu hỏi dùng chung ở ngân hàng câu hỏi, đổi ở đây sẽ đổi luôn ở mọi quiz khác đang gắn câu này"
+                    >
+                      {renameModeParts.has(groupContainerId(group.pageId)) ? "Xong đổi tên" : "Đổi tên câu hỏi"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => sortPartByName(group)}
+                      disabled={sortingPartId === groupContainerId(group.pageId)}
+                      className="text-xs font-semibold text-muted hover:text-text disabled:opacity-60"
+                      title="Tự động sắp xếp lại thứ tự câu hỏi trong Part này theo tên câu hỏi (vd Question 1-4, Question 5, Question 6...)"
+                    >
+                      {sortingPartId === groupContainerId(group.pageId) ? "Đang sắp xếp…" : "Sắp xếp theo tên"}
+                    </button>
+                  </div>
+                )}
               </div>
               <SortableContext
                 items={group.items.map((q) => q.quizQuestionId)}
@@ -1083,7 +1188,23 @@ function QuestionsPanel({
                             <span className="rounded-full bg-primary-soft px-2 py-0.5 text-xs font-semibold text-primary">
                               {q.type}
                             </span>
-                            <span className="flex-1">{q.name}</span>
+                            {renameModeParts.has(groupContainerId(group.pageId)) ? (
+                              <input
+                                defaultValue={q.name ?? ""}
+                                key={`${q.quizQuestionId}-name-${q.name}`}
+                                onBlur={(e) => {
+                                  if (e.target.value.trim() && e.target.value.trim() !== q.name) {
+                                    renameQuestionName(q.questionId, e.target.value);
+                                  }
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") (e.target as HTMLInputElement).blur();
+                                }}
+                                className="flex-1 rounded border border-accent/40 bg-surface px-2 py-1 text-sm"
+                              />
+                            ) : (
+                              <span className="flex-1">{q.name}</span>
+                            )}
                             <span className="flex items-center gap-1 text-xs text-muted">
                               <input
                                 type="number"
