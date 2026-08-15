@@ -526,6 +526,11 @@ public class AttemptService {
                                                 c.subType(), c.options()))
                                         .toList();
                                 case "GRID_MATCHING" -> {
+                                    // settings mang keyTableHeading (tiêu đề bảng chú giải) — thiếu
+                                    // dòng này thì lưu đúng ở ngân hàng câu hỏi nhưng học viên không
+                                    // bao giờ thấy tiêu đề (cùng dạng lỗi đã gặp ở ESSAY wordLimit/
+                                    // timeLimit, xem case "ESSAY" phía trên).
+                                    settings = q.settings();
                                     gridColumns = q.gridColumns().stream()
                                             .map(c -> new PlayerGridColumn(c.label(), c.description()))
                                             .toList();

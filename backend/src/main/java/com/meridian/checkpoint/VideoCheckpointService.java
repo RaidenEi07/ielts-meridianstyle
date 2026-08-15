@@ -165,6 +165,9 @@ public class VideoCheckpointService {
                     .map(c -> new PlayerClozeSubAnswer(c.id(), c.subIndex(), c.subType(), c.options()))
                     .toList();
             case "GRID_MATCHING" -> {
+                // settings mang keyTableHeading (tiêu đề bảng chú giải) — xem giải
+                // thích chi tiết ở AttemptService case "GRID_MATCHING" tương ứng.
+                settings = q.settings();
                 gridColumns = q.gridColumns().stream()
                         .map(c -> new PlayerGridColumn(c.label(), c.description()))
                         .toList();
