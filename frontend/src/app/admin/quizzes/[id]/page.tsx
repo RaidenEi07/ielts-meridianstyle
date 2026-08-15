@@ -6,13 +6,14 @@ import {
   closestCenter,
   DndContext,
   PointerSensor,
+  useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
 } from "@dnd-kit/core";
-import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { FileText, PenLine, Trash2 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { PageHeader } from "@/components/PageHeader";
 import { RichTextEditor } from "@/components/RichTextEditor";
 import { SearchableSelect } from "@/components/SearchableSelect";
@@ -52,12 +53,18 @@ interface QuestionGroup {
 
 // Buckets by pageId (not by position), so each Part is exactly one group no
 // matter how sortOrder currently interleaves them; groups are ordered by
-// Part number ascending, with unassigned questions last.
+// Part number ascending, with unassigned questions last. Seed 1 empty bucket
+// per EXISTING Part (even ones with 0 questions attached yet) so there's
+// still a group/drop-zone to drag a Part's first question into — without
+// this, a Part with no questions never renders at all and can never receive
+// one via drag.
 function groupQuestionsByPage(
   questions: QuizQuestionAdmin[],
-  pagesById: Map<number, QuizPageAdmin>,
+  pages: QuizPageAdmin[],
 ): QuestionGroup[] {
+  const pagesById = new Map(pages.map((p) => [p.id, p]));
   const buckets = new Map<number | null, QuizQuestionAdmin[]>();
+  for (const p of pages) buckets.set(p.id, []);
   for (const q of questions) {
     if (!buckets.has(q.pageId)) buckets.set(q.pageId, []);
     buckets.get(q.pageId)!.push(q);
@@ -69,6 +76,46 @@ function groupQuestionsByPage(
   }));
   groups.sort((a, b) => (a.page?.pageNumber ?? Infinity) - (b.page?.pageNumber ?? Infinity));
   return groups;
+}
+
+/** id của vùng thả (kéo-thả GIỮA các Part) — khác với id của từng item (là
+ * chính quizQuestionId, số) nên onDragEnd luôn phân biệt được "thả lên 1 câu
+ * khác" (di chuyển tới đúng vị trí đó) và "thả vào vùng trống của 1 Part"
+ * (thêm vào cuối Part đó, kể cả Part đang rỗng). */
+function groupContainerId(pageId: number | null): string {
+  return `part-${pageId ?? "unassigned"}`;
+}
+
+/** Bọc <ul> của mỗi Part thành 1 vùng thả riêng — cần thiết để Part đang RỖNG
+ * (chưa có item nào để làm "over" target) vẫn nhận được câu hỏi kéo tới; có
+ * item hay không, vùng này luôn là 1 đích thả hợp lệ. */
+function DroppableGroupList({
+  id,
+  isEmpty,
+  editMode,
+  children,
+}: {
+  id: string;
+  isEmpty: boolean;
+  editMode: boolean;
+  children: ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({ id });
+  return (
+    <ul
+      ref={setNodeRef}
+      className={`space-y-2 rounded-lg ${isEmpty ? "min-h-[2.75rem] border border-dashed p-2" : ""} ${
+        isOver ? "border-accent bg-accent-soft/30" : isEmpty ? "border-border" : ""
+      }`}
+    >
+      {children}
+      {isEmpty && (
+        <li className="pointer-events-none py-1 text-center text-xs text-faint">
+          {editMode ? "Kéo câu hỏi vào đây" : "Chưa có câu hỏi trong Part này"}
+        </li>
+      )}
+    </ul>
+  );
 }
 
 export default function AdminQuizDetailPage() {
@@ -692,7 +739,7 @@ function QuestionsPanel({
   // block (instead of scattering wherever its questions happen to fall in
   // sortOrder) — the flattened bucket order becomes the real sortOrder, since
   // that's the same order students see when taking the quiz.
-  const questionGroups = groupQuestionsByPage(detail.questions, pagesById);
+  const questionGroups = groupQuestionsByPage(detail.questions, detail.pages);
 
   function openPicker() {
     setPicking(true);
@@ -894,19 +941,53 @@ function QuestionsPanel({
     0,
   );
 
-  // Reordering only ever happens within one Part's own list (dragging across
-  // Parts would silently snap back, since group membership comes from pageId,
-  // not from where a row is dropped) — after moving within the group, rebuild
-  // the full cross-group order and persist that as the new sortOrder.
-  async function handleGroupDragEnd(groupItems: QuizQuestionAdmin[], event: DragEndEvent) {
+  // 1 DndContext DUY NHẤT bọc mọi Part (không phải mỗi Part 1 context riêng
+  // như trước) — nhờ vậy over có thể rơi vào 1 câu HOẶC 1 vùng thả thuộc Part
+  // KHÁC, và ta phát hiện được lúc đó là đang kéo CHÉO Part. Cùng Part thì xử
+  // lý y hệt sắp xếp cũ; khác Part thì đổi luôn pageId của câu (moveQuestionPage)
+  // rồi mới reorder toàn bộ để câu nằm đúng vị trí vừa thả.
+  async function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = groupItems.findIndex((q) => q.quizQuestionId === active.id);
-    const newIndex = groupItems.findIndex((q) => q.quizQuestionId === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reorderedGroup = arrayMove(groupItems, oldIndex, newIndex);
-    const fullOrder = questionGroups.flatMap((g) => (g.items === groupItems ? reorderedGroup : g.items));
+    if (!over) return;
+
+    const activeId = Number(active.id);
+    const sourceGroup = questionGroups.find((g) => g.items.some((q) => q.quizQuestionId === activeId));
+    if (!sourceGroup) return;
+    const sourceIndex = sourceGroup.items.findIndex((q) => q.quizQuestionId === activeId);
+
+    const overIdStr = String(over.id);
+    let targetGroup: QuestionGroup | undefined;
+    let targetIndex: number;
+    if (overIdStr.startsWith("part-")) {
+      // Thả vào vùng trống của 1 Part (kể cả Part đang rỗng) — thêm vào cuối.
+      targetGroup = questionGroups.find((g) => groupContainerId(g.pageId) === overIdStr);
+      targetIndex = targetGroup ? targetGroup.items.length : 0;
+    } else {
+      const overId = Number(over.id);
+      targetGroup = questionGroups.find((g) => g.items.some((q) => q.quizQuestionId === overId));
+      targetIndex = targetGroup ? targetGroup.items.findIndex((q) => q.quizQuestionId === overId) : 0;
+    }
+    if (!targetGroup) return;
+
+    const samePart = sourceGroup.pageId === targetGroup.pageId;
+    if (samePart && sourceIndex === targetIndex) return;
+
+    const newSourceItems = [...sourceGroup.items];
+    const [moved] = newSourceItems.splice(sourceIndex, 1);
+    const newTargetItems = samePart ? newSourceItems : [...targetGroup.items];
+    newTargetItems.splice(targetIndex, 0, moved);
+
+    const fullOrder = questionGroups.flatMap((g) => {
+      if (samePart) return g.pageId === sourceGroup.pageId ? newTargetItems : g.items;
+      if (g.pageId === sourceGroup.pageId) return newSourceItems;
+      if (g.pageId === targetGroup.pageId) return newTargetItems;
+      return g.items;
+    });
+
     try {
+      if (!samePart) {
+        await quizAdminApi.moveQuestionPage(token, moved.quizQuestionId, targetGroup.pageId);
+      }
       await quizAdminApi.reorderQuestions(
         token,
         detail.quiz.id,
@@ -958,8 +1039,9 @@ function QuestionsPanel({
       {detail.questions.length === 0 ? (
         <p className="text-sm text-muted">Chưa có câu hỏi nào trong quiz này.</p>
       ) : (
-        <div className="space-y-5">
-          {questionGroups.map((group) => (
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <div className="space-y-5">
+            {questionGroups.map((group) => (
             <div key={group.pageId ?? "unassigned"}>
               <div className="mb-2 flex items-center gap-2">
                 <span
@@ -983,16 +1065,15 @@ function QuestionsPanel({
                   Xem trước cả Part →
                 </button>
               </div>
-              <DndContext
-                sensors={sensors}
-                collisionDetection={closestCenter}
-                onDragEnd={(event) => handleGroupDragEnd(group.items, event)}
+              <SortableContext
+                items={group.items.map((q) => q.quizQuestionId)}
+                strategy={verticalListSortingStrategy}
               >
-                <SortableContext
-                  items={group.items.map((q) => q.quizQuestionId)}
-                  strategy={verticalListSortingStrategy}
+                <DroppableGroupList
+                  id={groupContainerId(group.pageId)}
+                  isEmpty={group.items.length === 0}
+                  editMode={editMode}
                 >
-                  <ul className="space-y-2">
                     {group.items.map((q) => {
                       const canGroupIntro = q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE_NOT_GIVEN";
                       return (
@@ -1084,12 +1165,12 @@ function QuestionsPanel({
                       </li>
                       );
                     })}
-                  </ul>
-                </SortableContext>
-              </DndContext>
+                </DroppableGroupList>
+              </SortableContext>
             </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        </DndContext>
       )}
 
       {editingId !== null && (

@@ -438,6 +438,16 @@ export const quizAdminApi = {
       token,
     }),
 
+  /** Chuyển 1 câu đã gắn sang Part khác (kéo-thả giữa các Part) — pageId
+   * null = gỡ khỏi Part ("Chưa gán trang"). Gọi kèm reorderQuestions() ngay
+   * sau để câu nằm đúng vị trí đã thả trong Part mới. */
+  moveQuestionPage: (token: string, quizQuestionId: number, pageId: number | null) =>
+    apiFetch<QuizQuestionAdmin>(`/api/admin/quiz-questions/${quizQuestionId}/page`, {
+      method: "PATCH",
+      body: { pageId },
+      token,
+    }),
+
   setPage: (
     token: string,
     id: number,

@@ -193,6 +193,34 @@ public class QuizService {
                 qq.getMark(), qq.getPageId(), qq.getSortOrder(), qq.getGroupIntro());
     }
 
+    /**
+     * Di chuyển 1 câu đã gắn sang Part khác (kéo-thả giữa các Part trong danh
+     * sách câu hỏi) — chỉ đổi page_id, KHÔNG đụng sortOrder ở đây; phía admin
+     * luôn gọi kèm reorderQuestions() ngay sau để câu nằm đúng vị trí đã thả
+     * trong Part mới (xem handleGroupDragEnd ở frontend).
+     */
+    @Transactional
+    public QuizQuestionDto moveQuestionPage(UUID uid, Long quizQuestionId, Long pageId) {
+        QuizQuestion qq = quizQuestionRepository.findById(quizQuestionId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy câu trong quiz"));
+        Quiz quiz = requireQuiz(qq.getQuizId());
+        permissionService.requireCapability(uid, CAP, contextId(quiz.getContext()));
+        if (pageId != null) {
+            QuizPage page = pageRepository.findById(pageId)
+                    .orElseThrow(() -> ApiException.notFound("Không tìm thấy trang"));
+            if (!page.getQuizId().equals(quiz.getId())) {
+                throw ApiException.badRequest("Trang không thuộc quiz này");
+            }
+        }
+        qq.setPageId(pageId);
+        qq = quizQuestionRepository.save(qq);
+        Question q = questionRepository.findById(qq.getQuestionId()).orElse(null);
+        return new QuizQuestionDto(qq.getId(), qq.getQuestionId(),
+                q != null ? q.getType().name() : null,
+                q != null ? q.getName() : "(đã xóa)",
+                qq.getMark(), qq.getPageId(), qq.getSortOrder(), qq.getGroupIntro());
+    }
+
     @Transactional
     public QuizPageDto setPage(UUID uid, Long quizId, QuizRequests.SetPage req) {
         Quiz quiz = requireQuiz(quizId);

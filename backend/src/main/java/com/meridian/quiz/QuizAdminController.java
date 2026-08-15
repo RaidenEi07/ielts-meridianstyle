@@ -89,6 +89,12 @@ public class QuizAdminController {
         return quizService.updateGroupIntro(uid(), quizQuestionId, req.groupIntro());
     }
 
+    @PatchMapping("/quiz-questions/{quizQuestionId}/page")
+    public QuizQuestionDto moveQuestionPage(@PathVariable Long quizQuestionId,
+            @Valid @RequestBody QuizRequests.MoveQuestionPage req) {
+        return quizService.moveQuestionPage(uid(), quizQuestionId, req.pageId());
+    }
+
     @PostMapping("/quizzes/{id}/pages")
     public QuizPageDto setPage(@PathVariable Long id, @Valid @RequestBody QuizRequests.SetPage req) {
         return quizService.setPage(uid(), id, req);

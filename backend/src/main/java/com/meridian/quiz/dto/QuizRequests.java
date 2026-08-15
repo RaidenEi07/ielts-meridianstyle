@@ -62,4 +62,8 @@ public final class QuizRequests {
 
     public record UpdateGroupIntro(String groupIntro) {
     }
+
+    /** pageId null = gỡ khỏi mọi Part ("Chưa gán trang"). */
+    public record MoveQuestionPage(Long pageId) {
+    }
 }
