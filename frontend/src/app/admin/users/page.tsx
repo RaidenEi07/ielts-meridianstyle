@@ -336,20 +336,20 @@ export default function AdminUsersPage() {
                     <td className="px-4 py-3 font-medium">{u.username}</td>
                     <td className="px-4 py-3 text-muted">{u.email}</td>
                     <td className="px-4 py-3">{u.fullName}</td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className={`whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-semibold ${st.cls}`}>
                         {st.label}
                       </span>
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex flex-wrap gap-1">
                         {u.roleAssignments.length === 0 && (
-                          <span className="text-xs text-muted">Chưa có vai trò</span>
+                          <span className="whitespace-nowrap text-xs text-muted">Chưa có vai trò</span>
                         )}
                         {u.roleAssignments.map((ra) => (
                           <span
                             key={ra.id}
-                            className="flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary"
+                            className="flex items-center gap-1 whitespace-nowrap rounded-full bg-primary-soft px-2.5 py-1 text-xs font-semibold text-primary"
                           >
                             {ra.roleName}
                             <button
@@ -364,7 +364,7 @@ export default function AdminUsersPage() {
                         ))}
                       </div>
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="whitespace-nowrap px-4 py-3">
                       {assignableRoles.length > 0 ? (
                         <select
                           defaultValue=""
@@ -372,7 +372,7 @@ export default function AdminUsersPage() {
                             if (e.target.value) assignRole(u.id, e.target.value);
                             e.target.value = "";
                           }}
-                          className="input text-xs"
+                          className="input min-w-[150px] text-xs"
                         >
                           <option value="">+ Gán vai trò…</option>
                           {assignableRoles.map((r) => (
@@ -382,19 +382,19 @@ export default function AdminUsersPage() {
                           ))}
                         </select>
                       ) : (
-                        <span className="text-xs text-muted">Đủ vai trò</span>
+                        <span className="whitespace-nowrap text-xs text-muted">Đủ vai trò</span>
                       )}
                     </td>
                     {tab === "teacher" && (
                       <td className="px-4 py-3">
                         <div className="flex flex-wrap gap-1">
                           {(rosters[u.id] ?? []).length === 0 && (
-                            <span className="text-xs text-muted">Chưa có học sinh</span>
+                            <span className="whitespace-nowrap text-xs text-muted">Chưa có học sinh</span>
                           )}
                           {(rosters[u.id] ?? []).map((s) => (
                             <span
                               key={s.id}
-                              className="flex items-center gap-1 rounded-full bg-green-soft px-2.5 py-1 text-xs font-semibold text-green"
+                              className="flex items-center gap-1 whitespace-nowrap rounded-full bg-green-soft px-2.5 py-1 text-xs font-semibold text-green"
                             >
                               {s.fullName}
                               <button
@@ -410,18 +410,18 @@ export default function AdminUsersPage() {
                         </div>
                       </td>
                     )}
-                    <td className="px-4 py-3 text-right">
+                    <td className="whitespace-nowrap px-4 py-3 text-right">
                       <div className="flex items-center justify-end gap-3">
                         <button
                           type="button"
                           onClick={() => setEditingUserId((v) => (v === u.id ? null : u.id))}
-                          className="text-xs font-semibold text-primary"
+                          className="whitespace-nowrap text-xs font-semibold text-primary"
                         >
                           Sửa
                         </button>
                         <Link
                           href={`/admin/users/${u.username}`}
-                          className="text-xs font-semibold text-accent"
+                          className="whitespace-nowrap text-xs font-semibold text-accent"
                         >
                           Xem chi tiết →
                         </Link>
