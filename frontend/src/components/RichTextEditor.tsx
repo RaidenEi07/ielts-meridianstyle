@@ -26,6 +26,7 @@ import {
   Quote,
   Redo2,
   Rows3,
+  SquareDashed,
   Strikethrough,
   Table as TableIcon,
   Trash2,
@@ -185,6 +186,21 @@ export function RichTextEditor({
     });
     editor.view.dispatch(tr);
     editor.commands.focus();
+  }
+
+  /** Chỉ áp cho Ô (hoặc vùng ô) đang chọn — lệnh setCellAttribute có sẵn của
+   * TipTap tự hiểu đúng phạm vi đang chọn (1 ô nếu con trỏ đứng yên, nhiều ô
+   * nếu đang bôi đen 1 vùng), không cần tự duyệt cây như "cả bảng" ở trên. */
+  function applyBorderToSelectedCells() {
+    const width = Number(borderWidth);
+    if (!Number.isFinite(width) || width < 0) return;
+    editor
+      ?.chain()
+      .focus()
+      .setCellAttribute("borderWidth", width)
+      .setCellAttribute("borderStyle", borderStyle)
+      .setCellAttribute("borderColor", borderColor)
+      .run();
   }
 
   function openImagePicker() {
@@ -370,9 +386,32 @@ export function RichTextEditor({
             />
           </span>
           <ToolbarButton
+            icon={SquareDashed}
+            label="Áp viền cho ô đang chọn"
+            onClick={applyBorderToSelectedCells}
+          />
+          <ToolbarButton
             icon={TableIcon}
             label="Áp viền cho cả bảng"
             onClick={applyBorderToWholeTable}
+          />
+          <Divider />
+          {/* Căn CẢ KHỐI bảng trong khung soạn — khác với 3 nút Align ở
+          thanh trên (chỉ canh CHỮ trong từng ô đang chọn). */}
+          <ToolbarButton
+            icon={AlignLeft}
+            label="Căn bảng trái"
+            onClick={() => editor.chain().focus().updateAttributes("table", { align: null }).run()}
+          />
+          <ToolbarButton
+            icon={AlignCenter}
+            label="Căn bảng giữa khung"
+            onClick={() => editor.chain().focus().updateAttributes("table", { align: "center" }).run()}
+          />
+          <ToolbarButton
+            icon={AlignRight}
+            label="Căn bảng phải"
+            onClick={() => editor.chain().focus().updateAttributes("table", { align: "right" }).run()}
           />
         </div>
       )}

@@ -15,7 +15,7 @@ export function ShortAnswerForm({
     <div className="space-y-2">
       <label className="block">
         <span className="mb-1 block text-xs font-medium text-muted">
-          Đáp án chấp nhận (cách nhau bởi dấu phẩy)
+          Đáp án chấp nhận (cách nhau bởi dấu phẩy + khoảng trắng)
         </span>
         <input
           value={acceptedAnswers}

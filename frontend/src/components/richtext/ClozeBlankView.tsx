@@ -6,9 +6,12 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { ClozeBlankAttrs } from "./ClozeBlankExtension";
 
+// Chỉ tách ở dấu phẩy CÓ khoảng trắng theo sau (", ") — dấu phẩy đứng liền
+// số như "20,000" (phân cách hàng nghìn) không bị tách oan thành "20" và
+// "000". Người nhập nhiều đáp án cần gõ dấu cách sau mỗi dấu phẩy.
 function splitCsv(s: string): string[] {
   return s
-    .split(",")
+    .split(/,\s+/)
     .map((x) => x.trim())
     .filter(Boolean);
 }
@@ -87,7 +90,8 @@ export function ClozeBlankView({ node, updateAttributes, deleteNode }: ReactNode
           >
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-muted">
-                Đáp án chấp nhận, cách nhau bởi dấu phẩy
+                Đáp án chấp nhận, cách nhau bởi dấu phẩy + khoảng trắng (vd số có dấu phẩy như
+                &ldquo;20,000&rdquo; sẽ không bị tách nếu không gõ cách sau dấu phẩy đó)
               </span>
               <input
                 autoFocus

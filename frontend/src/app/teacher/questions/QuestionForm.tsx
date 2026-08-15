@@ -35,9 +35,13 @@ import { CategoryForm } from "./CategoryForm";
 import { QuestionTypeGuide } from "./QuestionTypeGuide";
 import { QuestionTypePicker } from "./QuestionTypePicker";
 
+// Chỉ tách ở dấu phẩy CÓ khoảng trắng theo sau (", ") — dấu phẩy đứng liền
+// số như "20,000" (phân cách hàng nghìn) không bị tách oan thành "20" và
+// "000" khi dùng cho đáp án Short Answer. Người nhập nhiều đáp án/tag cần
+// gõ dấu cách sau mỗi dấu phẩy.
 function splitCsv(s: string): string[] {
   return s
-    .split(",")
+    .split(/,\s+/)
     .map((x) => x.trim())
     .filter(Boolean);
 }
@@ -407,7 +411,9 @@ export function QuestionForm({
             )}
 
             <label className="block">
-              <span className="mb-1 block text-xs font-medium text-muted">Điểm mặc định</span>
+              <span className="mb-1 block text-xs font-medium text-muted">
+                Điểm mặc định (khi gắn câu này vào quiz MỚI)
+              </span>
               <input
                 type="number"
                 step="0.1"
@@ -415,6 +421,11 @@ export function QuestionForm({
                 onChange={(e) => setDefaultMark(e.target.value)}
                 className="input"
               />
+              <span className="mt-1 block text-xs text-faint">
+                Chỉ áp dụng cho lần gắn mới — không đổi điểm câu này đang có sẵn ở các quiz đã gắn
+                từ trước (sửa điểm quiz nào thì vào đúng quiz đó, ô &ldquo;điểm&rdquo; cạnh câu
+                hỏi trong danh sách).
+              </span>
             </label>
 
             <label className="block sm:col-span-2">

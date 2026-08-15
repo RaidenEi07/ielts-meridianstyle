@@ -79,5 +79,28 @@ export const CustomTableHeader = TableHeader.extend({
   },
 });
 
-export const CustomTable = Table.configure({ resizable: true });
+/** Căn CẢ KHỐI bảng trong khung soạn (trái/giữa/phải) — khác với căn CHỮ
+ * trong từng ô (TextAlign, xem RichTextEditor.tsx). Bảng là phần tử block
+ * nên margin auto mới canh giữa được (text-align chỉ canh nội dung INLINE
+ * bên trong 1 khối, không tự di chuyển được cả khối). */
+export const CustomTable = Table.extend({
+  addAttributes() {
+    return {
+      ...this.parent?.(),
+      align: {
+        default: null as string | null,
+        parseHTML: (el: HTMLElement) => {
+          if (el.style.marginLeft === "auto" && el.style.marginRight === "auto") return "center";
+          if (el.style.marginLeft === "auto") return "right";
+          return null;
+        },
+        renderHTML: (attrs: { align: string | null }) => {
+          if (attrs.align === "center") return { style: "margin-left: auto; margin-right: auto;" };
+          if (attrs.align === "right") return { style: "margin-left: auto; margin-right: 0;" };
+          return {};
+        },
+      },
+    };
+  },
+}).configure({ resizable: true });
 export const CustomTableRow = TableRow;
