@@ -1149,10 +1149,10 @@ function QuestionsPanel({
                     <button
                       type="button"
                       onClick={() => toggleRenameMode(group.pageId)}
-                      className={`text-xs font-semibold ${
+                      className={`rounded-md border px-2.5 py-1 text-xs font-semibold transition-colors ${
                         renameModeParts.has(groupContainerId(group.pageId))
-                          ? "text-accent"
-                          : "text-muted hover:text-text"
+                          ? "border-accent bg-accent-soft text-accent"
+                          : "border-border text-muted hover:border-accent hover:text-text"
                       }`}
                       title="Đổi tên câu hỏi trực tiếp trong danh sách, không cần mở form Sửa — LƯU Ý: tên câu hỏi dùng chung ở ngân hàng câu hỏi, đổi ở đây sẽ đổi luôn ở mọi quiz khác đang gắn câu này"
                     >
@@ -1162,7 +1162,7 @@ function QuestionsPanel({
                       type="button"
                       onClick={() => sortPartByName(group)}
                       disabled={sortingPartId === groupContainerId(group.pageId)}
-                      className="text-xs font-semibold text-muted hover:text-text disabled:opacity-60"
+                      className="rounded-md border border-border px-2.5 py-1 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-text disabled:opacity-60"
                       title="Tự động sắp xếp lại thứ tự câu hỏi trong Part này theo tên câu hỏi (vd Question 1-4, Question 5, Question 6...)"
                     >
                       {sortingPartId === groupContainerId(group.pageId) ? "Đang sắp xếp…" : "Sắp xếp theo tên"}
