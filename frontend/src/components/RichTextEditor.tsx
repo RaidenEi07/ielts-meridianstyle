@@ -44,6 +44,7 @@ import {
   CustomTableHeader,
   CustomTableRow,
 } from "@/components/richtext/TableExtensions";
+import { inlineStylesFromStyleTags } from "@/components/richtext/pasteFromOffice";
 
 /** Danh sách extension nền dùng chung — soạn (ở đây) VÀ chuyển JSON→HTML lúc
  * lưu Cloze (`serializeClozeEditorState` trong `@/lib/clozeStemTransform`)
@@ -128,6 +129,10 @@ export function RichTextEditor({
         uploadAndInsertAt(view, imageFile);
         return true;
       },
+      // Dán bảng từ Word/Excel: "khắc" style từ khối <style>/class vào từng
+      // phần tử trước khi TipTap parse, không thì viền/màu/canh lề bị rơi
+      // hết (xem giải thích chi tiết trong pasteFromOffice.ts).
+      transformPastedHTML: (html) => inlineStylesFromStyleTags(html),
     },
   });
 

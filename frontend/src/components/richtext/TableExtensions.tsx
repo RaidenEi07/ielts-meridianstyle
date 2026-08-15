@@ -1,4 +1,5 @@
-import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
+import { Table, TableCell, TableHeader, TableRow, TableView } from "@tiptap/extension-table";
+import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 
 /** Ô bảng (td/th) mở rộng thêm border-width/style/color + căn giữa theo
  * chiều dọc — lưu ra HTML là style inline ngay trên từng ô (không phụ
@@ -79,11 +80,47 @@ export const CustomTableHeader = TableHeader.extend({
   },
 });
 
+/** Bảng bật resizable (kéo giãn cột) dùng NodeView riêng của thư viện
+ * (TableView) — NodeView đó tự dựng thẻ <table> bằng document.createElement
+ * và chỉ áp style 1 LẦN lúc khởi tạo; hàm update(node) của nó (chạy mỗi khi
+ * đổi attribute mà KHÔNG dựng lại node — đúng trường hợp bấm nút căn giữa
+ * sau khi bảng đã có sẵn) chỉ gọi updateColumns cho độ rộng cột, bỏ qua mọi
+ * attribute khác. Vì vậy attribute "align" set qua renderHTML KHÔNG BAO GIỜ
+ * lên lại DOM khi đổi live — phải kế thừa TableView, ghi đè update() để tự
+ * đồng bộ margin theo align mỗi lần. Set trực tiếp style.marginLeft/Right
+ * (không dùng cssText) để không đè mất width/minWidth mà updateColumns vừa
+ * set trong super.update(). */
+class AlignAwareTableView extends TableView {
+  update(node: ProseMirrorNode): boolean {
+    const ok = super.update(node);
+    if (ok) {
+      const align = (node.attrs as { align?: string | null }).align;
+      if (align === "center") {
+        this.table.style.marginLeft = "auto";
+        this.table.style.marginRight = "auto";
+      } else if (align === "right") {
+        this.table.style.marginLeft = "auto";
+        this.table.style.marginRight = "0";
+      } else {
+        this.table.style.marginLeft = "";
+        this.table.style.marginRight = "";
+      }
+    }
+    return ok;
+  }
+}
+
 /** Căn CẢ KHỐI bảng trong khung soạn (trái/giữa/phải) — khác với căn CHỮ
  * trong từng ô (TextAlign, xem RichTextEditor.tsx). Bảng là phần tử block
  * nên margin auto mới canh giữa được (text-align chỉ canh nội dung INLINE
  * bên trong 1 khối, không tự di chuyển được cả khối). */
 export const CustomTable = Table.extend({
+  addOptions() {
+    return {
+      ...this.parent!(),
+      View: AlignAwareTableView,
+    };
+  },
   addAttributes() {
     return {
       ...this.parent?.(),
