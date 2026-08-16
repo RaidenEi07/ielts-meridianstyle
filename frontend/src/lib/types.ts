@@ -46,6 +46,7 @@ export interface DistributeResult {
   childSiteName: string | null;
   success: boolean;
   message: string | null;
+  warnings: string[];
 }
 
 // ---- Catalog (Giai đoạn 2) ----

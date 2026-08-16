@@ -3,6 +3,7 @@ package com.meridian.distribution;
 import com.meridian.common.ApiException;
 import com.meridian.distribution.dto.CourseBundle;
 import com.meridian.distribution.dto.CourseDistributionDtos.DistributeResultDto;
+import com.meridian.distribution.dto.CourseImportSummaryDto;
 import com.meridian.rbac.PermissionService;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -59,22 +60,23 @@ public class CourseDistributionService {
     private DistributeResultDto sendTo(Long siteId, CourseBundle.Manifest manifest) {
         ChildSite site = childSiteRepository.findById(siteId).orElse(null);
         if (site == null) {
-            return new DistributeResultDto(siteId, null, false, "Không tìm thấy web con");
+            return new DistributeResultDto(siteId, null, false, "Không tìm thấy web con", List.of());
         }
         if (!site.isActive()) {
-            return new DistributeResultDto(siteId, site.getName(), false, "Web con đang tạm dừng");
+            return new DistributeResultDto(siteId, site.getName(), false, "Web con đang tạm dừng", List.of());
         }
         try {
-            restClient.post()
+            CourseImportSummaryDto summary = restClient.post()
                     .uri(site.getBaseUrl() + "/api/catalog/import")
                     .header("X-Meridian-Api-Key", site.getApiKey())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(manifest)
                     .retrieve()
-                    .toBodilessEntity();
-            return new DistributeResultDto(siteId, site.getName(), true, null);
+                    .body(CourseImportSummaryDto.class);
+            List<String> warnings = summary != null ? summary.warnings() : List.of();
+            return new DistributeResultDto(siteId, site.getName(), true, null, warnings);
         } catch (Exception e) {
-            return new DistributeResultDto(siteId, site.getName(), false, e.getMessage());
+            return new DistributeResultDto(siteId, site.getName(), false, e.getMessage(), List.of());
         }
     }
 }

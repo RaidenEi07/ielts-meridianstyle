@@ -499,6 +499,13 @@ function DistributeCourseButton({ courseId, token }: { courseId: number; token: 
                   {r.success ? "✓" : "✗"} {r.childSiteName ?? `#${r.childSiteId}`}
                 </span>
                 {!r.success && r.message && <span className="text-muted"> — {r.message}</span>}
+                {r.success && r.warnings.length > 0 && (
+                  <ul className="ml-4 mt-1 list-disc space-y-0.5 text-muted">
+                    {r.warnings.map((w, i) => (
+                      <li key={i}>{w}</li>
+                    ))}
+                  </ul>
+                )}
               </li>
             ))}
           </ul>
