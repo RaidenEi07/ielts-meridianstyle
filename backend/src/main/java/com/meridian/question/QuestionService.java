@@ -34,6 +34,7 @@ public class QuestionService {
     private final QuestionClozeSubAnswerRepository clozeRepository;
     private final QuestionGridColumnRepository gridColumnRepository;
     private final QuestionGridRowRepository gridRowRepository;
+    private final QuestionCategoryRepository categoryRepository;
     private final QuestionTaxonomyService taxonomyService;
     private final ObjectMapper json;
 
@@ -45,6 +46,7 @@ public class QuestionService {
             QuestionClozeSubAnswerRepository clozeRepository,
             QuestionGridColumnRepository gridColumnRepository,
             QuestionGridRowRepository gridRowRepository,
+            QuestionCategoryRepository categoryRepository,
             QuestionTaxonomyService taxonomyService,
             ObjectMapper json) {
         this.questionRepository = questionRepository;
@@ -55,6 +57,7 @@ public class QuestionService {
         this.clozeRepository = clozeRepository;
         this.gridColumnRepository = gridColumnRepository;
         this.gridRowRepository = gridRowRepository;
+        this.categoryRepository = categoryRepository;
         this.taxonomyService = taxonomyService;
         this.json = json;
     }
@@ -66,10 +69,12 @@ public class QuestionService {
         QuestionType qt = type == null || type.isBlank() ? null : parseType(type);
         List<Question> questions;
         if (categoryId != null && qt != null) {
+            Set<Long> categoryIds = resolveCategoryIdsIncludingDescendants(categoryId);
             questions = questionRepository
-                    .findByCategoryIdAndTypeOrderByCreatedAtDesc(categoryId, qt);
+                    .findByCategoryIdInAndTypeOrderByCreatedAtDesc(categoryIds, qt);
         } else if (categoryId != null) {
-            questions = questionRepository.findByCategoryIdOrderByCreatedAtDesc(categoryId);
+            Set<Long> categoryIds = resolveCategoryIdsIncludingDescendants(categoryId);
+            questions = questionRepository.findByCategoryIdInOrderByCreatedAtDesc(categoryIds);
         } else if (audience != null && qt != null) {
             questions = questionRepository
                     .findByCategory_AudienceAndTypeOrderByCreatedAtDesc(audience, qt);
@@ -81,6 +86,29 @@ public class QuestionService {
             questions = questionRepository.findAllByOrderByCreatedAtDesc();
         }
         return questions.stream().map(this::toSummary).toList();
+    }
+
+    /** Lọc theo danh mục trong ngân hàng câu hỏi cần bao trọn cả nhánh cây (vd
+     * chọn danh mục gốc "IELTS PREP (Moodle import)" phải trả về câu hỏi của
+     * mọi "Mock NN" > "Reading/Listening/Writing" bên dưới nó — câu hỏi chỉ
+     * thực sự gắn ở danh mục lá, không gắn trực tiếp ở danh mục cha) — nạp
+     * toàn bộ cây 1 lần rồi duyệt rộng (BFS) từ {@code rootId} thay vì N+1
+     * truy vấn đệ quy theo từng cấp. */
+    private Set<Long> resolveCategoryIdsIncludingDescendants(Long rootId) {
+        Map<Long, List<Long>> childrenByParent = new LinkedHashMap<>();
+        for (QuestionCategory c : categoryRepository.findAllByOrderByNameAsc()) {
+            if (c.getParent() != null) {
+                childrenByParent.computeIfAbsent(c.getParent().getId(), k -> new ArrayList<>()).add(c.getId());
+            }
+        }
+        Set<Long> result = new LinkedHashSet<>();
+        List<Long> queue = new ArrayList<>(List.of(rootId));
+        while (!queue.isEmpty()) {
+            Long id = queue.remove(0);
+            if (!result.add(id)) continue;
+            queue.addAll(childrenByParent.getOrDefault(id, List.of()));
+        }
+        return result;
     }
 
     @Transactional(readOnly = true)

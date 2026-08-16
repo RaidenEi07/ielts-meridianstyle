@@ -10,7 +10,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { ApiError, questionBankApi } from "@/lib/api";
 import { categoryOptionLabel } from "@/lib/categoryLabel";
-import { TYPE_META } from "@/lib/questionTypes";
+import { QUESTION_TYPES, TYPE_META } from "@/lib/questionTypes";
 import type {
   ImportSummary,
   QuestionCategoryNode,
@@ -32,6 +32,7 @@ export default function QuestionBankPage() {
   const [categories, setCategories] = useState<QuestionCategoryNode[]>([]);
   const [questions, setQuestions] = useState<QuestionSummary[]>([]);
   const [activeCat, setActiveCat] = useState<number | null>(null);
+  const [typeFilter, setTypeFilter] = useState<string>("");
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<QuestionDetail | null>(null);
   const [importing, setImporting] = useState(false);
@@ -70,16 +71,16 @@ export default function QuestionBankPage() {
   useEffect(() => {
     if (!allowed || !accessToken) return;
     questionBankApi
-      .questions(accessToken, activeCat ?? undefined, "IELTS")
+      .questions(accessToken, activeCat ?? undefined, "IELTS", typeFilter || undefined)
       .then(setQuestions)
       .catch(() => {});
     setSelected(new Set());
-  }, [allowed, accessToken, activeCat]);
+  }, [allowed, accessToken, activeCat, typeFilter]);
 
   function refresh() {
     if (!accessToken) return;
     questionBankApi
-      .questions(accessToken, activeCat ?? undefined, "IELTS")
+      .questions(accessToken, activeCat ?? undefined, "IELTS", typeFilter || undefined)
       .then(setQuestions)
       .catch(() => {});
   }
@@ -407,6 +408,33 @@ export default function QuestionBankPage() {
                 + Tạo câu hỏi mới
               </Link>
             </div>
+          </div>
+          <div className="mb-4 flex items-center gap-2">
+            <label className="text-sm font-medium text-muted" htmlFor="type-filter">
+              Lọc theo dạng
+            </label>
+            <select
+              id="type-filter"
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="input w-auto py-1.5 text-sm"
+            >
+              <option value="">Tất cả các dạng</option>
+              {QUESTION_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+            {typeFilter && (
+              <button
+                type="button"
+                onClick={() => setTypeFilter("")}
+                className="text-sm font-semibold text-muted hover:text-text"
+              >
+                Xóa bộ lọc
+              </button>
+            )}
           </div>
           {error && <p className="mb-3 text-sm text-red">{error}</p>}
           {importResult && (

@@ -557,10 +557,11 @@ export const questionBankApi = {
       { token },
     ),
 
-  questions: (token: string, categoryId?: number, audience?: Audience) => {
+  questions: (token: string, categoryId?: number, audience?: Audience, type?: string) => {
     const q = new URLSearchParams();
     if (categoryId) q.set("categoryId", String(categoryId));
     if (audience) q.set("audience", audience);
+    if (type) q.set("type", type);
     const qs = q.toString();
     return apiFetch<QuestionSummary[]>(
       `/api/admin/question-bank/questions${qs ? `?${qs}` : ""}`,
