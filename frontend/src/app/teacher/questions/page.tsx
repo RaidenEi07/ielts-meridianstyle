@@ -23,6 +23,13 @@ import { useConfirm } from "@/store/confirm";
 import { useToast } from "@/store/toast";
 import { PreviewModal } from "./PreviewModal";
 
+// Danh sách câu hỏi có thể lên tới hàng nghìn (vd chọn "Tất cả") — render hết
+// 1 lần vào 1 bảng khiến DOM quá nặng, thao tác (kể cả bấm "Sửa") trở nên ì
+// ạch/như không phản hồi. Phân trang phía client để giữ số dòng render tại 1
+// thời điểm ở mức nhẹ, không cần đổi hợp đồng API (server vẫn trả về đủ danh
+// sách đã lọc theo danh mục/dạng).
+const PAGE_SIZE = 50;
+
 export default function QuestionBankPage() {
   const router = useRouter();
   const { accessToken, hydrated, loadMe, hasCapability } = useAuthStore();
@@ -33,6 +40,7 @@ export default function QuestionBankPage() {
   const [questions, setQuestions] = useState<QuestionSummary[]>([]);
   const [activeCat, setActiveCat] = useState<number | null>(null);
   const [typeFilter, setTypeFilter] = useState<string>("");
+  const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<QuestionDetail | null>(null);
   const [importing, setImporting] = useState(false);
@@ -75,7 +83,11 @@ export default function QuestionBankPage() {
       .then(setQuestions)
       .catch(() => {});
     setSelected(new Set());
+    setPage(0);
   }, [allowed, accessToken, activeCat, typeFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(questions.length / PAGE_SIZE));
+  const pageItems = questions.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   function refresh() {
     if (!accessToken) return;
@@ -95,9 +107,19 @@ export default function QuestionBankPage() {
   }
 
   function toggleSelectAll() {
-    setSelected((prev) =>
-      prev.size === questions.length ? new Set() : new Set(questions.map((q) => q.id)),
-    );
+    // "Chọn tất cả" chỉ áp dụng cho trang hiện tại (không phải toàn bộ danh
+    // sách đã lọc) — khớp với những gì người dùng đang thấy trên màn hình.
+    const pageIds = pageItems.map((q) => q.id);
+    const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selected.has(id));
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        pageIds.forEach((id) => next.delete(id));
+      } else {
+        pageIds.forEach((id) => next.add(id));
+      }
+      return next;
+    });
   }
 
   async function bulkDelete() {
@@ -581,7 +603,9 @@ export default function QuestionBankPage() {
                   <th className="px-4 py-2.5">
                     <input
                       type="checkbox"
-                      checked={questions.length > 0 && selected.size === questions.length}
+                      checked={
+                        pageItems.length > 0 && pageItems.every((q) => selected.has(q.id))
+                      }
                       onChange={toggleSelectAll}
                     />
                   </th>
@@ -600,7 +624,7 @@ export default function QuestionBankPage() {
                     </td>
                   </tr>
                 ) : (
-                  questions.map((q) => {
+                  pageItems.map((q) => {
                     const meta = TYPE_META[q.type] ?? {
                       label: q.type,
                       cls: "bg-soft text-muted",
@@ -675,6 +699,35 @@ export default function QuestionBankPage() {
               </tbody>
             </table>
           </div>
+          {questions.length > PAGE_SIZE && (
+            <div className="mt-4 flex items-center justify-between text-sm">
+              <span className="text-muted">
+                {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, questions.length)} /{" "}
+                {questions.length} câu hỏi
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  disabled={page === 0}
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5 font-semibold text-text disabled:opacity-40"
+                >
+                  ← Trước
+                </button>
+                <span className="text-muted">
+                  Trang {page + 1}/{totalPages}
+                </span>
+                <button
+                  type="button"
+                  disabled={page >= totalPages - 1}
+                  onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5 font-semibold text-text disabled:opacity-40"
+                >
+                  Sau →
+                </button>
+              </div>
+            </div>
+          )}
         </main>
       </div>
 
