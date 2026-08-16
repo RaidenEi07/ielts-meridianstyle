@@ -21,6 +21,7 @@ import type {
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useToast } from "@/store/toast";
+import { EditModal } from "./EditModal";
 import { PreviewModal } from "./PreviewModal";
 
 // Danh sách câu hỏi có thể lên tới hàng nghìn (vd chọn "Tất cả") — render hết
@@ -43,6 +44,7 @@ export default function QuestionBankPage() {
   const [page, setPage] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [previewing, setPreviewing] = useState<QuestionDetail | null>(null);
+  const [editingId, setEditingId] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportSummary | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
@@ -71,9 +73,15 @@ export default function QuestionBankPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, accessToken]);
 
+  function refreshCategories() {
+    if (!accessToken) return;
+    questionBankApi.categories(accessToken, "IELTS").then(setCategories).catch(() => {});
+  }
+
   useEffect(() => {
     if (!allowed || !accessToken) return;
-    questionBankApi.categories(accessToken, "IELTS").then(setCategories).catch(() => {});
+    refreshCategories();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed, accessToken]);
 
   useEffect(() => {
@@ -670,12 +678,13 @@ export default function QuestionBankPage() {
                             >
                               Xem trước
                             </button>
-                            <Link
-                              href={`/teacher/questions/${q.id}`}
+                            <button
+                              type="button"
+                              onClick={() => setEditingId(q.id)}
                               className="font-semibold text-primary"
                             >
                               Sửa
-                            </Link>
+                            </button>
                             <button
                               type="button"
                               onClick={() => duplicateQuestion(q.id)}
@@ -733,6 +742,20 @@ export default function QuestionBankPage() {
 
       {previewing && (
         <PreviewModal question={previewing} onClose={() => setPreviewing(null)} />
+      )}
+
+      {editingId !== null && accessToken && (
+        <EditModal
+          questionId={editingId}
+          token={accessToken}
+          categories={categories}
+          onCategoriesChanged={refreshCategories}
+          onSaved={() => {
+            setEditingId(null);
+            refresh();
+          }}
+          onClose={() => setEditingId(null)}
+        />
       )}
 
       {showBulkRename && (
