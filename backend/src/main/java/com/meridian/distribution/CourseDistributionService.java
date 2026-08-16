@@ -30,9 +30,15 @@ public class CourseDistributionService {
         this.exportService = exportService;
         this.permissionService = permissionService;
 
+        // Đọc timeout ngắn (15s cũ) khiến khóa học lớn (vd ielts-prep, ~1800 câu
+        // hỏi) luôn báo "thất bại" (SocketTimeoutException) trên web tổng dù
+        // web con vẫn âm thầm nhập xong đúng ở phía sau — mỗi câu hỏi/quiz_question
+        // là 1-2 lượt ghi DB tuần tự bên web con nên tổng thời gian dễ vượt xa
+        // 15s với khóa học nhiều câu hỏi. Nới lên vài phút vì đây là thao tác quản
+        // trị không thường xuyên, không nhạy độ trễ như request người dùng cuối.
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(5));
-        factory.setReadTimeout(Duration.ofSeconds(15));
+        factory.setConnectTimeout(Duration.ofSeconds(10));
+        factory.setReadTimeout(Duration.ofMinutes(10));
         this.restClient = RestClient.builder().requestFactory(factory).build();
     }
 
