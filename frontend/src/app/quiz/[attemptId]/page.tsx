@@ -637,6 +637,34 @@ function QuizPlayerPageInner() {
     setAudioStarted(true);
   }, [audioStarted]);
 
+  // Chặn nút "tạm dừng" ở cấp hệ điều hành (Media Session — phím media trên
+  // bàn phím, nút trên tai nghe bluetooth, widget điều khiển media của
+  // Windows/macOS/trình duyệt) ngay từ nguồn, để audio không bị ngắt dù chỉ
+  // một nhịp. Đây là lớp phòng ngừa đầu tiên; onPause trên thẻ <audio> bên
+  // dưới là lớp dự phòng thứ hai, bắt mọi đường ngắt khác (kể cả gọi
+  // .pause() trực tiếp không qua Media Session).
+  useEffect(() => {
+    if (!audioStarted || audioEnded) return;
+    if (typeof navigator === "undefined" || !("mediaSession" in navigator)) return;
+    const keepPlaying = () => {
+      audioRef.current?.play().catch(() => {});
+    };
+    try {
+      navigator.mediaSession.setActionHandler("pause", keepPlaying);
+      navigator.mediaSession.setActionHandler("stop", keepPlaying);
+    } catch {
+      /* một vài trình duyệt không hỗ trợ các action này — bỏ qua */
+    }
+    return () => {
+      try {
+        navigator.mediaSession.setActionHandler("pause", null);
+        navigator.mediaSession.setActionHandler("stop", null);
+      } catch {
+        /* ignore */
+      }
+    };
+  }, [audioStarted, audioEnded]);
+
   // Số thứ tự câu toàn bài (cho navigator) + tra cứu câu -> step chứa nó.
   const orderedSlots = useMemo(() => steps.flatMap(stepSlots), [steps]);
 
@@ -810,6 +838,16 @@ function QuizPlayerPageInner() {
               return;
             }
             maxAudioReachedRef.current = Math.max(maxAudioReachedRef.current, t);
+          }}
+          onPause={(e) => {
+            // Lớp dự phòng: nếu audio bị ngắt bởi bất kỳ nguyên nhân nào
+            // ngoài ứng dụng (không đi qua Media Session — ví dụ tiện ích mở
+            // rộng trình duyệt, hoặc trình duyệt tự tạm dừng) trong khi chưa
+            // phát hết bài, tự động phát tiếp ngay lập tức thay vì để treo
+            // im lặng cho tới hết giờ làm bài.
+            if (audioStarted && !e.currentTarget.ended) {
+              e.currentTarget.play().catch(() => {});
+            }
           }}
           onEnded={() => setAudioEnded(true)}
         />
