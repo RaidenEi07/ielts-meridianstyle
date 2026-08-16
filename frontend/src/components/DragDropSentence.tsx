@@ -134,10 +134,14 @@ export function DragDropSentence({
           cây DOM thật của HTML đã soạn (giữ nguyên in đậm/nghiêng/ảnh...) —
           cùng cơ chế đã dùng cho ô trống CLOZE {n} và dropdown Matching
           Heading nhúng trong đoạn văn, xem HtmlWithBlanks.tsx. */}
+          {/* prose-sm (khớp CLOZE/QuestionRenderer.tsx) — trước đây prose-lg
+          khiến câu văn/nội dung câu hỏi hiện to hơn hẳn phần tiêu đề (14px)
+          và cả khối đáp án kéo-thả bên dưới (cũng 14px), tạo cảm giác lệch
+          cỡ chữ ngay trong cùng 1 câu hỏi. */}
           <HtmlWithBlanks
             html={template}
             markerPattern={/\[\[(\d+)\]\]/g}
-            className="prose prose-lg dark:prose-invert max-w-none leading-10 text-text"
+            className="prose prose-sm dark:prose-invert max-w-none leading-8 text-text"
             renderBlank={(targetLabel) => {
               const itemId = Object.keys(placements).find((id) => placements[id] === targetLabel);
               const filledItem = itemId
