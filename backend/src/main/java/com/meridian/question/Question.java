@@ -75,6 +75,14 @@ public class Question {
     @Column(name = "created_by")
     private UUID createdBy;
 
+    /** Điều phối web tổng -> web con: ID câu hỏi gốc bên web tổng, nếu câu
+     * hỏi này được tạo ra qua nhập khẩu khóa học ({@link
+     * com.meridian.distribution.CourseImportService}) — null với câu hỏi tạo
+     * trực tiếp. Dùng để nhận diện đúng ở lần gửi lại (resend) kể cả khi câu
+     * hỏi đã bị đổi tên bên web tổng, tránh tạo bản trùng. */
+    @Column(name = "master_question_id")
+    private Long masterQuestionId;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "question_tag_map",

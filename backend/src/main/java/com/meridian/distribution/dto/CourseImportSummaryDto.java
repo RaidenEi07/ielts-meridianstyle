@@ -17,5 +17,6 @@ public record CourseImportSummaryDto(
         int passagesReused,
         int questionsCreated,
         int questionsReused,
+        int questionsUpdated,
         List<String> warnings) {
 }

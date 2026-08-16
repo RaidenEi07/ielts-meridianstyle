@@ -16,7 +16,10 @@ public final class CourseBundle {
     private CourseBundle() {
     }
 
-    public static final int FORMAT_VERSION = 1;
+    /** v2: thêm groupIntro (tiêu đề nhóm), gridColumns/gridRows (GRID_MATCHING),
+     * và masterId (nhận diện câu hỏi ổn định qua các lần gửi lại) — trước đó
+     * cả 3 đều bị rơi mất khi điều phối sang web con. */
+    public static final int FORMAT_VERSION = 2;
 
     public record Manifest(
             int formatVersion,
@@ -55,8 +58,13 @@ public final class CourseBundle {
     public record QuizPageBundle(int pageNumber, String partLabel, String passageRef) {
     }
 
-    /** {@code questionRef} trỏ tới {@link QuestionBundle#refId()}; {@code pageNumber} null nếu câu hỏi không thuộc trang nào. */
-    public record QuizQuestionBundle(String questionRef, BigDecimal mark, Integer pageNumber, int sortOrder) {
+    /** {@code questionRef} trỏ tới {@link QuestionBundle#refId()}; {@code pageNumber} null nếu câu hỏi không thuộc trang nào.
+     * {@code groupIntro} là đoạn hướng dẫn dùng chung cho nhóm câu hỏi (xem
+     * {@code quiz_questions.group_intro}) — gắn với LƯỢT gán câu hỏi này vào
+     * quiz này (không phải nội dung câu hỏi dùng chung ở ngân hàng), null nếu
+     * câu hỏi không mở đầu nhóm nào. */
+    public record QuizQuestionBundle(
+            String questionRef, BigDecimal mark, Integer pageNumber, int sortOrder, String groupIntro) {
     }
 
     /**
@@ -71,8 +79,13 @@ public final class CourseBundle {
     public record PassageBundle(String refId, String title, String kind, String content, String audioUrl) {
     }
 
+    /** {@code masterId} là ID THẬT (không phải refId cục bộ trong gói) của câu
+     * hỏi này bên web tổng — web con lưu lại (xem {@code questions.master_question_id})
+     * để nhận diện đúng ở lần gửi lại (resend) kể cả khi câu hỏi đã bị đổi
+     * tên bên web tổng, tránh tạo bản trùng thay vì cập nhật. */
     public record QuestionBundle(
             String refId,
+            Long masterId,
             String categoryRef,
             String type,
             String name,
@@ -87,6 +100,8 @@ public final class CourseBundle {
             List<QuestionParts.MatchingPair> matchingPairs,
             List<QuestionParts.DragItem> dragItems,
             List<QuestionParts.DragZone> dragZones,
-            List<QuestionParts.ClozeSubAnswer> clozeSubAnswers) {
+            List<QuestionParts.ClozeSubAnswer> clozeSubAnswers,
+            List<QuestionParts.GridColumn> gridColumns,
+            List<QuestionParts.GridRow> gridRows) {
     }
 }

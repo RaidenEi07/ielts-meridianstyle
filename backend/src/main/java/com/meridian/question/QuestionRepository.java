@@ -21,4 +21,6 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
             Audience audience, QuestionType type);
 
     Optional<Question> findByCategoryIdAndNameIgnoreCase(Long categoryId, String name);
+
+    Optional<Question> findByMasterQuestionId(Long masterQuestionId);
 }

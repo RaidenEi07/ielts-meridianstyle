@@ -30,6 +30,8 @@ import com.meridian.question.dto.QuestionCategoryDto;
 import com.meridian.question.dto.QuestionDetailDto;
 import com.meridian.question.dto.QuestionUpsertRequest;
 import com.meridian.quiz.Quiz;
+import com.meridian.quiz.QuizQuestion;
+import com.meridian.quiz.QuizQuestionRepository;
 import com.meridian.quiz.QuizRepository;
 import com.meridian.quiz.QuizService;
 import com.meridian.quiz.dto.QuizDtos.QuizDetailDto;
@@ -65,6 +67,7 @@ public class CourseImportService {
     private final CourseRepository courseRepository;
     private final CourseSectionRepository sectionRepository;
     private final QuizRepository quizRepository;
+    private final QuizQuestionRepository quizQuestionRepository;
     private final QuestionCategoryRepository questionCategoryRepository;
     private final PassageRepository passageRepository;
     private final QuestionRepository questionRepository;
@@ -77,7 +80,8 @@ public class CourseImportService {
 
     public CourseImportService(CourseCategoryRepository courseCategoryRepository,
             CourseRepository courseRepository, CourseSectionRepository sectionRepository,
-            QuizRepository quizRepository, QuestionCategoryRepository questionCategoryRepository,
+            QuizRepository quizRepository, QuizQuestionRepository quizQuestionRepository,
+            QuestionCategoryRepository questionCategoryRepository,
             PassageRepository passageRepository, QuestionRepository questionRepository,
             UserRepository userRepository, CatalogService catalogService, QuizService quizService,
             QuestionService questionService, QuestionTaxonomyService questionTaxonomyService,
@@ -86,6 +90,7 @@ public class CourseImportService {
         this.courseRepository = courseRepository;
         this.sectionRepository = sectionRepository;
         this.quizRepository = quizRepository;
+        this.quizQuestionRepository = quizQuestionRepository;
         this.questionCategoryRepository = questionCategoryRepository;
         this.passageRepository = passageRepository;
         this.questionRepository = questionRepository;
@@ -179,27 +184,64 @@ public class CourseImportService {
         Map<String, Long> questionIdByRef = new HashMap<>();
         int questionsCreated = 0;
         int questionsReused = 0;
+        int questionsUpdated = 0;
         for (CourseBundle.QuestionBundle qb : manifest.questions()) {
             Long categoryId = qb.categoryRef() != null ? questionCategoryIdByRef.get(qb.categoryRef()) : null;
             if (categoryId == null) {
                 warnings.add("Bỏ qua câu hỏi \"" + qb.name() + "\": thiếu danh mục câu hỏi");
                 continue;
             }
-            Optional<Question> existing =
+            Long passageId = qb.passageRef() != null ? passageIdByRef.get(qb.passageRef()) : null;
+            QuestionUpsertRequest req = new QuestionUpsertRequest(
+                    categoryId, qb.type(), qb.name(), qb.stem(), passageId, qb.answerParagraphIndex(),
+                    qb.explanation(), qb.defaultMark(), qb.settings(), qb.tags(), qb.options(),
+                    qb.matchingPairs(), qb.dragItems(), qb.dragZones(), qb.clozeSubAnswers(),
+                    qb.gridColumns(), qb.gridRows());
+
+            // Nhận diện ưu tiên theo masterId (ổn định qua các lần gửi lại, kể
+            // cả khi câu hỏi đã bị đổi tên bên web tổng — trước đây dò thuần
+            // theo tên nên đổi tên bên web tổng làm lần gửi lại tạo bản trùng
+            // thay vì cập nhật bản cũ). Với masterId đã khớp, LUÔN cập nhật
+            // toàn bộ nội dung để web con luôn phản ánh đúng bản mới nhất bên
+            // web tổng.
+            Optional<Question> byMaster = qb.masterId() != null
+                    ? questionRepository.findByMasterQuestionId(qb.masterId())
+                    : Optional.empty();
+            if (byMaster.isPresent()) {
+                try {
+                    QuestionDetailDto updated = questionService.updateQuestion(actorId, byMaster.get().getId(), req);
+                    questionIdByRef.put(qb.refId(), updated.id());
+                    questionsUpdated++;
+                } catch (ApiException e) {
+                    warnings.add("Không cập nhật được câu hỏi \"" + qb.name() + "\": " + e.getMessage());
+                    questionIdByRef.put(qb.refId(), byMaster.get().getId());
+                }
+                continue;
+            }
+
+            // Không có masterId khớp — dò theo tên (tương thích ngược với gói
+            // định dạng v1, hoặc lần đầu gửi câu hỏi này). Nếu tìm thấy, gán
+            // bù masterId ngay để lần gửi lại SAU nhận diện ổn định.
+            Optional<Question> byName =
                     questionRepository.findByCategoryIdAndNameIgnoreCase(categoryId, qb.name());
-            if (existing.isPresent()) {
-                questionIdByRef.put(qb.refId(), existing.get().getId());
+            if (byName.isPresent()) {
+                if (qb.masterId() != null) {
+                    Question entity = byName.get();
+                    entity.setMasterQuestionId(qb.masterId());
+                    questionRepository.save(entity);
+                }
+                questionIdByRef.put(qb.refId(), byName.get().getId());
                 questionsReused++;
                 continue;
             }
-            Long passageId = qb.passageRef() != null ? passageIdByRef.get(qb.passageRef()) : null;
+
             try {
-                QuestionUpsertRequest req = new QuestionUpsertRequest(
-                        categoryId, qb.type(), qb.name(), qb.stem(), passageId, qb.answerParagraphIndex(),
-                        qb.explanation(), qb.defaultMark(), qb.settings(), qb.tags(), qb.options(),
-                        qb.matchingPairs(), qb.dragItems(), qb.dragZones(), qb.clozeSubAnswers(),
-                        null, null);
                 QuestionDetailDto created = questionService.createQuestion(actorId, req);
+                if (qb.masterId() != null) {
+                    Question entity = questionRepository.findById(created.id()).orElseThrow();
+                    entity.setMasterQuestionId(qb.masterId());
+                    questionRepository.save(entity);
+                }
                 questionIdByRef.put(qb.refId(), created.id());
                 questionsCreated++;
             } catch (ApiException e) {
@@ -265,8 +307,23 @@ public class CourseImportService {
                         continue;
                     }
                     Long pageId = qqb.pageNumber() != null ? pageIdByNumber.get(qqb.pageNumber()) : null;
-                    quizService.importQuestions(actorId, quizId,
-                            new QuizRequests.ImportQuestions(List.of(questionId), pageId, qqb.mark()));
+                    // Ghi trực tiếp qua repository (thay vì quizService.importQuestions(),
+                    // vốn LUÔN bỏ qua nếu cặp quiz+câu hỏi đã tồn tại và tự tính
+                    // sortOrder theo countByQuizId) để lần gửi lại thực sự cập
+                    // nhật điểm/trang/thứ tự/tiêu đề nhóm theo đúng gói mới nhất,
+                    // dùng thẳng sortOrder đã xuất — không suy luận lại.
+                    QuizQuestion qq = quizQuestionRepository.findByQuizIdAndQuestionId(quizId, questionId)
+                            .orElseGet(() -> {
+                                QuizQuestion fresh = new QuizQuestion();
+                                fresh.setQuizId(quizId);
+                                fresh.setQuestionId(questionId);
+                                return fresh;
+                            });
+                    qq.setPageId(pageId);
+                    qq.setMark(qqb.mark());
+                    qq.setSortOrder(qqb.sortOrder());
+                    qq.setGroupIntro(qqb.groupIntro());
+                    quizQuestionRepository.save(qq);
                 }
             }
         }
@@ -278,7 +335,7 @@ public class CourseImportService {
                 quizzesCreated, quizzesReused,
                 qCategoriesCreated, qCategoriesReused,
                 passagesCreated, passagesReused,
-                questionsCreated, questionsReused,
+                questionsCreated, questionsReused, questionsUpdated,
                 warnings);
     }
 

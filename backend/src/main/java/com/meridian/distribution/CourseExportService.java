@@ -91,7 +91,7 @@ public class CourseExportService {
                             questionCategoryRefIds, categoryBundles, passageRefIds, passageBundles);
                     Integer pageNumber = qq.getPageId() != null ? pageNumberOf(qq.getPageId(), pages) : null;
                     qqBundles.add(new CourseBundle.QuizQuestionBundle(
-                            questionRef, qq.getMark(), pageNumber, qq.getSortOrder()));
+                            questionRef, qq.getMark(), pageNumber, qq.getSortOrder(), qq.getGroupIntro()));
                 }
 
                 quizBundles.add(new CourseBundle.QuizBundle(
@@ -179,9 +179,9 @@ public class CourseExportService {
         String refId = "q" + (questionRefIds.size() + 1);
         questionRefIds.put(questionId, refId);
         questionBundles.add(new CourseBundle.QuestionBundle(
-                refId, categoryRef, d.type(), d.name(), d.stem(), passageRef, d.answerParagraphIndex(),
+                refId, questionId, categoryRef, d.type(), d.name(), d.stem(), passageRef, d.answerParagraphIndex(),
                 d.explanation(), d.defaultMark(), d.settings(), d.tags(), d.options(), d.matchingPairs(),
-                d.dragItems(), d.dragZones(), d.clozeSubAnswers()));
+                d.dragItems(), d.dragZones(), d.clozeSubAnswers(), d.gridColumns(), d.gridRows()));
         return refId;
     }
 
