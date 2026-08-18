@@ -99,7 +99,7 @@ public class ListeningDataInitializer implements CommandLineRunner {
                 sections.get(0).getId(),
                 QUIZ_TITLE,
                 "Nghe đoạn hội thoại và hoàn thành các ghi chú bên dưới.",
-                600, 3, false, true, 3, new BigDecimal("2"), "PUBLISHED", true));
+                600, 3, false, true, 3, new BigDecimal("2"), "PUBLISHED", true, false));
 
         var page = quizService.setPage(uid, quiz.quiz().id(),
                 new QuizRequests.SetPage(1, "Section 1", passage.id()));

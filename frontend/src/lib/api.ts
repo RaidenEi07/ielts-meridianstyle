@@ -366,6 +366,7 @@ export const quizAdminApi = {
       passMark?: number;
       status?: string;
       allowReviewAfterSubmit?: boolean;
+      audioControlsEnabled?: boolean;
     },
   ) =>
     apiFetch<QuizDetailAdmin>("/api/admin/quizzes", {
@@ -391,6 +392,7 @@ export const quizAdminApi = {
       passMark: number;
       status: string;
       allowReviewAfterSubmit: boolean;
+      audioControlsEnabled: boolean;
     }>,
   ) =>
     apiFetch<QuizDetailAdmin>(`/api/admin/quizzes/${id}`, {

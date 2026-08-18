@@ -65,6 +65,9 @@ public class Quiz {
     @Column(name = "allow_review_after_submit", nullable = false)
     private boolean allowReviewAfterSubmit = true;
 
+    @Column(name = "audio_controls_enabled", nullable = false)
+    private boolean audioControlsEnabled = false;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private QuizStatus status = QuizStatus.DRAFT;

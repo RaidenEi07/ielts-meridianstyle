@@ -566,6 +566,7 @@ public class AttemptService {
                 attempt.getStatus().name(), attempt.getStartedAt(), attempt.getDeadlineAt(),
                 quiz.getTimeLimitSeconds(), quiz.isAntiCheatEnabled(), quiz.getMaxViolations(),
                 attempt.getViolations(), template != null ? template.getCode() : null,
+                quiz.isAudioControlsEnabled(),
                 pages, questions, saved);
     }
 

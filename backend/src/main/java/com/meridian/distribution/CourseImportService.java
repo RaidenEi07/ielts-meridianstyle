@@ -281,14 +281,14 @@ public class CourseImportService {
                     quizService.updateQuiz(actorId, matchedQuiz.getId(), new QuizRequests.UpdateQuiz(
                             qb.title(), qb.intro(), qb.timeLimitSeconds(), qb.maxAttempts(),
                             qb.shuffleQuestions(), qb.antiCheatEnabled(), qb.maxViolations(),
-                            qb.passMark(), qb.status(), null));
+                            qb.passMark(), qb.status(), null, null));
                     quizId = matchedQuiz.getId();
                     quizzesReused++;
                 } else {
                     QuizDetailDto created = quizService.createQuiz(actorId, new QuizRequests.CreateQuiz(
                             sectionId, qb.title(), qb.intro(), qb.timeLimitSeconds(), qb.maxAttempts(),
                             qb.shuffleQuestions(), qb.antiCheatEnabled(), qb.maxViolations(),
-                            qb.passMark(), qb.status(), null));
+                            qb.passMark(), qb.status(), null, null));
                     quizId = created.quiz().id();
                     quizzesCreated++;
                 }

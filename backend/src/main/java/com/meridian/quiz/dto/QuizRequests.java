@@ -22,7 +22,8 @@ public final class QuizRequests {
             Integer maxViolations,
             BigDecimal passMark,
             String status,
-            Boolean allowReviewAfterSubmit) {
+            Boolean allowReviewAfterSubmit,
+            Boolean audioControlsEnabled) {
     }
 
     public record UpdateQuiz(
@@ -35,7 +36,8 @@ public final class QuizRequests {
             Integer maxViolations,
             BigDecimal passMark,
             String status,
-            Boolean allowReviewAfterSubmit) {
+            Boolean allowReviewAfterSubmit,
+            Boolean audioControlsEnabled) {
     }
 
     public record ImportQuestions(

@@ -80,7 +80,8 @@ public class QuizDataInitializer implements CommandLineRunner {
                 3,              // tối đa 3 lần vi phạm
                 new BigDecimal("2"),  // điểm đạt
                 "PUBLISHED",
-                true));         // cho xem lại
+                true,           // cho xem lại
+                false));        // ẩn thanh điều khiển audio (mặc định)
 
         List<Long> questionIds = new ArrayList<>();
         for (QuestionType t : List.of(QuestionType.MULTIPLE_CHOICE,

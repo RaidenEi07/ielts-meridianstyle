@@ -827,30 +827,39 @@ function QuizPlayerPageInner() {
         tục phát kể cả khi người dùng chuyển sang Part/Reading/Essay khác.
       */}
       {audioSrc && (
-        <audio
-          ref={audioRef}
-          src={audioSrc}
-          controls={false}
-          onTimeUpdate={(e) => {
-            const t = e.currentTarget.currentTime;
-            if (t > maxAudioReachedRef.current + 1.5) {
-              e.currentTarget.currentTime = maxAudioReachedRef.current;
-              return;
-            }
-            maxAudioReachedRef.current = Math.max(maxAudioReachedRef.current, t);
-          }}
-          onPause={(e) => {
-            // Lớp dự phòng: nếu audio bị ngắt bởi bất kỳ nguyên nhân nào
-            // ngoài ứng dụng (không đi qua Media Session — ví dụ tiện ích mở
-            // rộng trình duyệt, hoặc trình duyệt tự tạm dừng) trong khi chưa
-            // phát hết bài, tự động phát tiếp ngay lập tức thay vì để treo
-            // im lặng cho tới hết giờ làm bài.
-            if (audioStarted && !e.currentTarget.ended) {
-              e.currentTarget.play().catch(() => {});
-            }
-          }}
-          onEnded={() => setAudioEnded(true)}
-        />
+        <div
+          className={
+            attempt.audioControlsEnabled
+              ? "flex justify-center border-b border-border bg-surface px-4 py-2"
+              : undefined
+          }
+        >
+          <audio
+            ref={audioRef}
+            src={audioSrc}
+            controls={attempt.audioControlsEnabled}
+            className={attempt.audioControlsEnabled ? "w-full max-w-2xl" : undefined}
+            onTimeUpdate={(e) => {
+              const t = e.currentTarget.currentTime;
+              if (t > maxAudioReachedRef.current + 1.5) {
+                e.currentTarget.currentTime = maxAudioReachedRef.current;
+                return;
+              }
+              maxAudioReachedRef.current = Math.max(maxAudioReachedRef.current, t);
+            }}
+            onPause={(e) => {
+              // Lớp dự phòng: nếu audio bị ngắt bởi bất kỳ nguyên nhân nào
+              // ngoài ứng dụng (không đi qua Media Session — ví dụ tiện ích mở
+              // rộng trình duyệt, hoặc trình duyệt tự tạm dừng) trong khi chưa
+              // phát hết bài, tự động phát tiếp ngay lập tức thay vì để treo
+              // im lặng cho tới hết giờ làm bài.
+              if (audioStarted && !e.currentTarget.ended) {
+                e.currentTarget.play().catch(() => {});
+              }
+            }}
+            onEnded={() => setAudioEnded(true)}
+          />
+        </div>
       )}
 
       {/*

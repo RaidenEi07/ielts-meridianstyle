@@ -356,7 +356,8 @@ public class QuizService {
                 quizQuestionRepository.countByQuizId(quiz.getId()),
                 template != null ? template.getCode() : null,
                 course.getCategory().getAudienceGroup(),
-                quiz.isAllowReviewAfterSubmit());
+                quiz.isAllowReviewAfterSubmit(),
+                quiz.isAudioControlsEnabled());
     }
 
     private void applyCreate(Quiz quiz, QuizRequests.CreateQuiz req) {
@@ -372,6 +373,9 @@ public class QuizService {
         if (req.allowReviewAfterSubmit() != null) {
             quiz.setAllowReviewAfterSubmit(req.allowReviewAfterSubmit());
         }
+        if (req.audioControlsEnabled() != null) {
+            quiz.setAudioControlsEnabled(req.audioControlsEnabled());
+        }
     }
 
     private void applyUpdate(Quiz quiz, QuizRequests.UpdateQuiz req) {
@@ -386,6 +390,9 @@ public class QuizService {
         if (req.status() != null) quiz.setStatus(parseStatus(req.status(), quiz.getStatus()));
         if (req.allowReviewAfterSubmit() != null) {
             quiz.setAllowReviewAfterSubmit(req.allowReviewAfterSubmit());
+        }
+        if (req.audioControlsEnabled() != null) {
+            quiz.setAudioControlsEnabled(req.audioControlsEnabled());
         }
     }
 

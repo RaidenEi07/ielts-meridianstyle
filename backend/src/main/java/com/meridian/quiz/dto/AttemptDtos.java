@@ -101,6 +101,7 @@ public final class AttemptDtos {
             int maxViolations,
             int violations,
             String examTemplateCode,
+            boolean audioControlsEnabled,
             List<PagePlayer> pages,
             List<PlayerQuestion> questions,
             Map<Long, JsonNode> savedAnswers) {

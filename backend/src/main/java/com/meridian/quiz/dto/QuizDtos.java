@@ -27,7 +27,8 @@ public final class QuizDtos {
             long questionCount,
             String examTemplateCode,
             CourseAudienceGroup audienceGroup,
-            boolean allowReviewAfterSubmit) {
+            boolean allowReviewAfterSubmit,
+            boolean audioControlsEnabled) {
     }
 
     public record QuizQuestionDto(

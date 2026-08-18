@@ -260,6 +260,7 @@ function QuizSettingsForm({
   const [passMark, setPassMark] = useState(q.passMark != null ? String(q.passMark) : "");
   const [status, setStatus] = useState(q.status);
   const [allowReview, setAllowReview] = useState(q.allowReviewAfterSubmit);
+  const [audioControls, setAudioControls] = useState(q.audioControlsEnabled);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -276,6 +277,7 @@ function QuizSettingsForm({
     setPassMark(q.passMark != null ? String(q.passMark) : "");
     setStatus(q.status);
     setAllowReview(q.allowReviewAfterSubmit);
+    setAudioControls(q.audioControlsEnabled);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q.id]);
 
@@ -295,6 +297,7 @@ function QuizSettingsForm({
         passMark: passMark ? Number(passMark) : undefined,
         status,
         allowReviewAfterSubmit: allowReview,
+        audioControlsEnabled: audioControls,
       });
       setMsg("Đã lưu");
       setTimeout(() => setMsg(null), 2000);
@@ -411,6 +414,14 @@ function QuizSettingsForm({
             onChange={(e) => setAllowReview(e.target.checked)}
           />
           Cho phép học viên xem lại bài làm, kết quả và đáp án sau khi nộp
+        </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={audioControls}
+            onChange={(e) => setAudioControls(e.target.checked)}
+          />
+          Hiện thanh điều khiển audio (tua/âm lượng) — mặc định ẩn để giữ đúng điều kiện thi thật
         </label>
         {isAcademic && (
           <label className="flex items-center gap-2 text-sm">

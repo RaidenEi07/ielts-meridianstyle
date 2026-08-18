@@ -309,6 +309,7 @@ export interface QuizSummary {
   examTemplateCode: string | null;
   audienceGroup: CourseAudienceGroup;
   allowReviewAfterSubmit: boolean;
+  audioControlsEnabled: boolean;
 }
 
 // ---- Quiz management (admin/teacher) ----
@@ -445,6 +446,7 @@ export interface AttemptPlayer {
   maxViolations: number;
   violations: number;
   examTemplateCode: string | null;
+  audioControlsEnabled: boolean;
   pages: ExamPage[];
   questions: PlayerQuestion[];
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
