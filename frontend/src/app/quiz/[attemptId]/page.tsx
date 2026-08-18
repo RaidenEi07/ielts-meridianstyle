@@ -1002,7 +1002,7 @@ function QuizPlayerPageInner() {
       */}
       <nav className="fixed bottom-0 left-0 z-20 border-t border-border bg-surface px-4 py-2"
         style={{ right: fixedRightOffset }}>
-        <div className="mx-auto flex max-w-5xl items-center gap-2">
+        <div className="flex w-full items-center gap-2">
           <span className="shrink-0 text-xs text-muted">
             {answeredCount}/{orderedSlots.length} câu
           </span>
@@ -1052,7 +1052,7 @@ function QuizPlayerPageInner() {
                     type="button"
                     onClick={() => goToQuestion(slot.key)}
                     title={`Câu ${order.get(slot.key)} — ${steps[stepIndex].label}${isFlagged ? " (đã đánh dấu)" : ""}`}
-                    className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-semibold transition-transform ${
+                    className={`grid h-7 w-7 shrink-0 place-items-center rounded-full border text-xs font-semibold tabular-nums transition-transform ${
                       isCurrent ? "ring-2 ring-primary ring-offset-1 ring-offset-surface" : ""
                     } ${
                       isFlagged ? "border-accent bg-accent-soft text-accent"
@@ -2031,7 +2031,7 @@ function QuestionCard({
           : reviewTint(review) || (bare ? "" : "border-border bg-surface")
       }`}>
       <div className="mb-3 flex items-start gap-3">
-        <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold text-primary" style={{ minWidth: "1.75rem" }}>
+        <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold tabular-nums text-primary" style={{ minWidth: "1.75rem" }}>
           {index}
         </span>
         <div
@@ -2111,7 +2111,7 @@ function McGridCard({
                   }`}>
                   <td id={`q-${q.quizQuestionId}`} className="border-b border-border p-3">
                     <div className="flex items-start gap-2">
-                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-semibold text-primary">
+                      <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-primary-soft text-xs font-semibold tabular-nums text-primary">
                         {order.get(`${q.quizQuestionId}`) ?? ""}
                       </span>
                       <span className="flex-1 font-medium text-text">{q.stem ?? q.name}</span>
@@ -2170,7 +2170,7 @@ function EmbeddedMatchingInfoCard({
           : reviewTint(review) || "border-border bg-surface"
       }`}>
       <div className="flex items-start gap-3">
-        <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold text-primary" style={{ minWidth: "1.75rem" }}>
+        <span className="grid h-7 shrink-0 place-items-center rounded-full bg-primary-soft px-2 text-sm font-semibold tabular-nums text-primary" style={{ minWidth: "1.75rem" }}>
           {index}
         </span>
         <p className="flex-1 text-sm text-muted">

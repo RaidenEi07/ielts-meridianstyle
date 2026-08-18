@@ -208,7 +208,7 @@ export function QuestionRenderer({
             const blankId = `blank-${question.quizQuestionId}-${subIndex}`;
             const num = blankOrder?.get(`${question.quizQuestionId}:${subIndex}`);
             const badge = num != null ? (
-              <span className="mr-1 inline-grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">
+              <span className="mr-1 inline-grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-semibold tabular-nums text-primary">
                 {num}
               </span>
             ) : null;

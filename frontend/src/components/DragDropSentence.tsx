@@ -44,7 +44,7 @@ function BlankSlot({
   return (
     <span className="mx-1 inline-flex items-center align-middle">
       {number != null && (
-        <span className="mr-1 inline-grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-semibold text-primary">
+        <span className="mr-1 inline-grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary-soft text-[11px] font-semibold tabular-nums text-primary">
           {number}
         </span>
       )}
