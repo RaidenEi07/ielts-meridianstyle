@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Logo } from "@/components/Logo";
+import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserMenu } from "@/components/UserMenu";
 import { useAuthStore } from "@/store/auth";
 
 export function SiteHeader() {
@@ -19,7 +21,7 @@ export function SiteHeader() {
         <Link href="/">
           <Logo />
         </Link>
-        <nav className="flex items-center gap-5 text-sm font-medium text-muted">
+        <nav className="flex items-center gap-3 text-sm font-medium text-muted sm:gap-5">
           <Link href="/courses" className="hidden hover:text-text sm:inline">
             Khóa học
           </Link>
@@ -31,23 +33,16 @@ export function SiteHeader() {
                 await switchBackToParent();
                 router.push("/parent/children");
               }}
-              className="rounded-full bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent transition-opacity hover:opacity-80"
+              className="hidden rounded-full bg-accent-soft px-3 py-1.5 text-xs font-semibold text-accent transition-opacity hover:opacity-80 md:inline"
             >
               Đang học: {user.fullName} · Quay lại phụ huynh
             </button>
           )}
-          {hydrated && user && (
-            <Link href="/attempts" className="hidden hover:text-text sm:inline">
-              Lịch sử làm bài
-            </Link>
-          )}
           {hydrated && user ? (
-            <Link
-              href="/dashboard"
-              className="rounded-full bg-primary px-5 py-2 font-semibold text-white transition-opacity hover:opacity-90"
-            >
-              Bảng điều khiển
-            </Link>
+            <>
+              <NotificationBell />
+              <UserMenu />
+            </>
           ) : (
             <Link
               href="/login"

@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { Logo } from "@/components/Logo";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { PageHeader } from "@/components/PageHeader";
 import { ApiError, familyApi } from "@/lib/api";
 import type { ChildProfile } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
@@ -116,22 +114,7 @@ export default function ParentChildrenPage() {
 
   return (
     <div className="min-h-screen bg-bg">
-      <header className="border-b border-border bg-surface">
-        <div className="mx-auto flex max-w-3xl items-center justify-between px-6 py-4">
-          <Link href="/">
-            <Logo />
-          </Link>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Link
-              href="/dashboard"
-              className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted hover:text-text"
-            >
-              ← Bảng điều khiển
-            </Link>
-          </div>
-        </div>
-      </header>
+      <PageHeader backHref="/dashboard" backLabel="Bảng điều khiển" maxWidthClass="max-w-3xl" />
 
       <main className="mx-auto max-w-3xl space-y-6 px-6 py-10">
         <div>

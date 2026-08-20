@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Source_Serif_4 } from "next/font/google";
-import { BubbleNav } from "@/components/BubbleNav";
 import { ConfirmDialogHost } from "@/components/ConfirmDialogHost";
 import { ToastHost } from "@/components/ToastHost";
 import "./globals.css";
@@ -71,7 +70,6 @@ export default function RootLayout({
       </head>
       <body className="min-h-full flex flex-col">
         {children}
-        <BubbleNav />
         <ConfirmDialogHost />
         <ToastHost />
       </body>

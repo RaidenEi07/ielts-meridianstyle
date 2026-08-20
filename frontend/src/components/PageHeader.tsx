@@ -3,7 +3,9 @@
 import Link from "next/link";
 import { Move } from "lucide-react";
 import { Logo } from "@/components/Logo";
+import { NotificationBell } from "@/components/NotificationBell";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { UserMenu } from "@/components/UserMenu";
 import { useAuthStore } from "@/store/auth";
 import { useEditModeStore } from "@/store/editMode";
 
@@ -68,6 +70,8 @@ export function PageHeader({
               ← {backLabel}
             </Link>
           )}
+          <NotificationBell />
+          <UserMenu />
         </div>
       </div>
     </header>
