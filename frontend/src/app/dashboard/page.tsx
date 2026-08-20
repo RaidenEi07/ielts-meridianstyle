@@ -492,6 +492,12 @@ function AdminAnalytics({ token }: { token: string }) {
   );
 }
 
+// Số tài khoản xem trước ngay trên dashboard — trang tổng quan nên gọn, danh
+// sách đầy đủ (tìm kiếm được, đã phân trang) đã có sẵn ở /admin/users, bảng ở
+// đây trước là dump nguyên 150 dòng không phân trang/không bấm được, chỉ làm
+// nặng trang chủ mà không thêm giá trị so với việc bấm sang trang kia.
+const PREVIEW_COUNT = 8;
+
 function AdminUsers({ token }: { token: string }) {
   const [users, setUsers] = useState<User[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -504,11 +510,16 @@ function AdminUsers({ token }: { token: string }) {
 
   return (
     <section className="rounded-lg border border-border bg-surface p-6">
-      <div className="mb-4 flex items-center gap-2">
-        <h2 className="text-lg font-semibold">Quản lý người dùng</h2>
-        <span className="rounded-full bg-red-soft px-2 py-0.5 text-xs font-semibold text-red">
-          Admin
-        </span>
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold">Quản lý người dùng</h2>
+          <span className="rounded-full bg-red-soft px-2 py-0.5 text-xs font-semibold text-red">
+            Admin
+          </span>
+        </div>
+        <Link href="/admin/users" className="text-sm font-semibold text-accent">
+          Xem tất cả{users ? ` (${users.length})` : ""} →
+        </Link>
       </div>
       {error && <p className="text-sm text-red">{error}</p>}
       {!users && !error && <p className="text-sm text-muted">Đang tải…</p>}
@@ -523,7 +534,7 @@ function AdminUsers({ token }: { token: string }) {
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
+              {users.slice(0, PREVIEW_COUNT).map((u) => (
                 <tr key={u.id} className="border-t border-border">
                   <td className="px-4 py-2.5 font-medium">{u.fullName}</td>
                   <td className="px-4 py-2.5 text-muted">{u.email}</td>

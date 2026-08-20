@@ -12,6 +12,11 @@ import { useToast } from "@/store/toast";
 
 type RoleTab = "all" | "student" | "teacher";
 
+// Cùng ngưỡng/kiểu phân trang với /teacher/questions (đã có sẵn) — danh sách
+// dồn hết không phân trang từng gây "Sửa" bấm không phản hồi ở đó khi đủ lớn;
+// áp dụng lại đây trước khi /admin/users (150 dòng) gặp đúng vấn đề.
+const PAGE_SIZE = 50;
+
 function hasRole(u: AdminUser, shortname: string) {
   return u.roleAssignments.some((ra) => ra.roleShortname === shortname);
 }
@@ -43,6 +48,7 @@ export default function AdminUsersPage() {
   const [assigning, setAssigning] = useState(false);
   const [rosters, setRosters] = useState<Record<string, StudentSummary[]>>({});
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -60,6 +66,7 @@ export default function AdminUsersPage() {
   function refresh() {
     if (!token) return;
     usersAdminApi.list(token, search || undefined).then(setUsers).catch(() => {});
+    setPage(0);
   }
 
   useEffect(() => {
@@ -72,9 +79,12 @@ export default function AdminUsersPage() {
   const students = users.filter((u) => hasRole(u, "student"));
   const teachers = users.filter((u) => hasRole(u, "teacher"));
   const visibleUsers = tab === "student" ? students : tab === "teacher" ? teachers : users;
+  const totalPages = Math.max(1, Math.ceil(visibleUsers.length / PAGE_SIZE));
+  const pageUsers = visibleUsers.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   useEffect(() => {
     setSelected(new Set());
+    setPage(0);
   }, [tab]);
 
   useEffect(() => {
@@ -317,7 +327,7 @@ export default function AdminUsersPage() {
               </tr>
             </thead>
             <tbody>
-              {visibleUsers.map((u) => {
+              {pageUsers.map((u) => {
                 const st = STATUS_META[u.status] ?? STATUS_META.ACTIVE;
                 const heldRoles = new Set(u.roleAssignments.map((ra) => ra.roleShortname));
                 const assignableRoles = roles.filter((r) => !heldRoles.has(r.shortname));
@@ -452,6 +462,35 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+        {visibleUsers.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted">
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, visibleUsers.length)} /{" "}
+              {visibleUsers.length} tài khoản
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 font-semibold text-text disabled:opacity-40"
+              >
+                ← Trước
+              </button>
+              <span className="text-muted">
+                Trang {page + 1}/{totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 font-semibold text-text disabled:opacity-40"
+              >
+                Sau →
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );

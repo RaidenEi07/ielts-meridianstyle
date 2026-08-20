@@ -13,6 +13,10 @@ function hasRole(u: AdminUser, shortname: string) {
   return u.roleAssignments.some((ra) => ra.roleShortname === shortname);
 }
 
+// Cùng ngưỡng phân trang với /teacher/questions và /admin/users — tránh dồn
+// hết danh sách học sinh (có thể hàng trăm) vào 1 lần render.
+const PAGE_SIZE = 50;
+
 export default function AdminStudentsPage() {
   const router = useRouter();
   const { accessToken, hydrated, loadMe } = useAuthStore();
@@ -31,6 +35,7 @@ export default function AdminStudentsPage() {
   const [bulkTeacherId, setBulkTeacherId] = useState("");
   const [enrolling, setEnrolling] = useState(false);
   const [assigning, setAssigning] = useState(false);
+  const [page, setPage] = useState(0);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -54,6 +59,7 @@ export default function AdminStudentsPage() {
       setStudents(users.filter((u) => hasRole(u, "student")));
       setTeachers(users.filter((u) => hasRole(u, "teacher") || hasRole(u, "manager")));
     });
+    setPage(0);
   }
 
   useEffect(() => {
@@ -84,6 +90,9 @@ export default function AdminStudentsPage() {
       return next;
     });
   }
+
+  const totalPages = Math.max(1, Math.ceil(students.length / PAGE_SIZE));
+  const pageStudents = students.slice(page * PAGE_SIZE, page * PAGE_SIZE + PAGE_SIZE);
 
   function toggleSelectAll() {
     setSelected((prev) => (prev.size === students.length ? new Set() : new Set(students.map((s) => s.id))));
@@ -256,7 +265,7 @@ export default function AdminStudentsPage() {
                   </td>
                 </tr>
               ) : (
-                students.map((s) => (
+                pageStudents.map((s) => (
                   <tr key={s.id} className="border-t border-border">
                     <td className="px-4 py-3">
                       <input
@@ -279,6 +288,35 @@ export default function AdminStudentsPage() {
             </tbody>
           </table>
         </div>
+        {students.length > PAGE_SIZE && (
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted">
+              {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, students.length)} /{" "}
+              {students.length} học sinh
+            </span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                disabled={page === 0}
+                onClick={() => setPage((p) => Math.max(0, p - 1))}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 font-semibold text-text disabled:opacity-40"
+              >
+                ← Trước
+              </button>
+              <span className="text-muted">
+                Trang {page + 1}/{totalPages}
+              </span>
+              <button
+                type="button"
+                disabled={page >= totalPages - 1}
+                onClick={() => setPage((p) => Math.min(totalPages - 1, p + 1))}
+                className="rounded-lg border border-border bg-surface px-3 py-1.5 font-semibold text-text disabled:opacity-40"
+              >
+                Sau →
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
