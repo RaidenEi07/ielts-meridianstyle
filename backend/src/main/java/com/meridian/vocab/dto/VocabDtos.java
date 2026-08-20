@@ -10,10 +10,13 @@ public final class VocabDtos {
     /** Danh sách bộ thẻ trong 1 section — dùng cho cả học sinh lẫn admin. */
     public record VocabSetSummaryDto(Long id, String title, int sortOrder, long cardCount) {}
 
-    /** 1 thẻ, hiển thị cho học sinh (không có acceptedAnswer — không cần, vì
-     * đáp án đúng chính là chữ hiển thị trong text, không phải câu hỏi trắc
-     * nghiệm cần giấu đáp án). */
-    public record VocabCardDto(Long id, String cardType, String text, String audioUrl, int sortOrder) {}
+    /** 1 thẻ, hiển thị cho học sinh. acceptedAnswer không phải "đáp án cần
+     * giấu" (đáp án đúng chính là chữ hiển thị trong text) — chỉ dùng làm
+     * chuỗi so khớp cho nút "Kiểm tra nhanh" (nhận diện giọng nói phía trình
+     * duyệt, xem VocabSetPlayer.tsx); điểm chính thức vẫn do giáo viên chấm
+     * sao, không đổi. */
+    public record VocabCardDto(
+            Long id, String cardType, String text, String audioUrl, int sortOrder, String acceptedAnswer) {}
 
     public record VocabSetDetailDto(Long id, String title, List<VocabCardDto> cards) {}
 

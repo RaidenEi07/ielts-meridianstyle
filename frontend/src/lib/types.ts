@@ -772,6 +772,9 @@ export interface VocabCard {
   text: string;
   audioUrl: string;
   sortOrder: number;
+  /** Chuỗi so khớp cho nút "Kiểm tra nhanh" (nhận diện giọng nói) — không
+   * phải đáp án cần giấu, xem VocabDtos.VocabCardDto phía backend. */
+  acceptedAnswer: string | null;
 }
 
 export interface VocabSetDetail {

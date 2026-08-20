@@ -127,7 +127,7 @@ public class VocabService {
     private VocabSetDetailDto toDetail(VocabSet set) {
         List<VocabCardDto> cards = cardRepository.findBySet_IdOrderBySortOrderAscIdAsc(set.getId()).stream()
                 .map(c -> new VocabCardDto(c.getId(), c.getCardType().name(), c.getText(), c.getAudioUrl(),
-                        c.getSortOrder()))
+                        c.getSortOrder(), c.getAcceptedAnswer()))
                 .toList();
         return new VocabSetDetailDto(set.getId(), set.getTitle(), cards);
     }

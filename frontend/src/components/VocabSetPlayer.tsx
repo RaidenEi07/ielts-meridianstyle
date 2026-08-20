@@ -1,10 +1,11 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, Mic, Square, Star } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, Mic, Sparkles, Square, Star, XCircle } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { ApiError, mediaApi, vocabApi } from "@/lib/api";
 import type { VocabRecording, VocabSetDetail } from "@/lib/types";
 import { useAudioRecorder } from "@/lib/useAudioRecorder";
+import { useSpeechCheck } from "@/lib/useSpeechCheck";
 import { useToast } from "@/store/toast";
 
 /** Trình phát 1 bộ thẻ luyện từ vựng — nghe audio mẫu, ghi âm đọc lại, xem sao
@@ -18,6 +19,7 @@ export function VocabSetPlayer({ setId, token }: { setId: number; token: string 
   const [saving, setSaving] = useState(false);
   const [recordings, setRecordings] = useState<VocabRecording[]>([]);
   const toast = useToast();
+  const speechCheck = useSpeechCheck();
 
   useEffect(() => {
     vocabApi
@@ -36,6 +38,7 @@ export function VocabSetPlayer({ setId, token }: { setId: number; token: string 
     if (localBlobUrl) URL.revokeObjectURL(localBlobUrl);
     setLocalBlobUrl(null);
     pendingBlobRef.current = null;
+    speechCheck.reset();
     vocabApi
       .myRecordings(card.id, token)
       .then(setRecordings)
@@ -115,6 +118,43 @@ export function VocabSetPlayer({ setId, token }: { setId: number; token: string 
       <p className="mt-2 text-lg font-semibold">{card.text}</p>
 
       <audio key={card.audioUrl} src={card.audioUrl} controls className="mt-3 w-full" />
+
+      {speechCheck.isSupported && (
+        <div className="mt-3 flex flex-col items-center gap-1.5 rounded-lg border border-dashed border-border bg-bg p-3">
+          <button
+            type="button"
+            onClick={() => speechCheck.check(card.acceptedAnswer)}
+            disabled={speechCheck.status === "listening"}
+            className="flex items-center gap-1.5 rounded-full border border-accent px-3 py-1.5 text-xs font-semibold text-accent transition-opacity hover:opacity-80 disabled:opacity-60"
+          >
+            <Sparkles className="h-3.5 w-3.5" />
+            {speechCheck.status === "listening" ? "Đang nghe…" : "Kiểm tra nhanh (tự luyện)"}
+          </button>
+          {speechCheck.status === "correct" && (
+            <p className="flex items-center gap-1 text-xs font-medium text-green">
+              <CheckCircle2 className="h-3.5 w-3.5" /> Có vẻ đúng rồi!
+            </p>
+          )}
+          {speechCheck.status === "wrong" && (
+            <p className="flex items-center gap-1 text-xs font-medium text-red">
+              <XCircle className="h-3.5 w-3.5" />
+              Chưa khớp{speechCheck.transcript ? ` — trình duyệt nghe thành "${speechCheck.transcript}"` : ""}, thử lại nhé
+            </p>
+          )}
+          {speechCheck.status === "no-speech" && (
+            <p className="text-xs text-muted">Chưa nghe thấy gì, bấm lại và nói to hơn nhé.</p>
+          )}
+          {speechCheck.status === "denied" && (
+            <p className="text-xs text-muted">Bạn cần cho phép dùng micro để dùng tính năng này.</p>
+          )}
+          {speechCheck.status === "error" && (
+            <p className="text-xs text-muted">Không kiểm tra được lúc này, thử lại sau nhé.</p>
+          )}
+          <p className="text-center text-[11px] text-faint">
+            Chỉ để tự luyện — điểm chính thức vẫn do giáo viên chấm ở bản ghi âm bên dưới.
+          </p>
+        </div>
+      )}
 
       <div className="mt-4 flex flex-col items-center gap-2 rounded-xl border border-border bg-soft p-4">
         <button
