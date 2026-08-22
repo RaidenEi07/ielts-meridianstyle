@@ -1863,6 +1863,17 @@ function WritingEditor({
       </div>
       <div className="mx-auto grid max-w-6xl gap-4 px-6 py-6 md:grid-cols-2">
         <div className="rounded-card border border-border bg-surface p-5">
+          {/* Câu Tự luận không đi qua groupByInstructionIntro (được tách thành
+              step "essay" riêng, mỗi câu render trực tiếp qua WritingEditor)
+              nên groupIntro của nó trước đây bị bỏ qua hoàn toàn dù có dữ
+              liệu thật (vd đề bài Writing gắn ở đây thay vì stem) - hiện đúng
+              ở preview admin nhưng mất trên trang làm bài thật. */}
+          {question.groupIntro && (
+            <div
+              className="prose prose-sm dark:prose-invert mb-3 max-w-none border-b border-border pb-3 text-muted"
+              dangerouslySetInnerHTML={{ __html: stripInlineTextColors(question.groupIntro) }}
+            />
+          )}
           <p className="text-sm text-muted">Đề bài</p>
           <p className="mt-1 text-sm italic text-muted">{instruction}</p>
           <div
