@@ -75,7 +75,7 @@ export function QuestionRenderer({
                         : "border-border text-muted hover:text-text")
                   }`}
                 >
-                  {o.content}
+                  <span className="[&>p]:inline" dangerouslySetInnerHTML={{ __html: o.content }} />
                 </button>
               );
             })}
@@ -122,7 +122,7 @@ export function QuestionRenderer({
                     });
                   }}
                 />
-                {o.content}
+                <span className="[&>p]:inline" dangerouslySetInnerHTML={{ __html: o.content }} />
               </label>
             );
           })}
@@ -148,7 +148,7 @@ export function QuestionRenderer({
                       : "border-border text-muted hover:text-text")
                 }`}
               >
-                {o.content}
+                <span className="[&>p]:inline" dangerouslySetInnerHTML={{ __html: o.content }} />
               </button>
             );
           })}
