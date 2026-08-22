@@ -302,21 +302,24 @@ function groupMcGrids(questions: PlayerQuestion[], order: Map<string, number>): 
   return result;
 }
 
-/** Chạy SAU groupMcGrids() — gộp thêm các câu Trắc nghiệm/Đúng-Sai-NG liên
- * tiếp CHƯA bị gộp thành bảng lưới, dùng chung 1 đoạn hướng dẫn
- * (question.groupIntro, chỉ khác null ở câu ĐẦU của mỗi nhóm — xem
- * quiz_questions.group_intro) thành 1 khối chung 1 tiêu đề. Mỗi câu bên
- * trong vẫn giữ nguyên số thứ tự/cờ đánh dấu/ô trả lời/màu đúng-sai riêng
- * (thuần gộp hiển thị, không đổi dữ liệu/logic chấm điểm) — chỉ khác chỗ
- * không còn thẻ viền riêng từng câu (xem QuestionCard `bare`). Câu hỏi nào
- * KHÔNG mở đầu bằng groupIntro thì hiện đứng riêng như cũ (kể cả khi cùng
- * dạng MC/TFNG với nhóm liền trước — chỉ câu tự khai báo groupIntro mới mở
- * nhóm mới, ngăn 2 nhóm liền nhau bị dính làm một).
+/** Chạy SAU groupMcGrids() — gộp thêm các câu liên tiếp CHƯA bị gộp thành
+ * bảng lưới, dùng chung 1 đoạn hướng dẫn (question.groupIntro, chỉ khác null
+ * ở câu ĐẦU của mỗi nhóm — xem quiz_questions.group_intro) thành 1 khối
+ * chung 1 tiêu đề. Áp dụng cho MỌI dạng câu hỏi, không riêng Trắc
+ * nghiệm/Đúng-Sai-NG — groupIntro là 1 trường tổng quát (vd đề bài Writing
+ * dùng chung cho nhiều câu Trả lời ngắn liên tiếp, xem PartPreviewModal render
+ * y hệt không phân biệt type); giới hạn theo type trước đây khiến groupIntro
+ * gắn trên câu không phải MC/TFNG bị ÂM THẦM MẤT trên trang làm bài thật dù
+ * vẫn hiện đúng ở preview admin (PartPreviewModal không lọc theo type). Mỗi
+ * câu bên trong vẫn giữ nguyên số thứ tự/cờ đánh dấu/ô trả lời/màu đúng-sai
+ * riêng (thuần gộp hiển thị, không đổi dữ liệu/logic chấm điểm) — chỉ khác
+ * chỗ không còn thẻ viền riêng từng câu (xem QuestionCard `bare`). Câu hỏi
+ * nào KHÔNG mở đầu bằng groupIntro thì hiện đứng riêng như cũ nếu chưa có
+ * nhóm nào đang mở, hoặc được gộp tiếp vào nhóm liền trước (chỉ câu tự khai
+ * báo groupIntro mới mở nhóm mới, ngăn 2 nhóm liền nhau bị dính làm một).
  */
 function groupByInstructionIntro(items: QuestionOrGroup[]): QuestionOrGroup[] {
   const isPlainQuestion = (item: QuestionOrGroup): item is PlayerQuestion => !("kind" in item);
-  const isGroupableType = (q: PlayerQuestion) =>
-    q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE_NOT_GIVEN";
 
   const result: QuestionOrGroup[] = [];
   let current: { intro: string; items: PlayerQuestion[] } | null = null;
@@ -333,10 +336,10 @@ function groupByInstructionIntro(items: QuestionOrGroup[]): QuestionOrGroup[] {
   };
 
   for (const item of items) {
-    if (isPlainQuestion(item) && isGroupableType(item) && item.groupIntro) {
+    if (isPlainQuestion(item) && item.groupIntro) {
       flush();
       current = { intro: item.groupIntro, items: [item] };
-    } else if (isPlainQuestion(item) && isGroupableType(item) && current) {
+    } else if (isPlainQuestion(item) && current) {
       current.items.push(item);
     } else {
       flush();
@@ -974,14 +977,36 @@ function QuizPlayerPageInner() {
               )}
               {step.kind === "standalone" && (
                 <div className="mx-auto max-w-3xl space-y-4 px-6 py-6">
-                  {step.questions.map((q) => (
-                    <QuestionCard key={q.quizQuestionId} index={cardLabel(q, order)}
-                      question={q} answer={answers[q.quizQuestionId]} flagged={flagged.has(q.quizQuestionId)}
-                      order={order}
-                      focused={isFocusedQuestion(focusId, q.quizQuestionId)}
-                      onChange={(r) => setAnswer(q, r)} onFlag={() => toggleFlag(q.quizQuestionId)}
-                      review={reviewMap?.get(q.quizQuestionId)} />
-                  ))}
+                  {/* Trước đây map thẳng qua QuestionCard, bỏ qua groupMcGrids/
+                      groupByInstructionIntro — mọi groupIntro (đề bài/ảnh dùng
+                      chung, vd bài Writing chia nhiều đoạn) gắn trên câu hỏi ở
+                      Part không có passage đều bị mất hẳn trên trang làm bài
+                      thật dù hiện đúng ở preview admin. Đồng bộ lại với cách
+                      ReadingSplitPane/ListeningPane render để nhất quán. */}
+                  {groupByInstructionIntro(groupMcGrids(step.questions, order)).map((item) => {
+                    if (!("kind" in item)) {
+                      return (
+                        <QuestionCard key={item.quizQuestionId} index={cardLabel(item, order)}
+                          question={item} answer={answers[item.quizQuestionId]} flagged={flagged.has(item.quizQuestionId)}
+                          order={order}
+                          focused={isFocusedQuestion(focusId, item.quizQuestionId)}
+                          onChange={(r) => setAnswer(item, r)} onFlag={() => toggleFlag(item.quizQuestionId)}
+                          review={reviewMap?.get(item.quizQuestionId)} />
+                      );
+                    }
+                    if (item.kind === "mc-grid") {
+                      return (
+                        <McGridCard key={item.key} columns={item.columns} rows={item.rows} order={order}
+                          answers={answers} flagged={flagged} focusedId={focusId}
+                          onAnswer={setAnswer} onFlag={toggleFlag} review={reviewMap} />
+                      );
+                    }
+                    return (
+                      <InstructionGroupCard key={item.key} intro={item.intro} items={item.items} order={order}
+                        answers={answers} flagged={flagged} focusedId={focusId}
+                        onAnswer={setAnswer} onFlag={toggleFlag} review={reviewMap} />
+                    );
+                  })}
                 </div>
               )}
               {step.kind === "essay" && (
