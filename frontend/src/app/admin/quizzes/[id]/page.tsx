@@ -1191,7 +1191,6 @@ function QuestionsPanel({
                   editMode={editMode}
                 >
                     {group.items.map((q) => {
-                      const canGroupIntro = q.type === "MULTIPLE_CHOICE" || q.type === "TRUE_FALSE_NOT_GIVEN";
                       return (
                       <li key={q.quizQuestionId}>
                         <SortableRow id={q.quizQuestionId} editMode={editMode}>
@@ -1233,16 +1232,20 @@ function QuestionsPanel({
                               />
                               điểm
                             </span>
-                            {canGroupIntro && (
-                              <button
-                                type="button"
-                                onClick={() => openGroupIntroEditor(q)}
-                                title="Đoạn hướng dẫn dùng chung cho nhóm câu hỏi bắt đầu từ đây (vd 'Questions 14-19, Choose...') - không đụng nội dung câu hỏi ở ngân hàng câu hỏi"
-                                className={`text-xs font-semibold ${q.groupIntro ? "text-accent" : "text-faint hover:text-accent"}`}
-                              >
-                                {q.groupIntro ? "Tiêu đề nhóm ✓" : "+ Tiêu đề nhóm"}
-                              </button>
-                            )}
+                            {/* Trước đây chỉ hiện cho MULTIPLE_CHOICE/TRUE_FALSE_NOT_GIVEN
+                                (canGroupIntro) - groupIntro là trường tổng quát, áp dụng
+                                được cho mọi loại câu hỏi (Trả lời ngắn, Cloze, Kéo-thả,
+                                Tự luận...); giới hạn cũ khiến giáo viên không tìm được chỗ
+                                sửa đề bài/ảnh chung của câu hỏi khác MC/TFNG dù dữ liệu vẫn
+                                hiện đúng ở "Xem trước". */}
+                            <button
+                              type="button"
+                              onClick={() => openGroupIntroEditor(q)}
+                              title="Đoạn hướng dẫn dùng chung cho nhóm câu hỏi bắt đầu từ đây (vd 'Questions 14-19, Choose...') - không đụng nội dung câu hỏi ở ngân hàng câu hỏi"
+                              className={`text-xs font-semibold ${q.groupIntro ? "text-accent" : "text-faint hover:text-accent"}`}
+                            >
+                              {q.groupIntro ? "Tiêu đề nhóm ✓" : "+ Tiêu đề nhóm"}
+                            </button>
                             <button
                               type="button"
                               onClick={() => openPreview(q.questionId)}
