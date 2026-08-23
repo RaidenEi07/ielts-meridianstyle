@@ -82,7 +82,7 @@ type Step =
   | { kind: "reading"; key: string; label: string; page: ExamPage; questions: PlayerQuestion[] }
   | { kind: "listening"; key: string; label: string; page: ExamPage; questions: PlayerQuestion[] }
   | { kind: "standalone"; key: string; label: string; questions: PlayerQuestion[] }
-  | { kind: "essay"; key: string; label: string; question: PlayerQuestion };
+  | { kind: "essay"; key: string; label: string; question: PlayerQuestion; taskNumber: number };
 
 /**
  * Một "slot" đánh số trong navigator: hầu hết câu hỏi = 1 slot, nhưng CLOZE có
@@ -119,6 +119,15 @@ function dragTextBlankLabels(template: string): string[] {
 }
 
 function expandSlots(q: PlayerQuestion): Slot[] {
+  // Tự luận không chiếm số "Câu N" nào trong mạch đánh số đọc/nghe chung -
+  // hiện riêng thành "Writing Task N" (xem WritingEditor, step.taskNumber),
+  // khớp CorrectAnswerFormatter.slotCount() phía backend (case "ESSAY" -> 0).
+  // Thiếu nhánh này trước đây khiến ESSAY rơi vào default bên dưới, tự chiếm
+  // 1 số ẢO trong `order` - vô hại khi Essay luôn đứng CUỐI (không có câu nào
+  // phía sau bị đẩy số), nhưng sai ngay khi Essay được xen vào giữa/đứng
+  // trước (xem chỗ sắp `steps` theo vị trí thật) vì lúc đó số ảo đó sẽ đẩy
+  // lệch +1 mọi câu Đọc/Nghe phía sau, không khớp số "Câu N" backend đã tính.
+  if (q.type === "ESSAY") return [];
   if (q.type === "CLOZE" && q.clozeSubAnswers.length > 0) {
     return [...q.clozeSubAnswers]
       .sort((a, b) => a.subIndex - b.subIndex)
@@ -571,10 +580,22 @@ function QuizPlayerPageInner() {
   }, []);
 
   // Mỗi Part (reading/listening), nhóm câu-không-passage, và mỗi Essay là 1 "trang" riêng.
-  // Sắp theo pageNumber xuyên suốt reading+listening (không nhóm theo kind trước) để
-  // Part 1 luôn hiện trước Part 2/3 dù 2 loại trang bị trộn lẫn trong cùng 1 quiz.
+  // Trước đây LUÔN đẩy mọi Essay xuống cuối danh sách bất kể vị trí giáo viên
+  // đặt trong khung soạn quiz (vd Q1 = Tự luận, Q2 = Cloze cùng 1 Part vẫn
+  // hiện "Part 1" (Cloze) TRƯỚC "Writing Task" (Tự luận)) - giờ định vị MỖI
+  // "trang" (Part đọc/nghe, khối câu-không-passage, từng Essay riêng) bằng vị
+  // trí NHỎ NHẤT trong `attempt.questions` (mảng này backend đã trả đúng theo
+  // sort_order thật - xem AttemptService.playerView) của các câu nó đại diện,
+  // rồi sắp lại toàn bộ theo vị trí đó — khớp đúng thứ tự đã cấu hình dù Essay
+  // xen giữa các câu khác thay vì luôn đứng cuối. Chỉ đổi thứ tự HIỂN THỊ giữa
+  // các "trang" với nhau, không đụng thứ tự câu hỏi bên trong từng trang.
   const steps: Step[] = useMemo(() => {
     if (!attempt) return [];
+    const orderIndex = new Map<number, number>();
+    attempt.questions.forEach((q, i) => orderIndex.set(q.quizQuestionId, i));
+    const positionOf = (qs: PlayerQuestion[]) =>
+      Math.min(...qs.map((q) => orderIndex.get(q.quizQuestionId) ?? Infinity));
+
     const passagePages = attempt.pages
       .filter((p) => p.passageKind === "READING" || p.passageKind === "LISTENING")
       .sort((a, b) => a.pageNumber - b.pageNumber);
@@ -586,28 +607,41 @@ function QuizPlayerPageInner() {
       (q) => q.type !== "ESSAY" && !(q.pageId != null && passagePageIds.has(q.pageId)),
     );
 
-    const list: Step[] = [];
-    passagePages.forEach((page) =>
-      list.push({
-        kind: page.passageKind === "LISTENING" ? "listening" : "reading",
-        key: `page-${page.id}`,
-        label: page.partLabel ?? `Part ${page.pageNumber}`,
-        page,
-        questions: questionsForPage(page.id),
-      }),
-    );
+    const positioned: { step: Step; position: number }[] = [];
+    passagePages.forEach((page) => {
+      const pageQuestions = questionsForPage(page.id);
+      positioned.push({
+        step: {
+          kind: page.passageKind === "LISTENING" ? "listening" : "reading",
+          key: `page-${page.id}`,
+          label: page.partLabel ?? `Part ${page.pageNumber}`,
+          page,
+          questions: pageQuestions,
+        },
+        position: positionOf(pageQuestions),
+      });
+    });
     if (standalone.length > 0) {
-      list.push({ kind: "standalone", key: "standalone", label: "Câu hỏi khác", questions: standalone });
+      positioned.push({
+        step: { kind: "standalone", key: "standalone", label: "Câu hỏi khác", questions: standalone },
+        position: positionOf(standalone),
+      });
     }
-    essayQuestions.forEach((q, i) =>
-      list.push({
-        kind: "essay",
-        key: `essay-${q.quizQuestionId}`,
-        label: essayQuestions.length > 1 ? `Writing Task ${i + 1}` : "Writing Task",
-        question: q,
-      }),
-    );
-    return list;
+    essayQuestions.forEach((q, i) => {
+      positioned.push({
+        step: {
+          kind: "essay",
+          key: `essay-${q.quizQuestionId}`,
+          label: essayQuestions.length > 1 ? `Writing Task ${i + 1}` : "Writing Task",
+          question: q,
+          taskNumber: i + 1,
+        },
+        position: orderIndex.get(q.quizQuestionId) ?? Infinity,
+      });
+    });
+
+    positioned.sort((a, b) => a.position - b.position);
+    return positioned.map((p) => p.step);
   }, [attempt]);
 
   // Audio Listening dùng CHUNG cho mọi Part (3 Part cùng 1 file) — 1 <audio>
@@ -797,7 +831,17 @@ function QuizPlayerPageInner() {
     );
   }
 
-  const answeredCount = orderedSlots.filter((s) => isSlotAnswered(s, answers)).length;
+  // Tự luận không nằm trong orderedSlots (không chiếm số "Câu N" chung - xem
+  // expandSlots) nên phải cộng riêng vào tổng/đã-trả-lời, nếu không màn xác
+  // nhận nộp bài sẽ không còn cảnh báo khi bỏ trống Tự luận (trước đây vô
+  // tình được cảnh báo nhờ Essay từng chiếm 1 số ảo trong orderedSlots).
+  const essaySteps = steps.filter((s): s is Extract<Step, { kind: "essay" }> => s.kind === "essay");
+  const essayAnsweredCount = essaySteps.filter((s) =>
+    Boolean((answers[s.question.quizQuestionId]?.text as string | undefined)?.trim()),
+  ).length;
+  const totalCount = orderedSlots.length + essaySteps.length;
+  const answeredCount =
+    orderedSlots.filter((s) => isSlotAnswered(s, answers)).length + essayAnsweredCount;
   // Giao diện thi trắng-đen chuẩn phòng thi thật chỉ áp dụng cho Academic/IELTS
   // (có Part đọc/nghe/viết) — khóa Trẻ em chỉ có step "standalone" nên không đổi màu.
   const isExamMode = steps.some((s) => s.kind === "reading" || s.kind === "listening" || s.kind === "essay");
@@ -1010,7 +1054,7 @@ function QuizPlayerPageInner() {
                 </div>
               )}
               {step.kind === "essay" && (
-                <WritingEditor index={order.get(`${step.question.quizQuestionId}`)!}
+                <WritingEditor index={step.taskNumber}
                   question={step.question} value={answers[step.question.quizQuestionId]?.text ?? ""}
                   onChange={(text) => setAnswer(step.question, { text })}
                   review={reviewMap?.get(step.question.quizQuestionId)} />
@@ -1029,7 +1073,7 @@ function QuizPlayerPageInner() {
         style={{ right: fixedRightOffset }}>
         <div className="flex w-full items-center gap-2">
           <span className="shrink-0 text-xs text-muted">
-            {answeredCount}/{orderedSlots.length} câu
+            {answeredCount}/{totalCount} câu
           </span>
           <div className="flex shrink-0 items-center gap-1">
             {steps.map((step, idx) => (
@@ -1136,7 +1180,7 @@ function QuizPlayerPageInner() {
     {confirmingSubmit && (
       <SubmitConfirmScreen
         answeredCount={answeredCount}
-        totalCount={orderedSlots.length}
+        totalCount={totalCount}
         onBack={() => setConfirmingSubmit(false)}
         onConfirm={() => {
           setConfirmingSubmit(false);
