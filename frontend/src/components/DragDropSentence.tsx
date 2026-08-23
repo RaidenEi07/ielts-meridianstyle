@@ -123,6 +123,24 @@ export function DragDropSentence({
 
   const usedItemIds = new Set(Object.keys(placements));
 
+  // Câu "NB you may use any letter/word more than once" (vd Matching Features,
+  // Summary Completion): 1 đáp án đúng cho NHIỀU ô trống khác nhau được lưu
+  // thành NHIỀU dòng item cùng nội dung, mỗi dòng gắn 1 ô trống riêng (xem
+  // ghi chú ở backend/build script) - nếu hiện nguyên `dragItems` sau khi lọc
+  // "chưa dùng", học viên sẽ thấy 2 thẻ trùng chữ y hệt nhau trong khối đáp
+  // án, sai với đề thi thật (mỗi đáp án chỉ hiện 1 thẻ, dùng lại được nhiều
+  // lần). Gộp theo nội dung: chỉ hiện 1 thẻ đại diện cho mỗi nội dung còn
+  // "dòng chưa dùng" nào đó - dòng đại diện đổi tự nhiên qua từng lượt kéo vì
+  // danh sách lọc lại mỗi lần render, nên sau khi kéo hết dòng này vẫn còn
+  // dòng kia thì thẻ vẫn hiện tiếp, đúng ý "dùng được nhiều lần".
+  const unplacedItems = dragItems.filter((item) => !usedItemIds.has(String(item.id)));
+  const seenContent = new Set<string>();
+  const bankItems = unplacedItems.filter((item) => {
+    if (seenContent.has(item.content)) return false;
+    seenContent.add(item.content);
+    return true;
+  });
+
   return (
     <DndContext onDragEnd={handleDragEnd}>
       <div className="space-y-5">
@@ -165,11 +183,9 @@ export function DragDropSentence({
         <div>
           {bankHeading && <p className="mb-2 text-base font-semibold text-text">{bankHeading}</p>}
           <div className="flex flex-wrap justify-center gap-3 rounded-xl border border-border bg-surface p-4">
-            {dragItems
-              .filter((item) => !usedItemIds.has(String(item.id)))
-              .map((item) => (
-                <DraggableWordChip key={item.id} item={item} />
-              ))}
+            {bankItems.map((item) => (
+              <DraggableWordChip key={item.id} item={item} />
+            ))}
           </div>
         </div>
       </div>

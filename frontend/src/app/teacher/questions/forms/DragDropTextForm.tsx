@@ -48,6 +48,17 @@ export function DragDropTextForm({
   function removeItem(i: number) {
     onItemsChange(items.filter((_, idx) => idx !== i));
   }
+  /** Đáp án đúng cho NHIỀU ô trống (vd "NB you may use any letter more than
+   * once" - Matching Features, Summary Completion): thêm 1 dòng MỚI cùng nội
+   * dung, để trống ô trống cho giáo viên tự chọn ô còn lại. KHÔNG gộp chung 1
+   * dòng cho nhiều ô — mỗi dòng chỉ giữ đúng 1 ô trống (xem correctTarget),
+   * player tự gộp lại thành 1 thẻ kéo-thả (xem DragDropSentence.tsx) miễn 2
+   * dòng trùng NGUYÊN VĂN nội dung. */
+  function duplicateItem(i: number) {
+    const next = [...items];
+    next.splice(i + 1, 0, { id: null, content: items[i].content, correctTarget: "", sortOrder: 0 });
+    onItemsChange(next.map((it, idx) => ({ ...it, sortOrder: idx })));
+  }
 
   return (
     <div className="space-y-3">
@@ -116,6 +127,14 @@ export function DragDropTextForm({
                 </option>
               )}
             </select>
+            <button
+              type="button"
+              onClick={() => duplicateItem(i)}
+              title="Đáp án này cũng đúng cho 1 ô trống khác (vd &quot;may use any letter more than once&quot;) — thêm 1 dòng cùng nội dung để gắn ô trống thứ 2, học viên sẽ chỉ thấy 1 thẻ dùng được nhiều lần"
+              className="text-xs font-semibold text-accent"
+            >
+              Nhân đôi
+            </button>
             <button type="button" onClick={() => removeItem(i)} className="text-xs text-red">
               Xóa
             </button>
