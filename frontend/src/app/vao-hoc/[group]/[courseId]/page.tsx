@@ -5,7 +5,7 @@ import { notFound, useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Lock, Search } from "lucide-react";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ApiError, catalogApi, enrollmentApi, progressApi } from "@/lib/api";
+import { ApiError, authApi, catalogApi, enrollmentApi, progressApi } from "@/lib/api";
 import { groupLabel, isGroupSlug } from "@/lib/audienceGroups";
 import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 import type { CourseDetail, Section } from "@/lib/types";
@@ -44,6 +44,19 @@ export default function VaoHocCoursePage() {
     loadMe().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, accessToken]);
+
+  // systemCapabilities (đọc qua hasCapability) chỉ tính tại SYSTEM context —
+  // tài khoản chỉ được cấp course:manage RIÊNG ở đúng khóa này (quyền lẻ
+  // theo khóa, V47) vẫn cần thấy nút sửa, không thì không cách nào tìm ra
+  // trang sửa dù trang đó cho vào đúng.
+  const [canManageThisCourse, setCanManageThisCourse] = useState(false);
+  useEffect(() => {
+    if (!hydrated || !accessToken || !Number.isFinite(courseId)) return;
+    authApi
+      .myCourseCapabilities(accessToken, courseId)
+      .then((caps) => setCanManageThisCourse(caps.includes("course:manage")))
+      .catch(() => {});
+  }, [hydrated, accessToken, courseId]);
 
   function loadProgress() {
     if (!accessToken || !Number.isFinite(courseId)) return;
@@ -128,7 +141,7 @@ export default function VaoHocCoursePage() {
           <Link href={`/vao-hoc/${params.group}`} className="text-sm text-accent">
             ← {groupLabel(params.group)}
           </Link>
-          {hasCapability("course:manage") && (
+          {(hasCapability("course:manage") || canManageThisCourse) && (
             <Link
               href={`/admin/courses/${courseId}`}
               className="text-sm font-medium text-accent hover:underline"

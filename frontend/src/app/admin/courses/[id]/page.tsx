@@ -25,7 +25,7 @@ import { SortableRow } from "@/components/SortableRow";
 import { VocabAdminPanel } from "@/components/VocabAdminPanel";
 import { VideoCheckpointsEditor } from "@/components/VideoCheckpointsEditor";
 import { VideoUploadField } from "@/components/VideoUploadField";
-import { ApiError, catalogAdminApi, catalogApi, childSiteAdminApi, quizAdminApi } from "@/lib/api";
+import { ApiError, authApi, catalogAdminApi, catalogApi, childSiteAdminApi, quizAdminApi } from "@/lib/api";
 import type {
   ChildSite,
   CourseAudienceGroup,
@@ -66,9 +66,23 @@ export default function AdminCourseDetailPage() {
       return;
     }
     loadMe()
-      .then(() =>
-        setAllowed(useAuthStore.getState().systemCapabilities.includes("course:manage")),
-      )
+      .then(async () => {
+        if (useAuthStore.getState().systemCapabilities.includes("course:manage")) {
+          setAllowed(true);
+          return;
+        }
+        // Chưa có quyền hệ thống — kiểm thêm quyền lẻ gán RIÊNG cho đúng khóa
+        // này (xem authApi.myCourseCapabilities). systemCapabilities chỉ
+        // tính tại SYSTEM context, không bao giờ thấy quyền lẻ theo khóa học
+        // (V47) — thiếu bước này thì tài khoản chỉ được cấp course:manage ở
+        // đúng khóa này (không có role hệ thống) luôn bị chặn nhầm.
+        try {
+          const courseCaps = await authApi.myCourseCapabilities(token, courseId);
+          setAllowed(courseCaps.includes("course:manage"));
+        } catch {
+          setAllowed(false);
+        }
+      })
       .finally(() => setReady(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, accessToken]);

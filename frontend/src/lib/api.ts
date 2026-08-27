@@ -167,6 +167,15 @@ export const authApi = {
       body: req,
       token,
     }),
+
+  /** Quyền hiệu lực CỦA CHÍNH MÌNH tại 1 khóa học cụ thể — gồm cả quyền lẻ
+   * gán riêng theo khóa (V47), thứ mà MeResponse.systemCapabilities không
+   * bao giờ thấy (chỉ tính tại SYSTEM context). Trang gắn với 1 khóa cụ thể
+   * (sửa khóa, sửa quiz trong khóa...) nên gọi thêm hàm này khi xét quyền,
+   * không chỉ dựa vào systemCapabilities — nếu không, tài khoản chỉ được
+   * cấp quyền lẻ ở đúng khóa đó (không có role hệ thống) sẽ luôn bị chặn. */
+  myCourseCapabilities: (token: string, courseId: number) =>
+    apiFetch<string[]>(`/api/auth/me/course-capabilities/${courseId}`, { token }),
 };
 
 // ---- Catalog endpoints (public reads) ----

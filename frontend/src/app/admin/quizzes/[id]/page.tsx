@@ -162,9 +162,26 @@ export default function AdminQuizDetailPage() {
       return;
     }
     loadMe()
-      .then(() =>
-        setAllowed(useAuthStore.getState().systemCapabilities.includes("course:manage")),
-      )
+      .then(async () => {
+        if (useAuthStore.getState().systemCapabilities.includes("course:manage")) {
+          setAllowed(true);
+          return;
+        }
+        // Quiz gắn với 1 khóa cụ thể nhưng chưa biết khóa nào tới khi tải
+        // xong chi tiết quiz — không có sẵn courseId để kiểm quyền lẻ theo
+        // khóa (V47) TRƯỚC như trang khóa học làm được. Thử tải thẳng chi
+        // tiết quiz: backend đã tự kiểm đúng course:manage tại context của
+        // quiz đó (QuizService.getQuizDetail) — 403 thì coi là không có
+        // quyền. Tránh việc frontend tự đoán quyền riêng rồi lệch với backend
+        // (đúng lỗi vừa gặp ở trang khóa học khi chỉ dựa systemCapabilities).
+        try {
+          const d = await quizAdminApi.detail(token, quizId);
+          setDetail(d);
+          setAllowed(true);
+        } catch {
+          setAllowed(false);
+        }
+      })
       .finally(() => setReady(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, accessToken]);

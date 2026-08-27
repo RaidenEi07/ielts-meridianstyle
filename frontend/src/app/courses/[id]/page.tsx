@@ -6,7 +6,7 @@ import { Check, CheckCircle2, ChevronDown, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
 import { SiteHeader } from "@/components/SiteHeader";
 import { VocabPracticeList } from "@/components/VocabPracticeList";
-import { ApiError, catalogApi, enrollmentApi, quizApi } from "@/lib/api";
+import { ApiError, authApi, catalogApi, enrollmentApi, quizApi } from "@/lib/api";
 import { formatPrice } from "@/lib/format";
 import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 import type { CourseDetail, QuizSummary } from "@/lib/types";
@@ -55,6 +55,20 @@ export default function CourseDetailPage() {
     loadMe().catch(() => {});
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [hydrated, accessToken]);
+
+  // hasCapability() chỉ thấy quyền hệ thống (systemCapabilities, tính tại
+  // SYSTEM context) — nút "Chỉnh sửa khóa học" vẫn cần hiện cho tài khoản
+  // chỉ được cấp course:manage RIÊNG ở đúng khóa này (quyền lẻ theo khóa,
+  // V47), không có role hệ thống nào. Không thì họ không cách nào tìm ra
+  // trang sửa dù trang đó (đã sửa) sẽ cho vào đúng.
+  const [canManageThisCourse, setCanManageThisCourse] = useState(false);
+  useEffect(() => {
+    if (!hydrated || !accessToken || !Number.isFinite(courseId)) return;
+    authApi
+      .myCourseCapabilities(accessToken, courseId)
+      .then((caps) => setCanManageThisCourse(caps.includes("course:manage")))
+      .catch(() => {});
+  }, [hydrated, accessToken, courseId]);
 
   useEffect(() => {
     if (!hydrated || !accessToken || course?.audienceGroup === "IELTS") return;
@@ -448,7 +462,7 @@ export default function CourseDetailPage() {
               ← Tất cả khóa học
             </Link>
 
-            {hasCapability("course:manage") && (
+            {(hasCapability("course:manage") || canManageThisCourse) && (
               <Link
                 href={`/admin/courses/${courseId}`}
                 className="mt-2 block text-center text-sm font-medium text-accent hover:underline"

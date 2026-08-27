@@ -38,6 +38,7 @@ public class RbacService {
     private final UserCapabilityGrantRepository userCapabilityGrantRepository;
     private final CourseRepository courseRepository;
     private final ContextService contextService;
+    private final PermissionService permissionService;
     private final PasswordEncoder passwordEncoder;
 
     public RbacService(UserRepository userRepository, RoleRepository roleRepository,
@@ -45,7 +46,8 @@ public class RbacService {
             RoleAssignmentRepository roleAssignmentRepository,
             UserCapabilityGrantRepository userCapabilityGrantRepository,
             CourseRepository courseRepository,
-            ContextService contextService, PasswordEncoder passwordEncoder) {
+            ContextService contextService, PermissionService permissionService,
+            PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.capabilityRepository = capabilityRepository;
@@ -53,6 +55,7 @@ public class RbacService {
         this.userCapabilityGrantRepository = userCapabilityGrantRepository;
         this.courseRepository = courseRepository;
         this.contextService = contextService;
+        this.permissionService = permissionService;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -199,6 +202,28 @@ public class RbacService {
         UpdateUserRequest sanitized = new UpdateUserRequest(
                 req.fullName(), req.email(), req.newPassword(), req.currentPassword(), null);
         return updateUser(userId, sanitized);
+    }
+
+    /**
+     * Quyền hiệu lực CỦA CHÍNH USER ĐANG GỌI tại 1 khóa học cụ thể — gồm cả
+     * quyền kế thừa từ role (nếu role gán ở SYSTEM hoặc đúng khóa này) LẪN
+     * quyền lẻ gán riêng ở khóa này (xem V47). Trang admin chỉ có sẵn
+     * {@code systemCapabilities} (MeResponse, tính tại SYSTEM context) —
+     * KHÔNG phản ánh quyền lẻ theo khóa, nên 1 tài khoản chỉ được gán
+     * course:manage ở đúng 1 khóa vẫn bị chặn "Không có quyền truy cập" khi
+     * vào sửa đúng khóa đó nếu trang chỉ kiểm systemCapabilities — endpoint
+     * này để mỗi trang gắn với 1 khóa cụ thể tự kiểm thêm đúng tại khóa đó.
+     */
+    @Transactional(readOnly = true)
+    public List<String> myEffectiveCapabilitiesAtCourse(UUID userId, Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy khóa học"));
+        Context context = course.getContext();
+        if (context == null) {
+            return List.of();
+        }
+        return permissionService.getEffectiveCapabilities(userId, context.getId())
+                .stream().sorted().toList();
     }
 
     // ============ Quyền lẻ theo khóa học (không qua role — xem V47) ============
