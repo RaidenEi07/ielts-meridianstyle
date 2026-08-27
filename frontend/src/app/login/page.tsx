@@ -2,9 +2,9 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
-import { ApiError } from "@/lib/api";
+import { ApiError, configApi } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { useToast } from "@/store/toast";
 
@@ -16,6 +16,19 @@ export default function AuthPage() {
   const register = useAuthStore((s) => s.register);
 
   const [tab, setTab] = useState<Tab>("login");
+  // Mặc định false (đóng) trong lúc chờ tải config — an toàn hơn là hiện
+  // nhầm tab Đăng ký rồi 403 khi bấm submit. Đọc REGISTRATION_OPEN qua config
+  // công khai thay vì hardcode ẩn hẳn tab, để admin bật lại được sau này chỉ
+  // bằng cách đổi giá trị ở /admin/settings, không cần sửa code (xem
+  // AuthService.register() phía backend — chỗ áp chính sách thật).
+  const [registrationOpen, setRegistrationOpen] = useState(false);
+
+  useEffect(() => {
+    configApi
+      .getPublic()
+      .then((cfg) => setRegistrationOpen(cfg.REGISTRATION_OPEN === "true"))
+      .catch(() => {});
+  }, []);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -106,24 +119,28 @@ export default function AuthPage() {
             </Link>
           </div>
 
-          {/* Tab switcher */}
-          <div className="mb-8 inline-flex rounded-full bg-soft p-1">
-            {(["login", "register"] as Tab[]).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => {
-                  setTab(t);
-                  setError(null);
-                }}
-                className={`rounded-full px-6 py-2 text-sm font-semibold transition-colors ${
-                  tab === t ? "bg-surface text-text shadow-sm" : "text-muted"
-                }`}
-              >
-                {t === "login" ? "Đăng nhập" : "Đăng ký"}
-              </button>
-            ))}
-          </div>
+          {/* Tab switcher — chỉ hiện khi đăng ký công khai đang mở (xem
+          REGISTRATION_OPEN, /admin/settings). Đóng đăng ký thì chỉ còn 1 lựa
+          chọn (Đăng nhập), không cần hiện dạng "chuyển tab" nữa. */}
+          {registrationOpen && (
+            <div className="mb-8 inline-flex rounded-full bg-soft p-1">
+              {(["login", "register"] as Tab[]).map((t) => (
+                <button
+                  key={t}
+                  type="button"
+                  onClick={() => {
+                    setTab(t);
+                    setError(null);
+                  }}
+                  className={`rounded-full px-6 py-2 text-sm font-semibold transition-colors ${
+                    tab === t ? "bg-surface text-text shadow-sm" : "text-muted"
+                  }`}
+                >
+                  {t === "login" ? "Đăng nhập" : "Đăng ký"}
+                </button>
+              ))}
+            </div>
+          )}
 
           <h1 className="mb-1 text-2xl font-bold">
             {tab === "login" ? "Chào mừng trở lại" : "Tạo tài khoản mới"}

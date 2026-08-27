@@ -1,5 +1,6 @@
 package com.meridian.auth;
 
+import com.meridian.admin.WebConfigurationRepository;
 import com.meridian.auth.dto.AuthResponse;
 import com.meridian.auth.dto.LoginRequest;
 import com.meridian.auth.dto.MeResponse;
@@ -41,11 +42,13 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final Environment env;
+    private final WebConfigurationRepository configRepository;
 
     public AuthService(UserRepository userRepository, RoleRepository roleRepository,
             RoleAssignmentRepository roleAssignmentRepository,
             ContextService contextService, PermissionService permissionService,
-            PasswordEncoder passwordEncoder, JwtService jwtService, Environment env) {
+            PasswordEncoder passwordEncoder, JwtService jwtService, Environment env,
+            WebConfigurationRepository configRepository) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.roleAssignmentRepository = roleAssignmentRepository;
@@ -54,10 +57,27 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.env = env;
+        this.configRepository = configRepository;
     }
 
+    /** Tự đăng ký công khai (role Học viên mặc định) — cổng riêng, chỉ khoá
+     * đường này. registerParent() KHÔNG bị chặn ở đây (phụ huynh tự tạo tài
+     * khoản theo dõi con là luồng khác, chưa được yêu cầu tắt cùng lúc). Đọc
+     * thẳng WebConfigurationRepository thay vì ConfigService.allConfig() vì
+     * ConfigService bắt buộc capability system:manage — endpoint này công
+     * khai, không có user đăng nhập để kiểm tra quyền. Thiếu bản ghi (deploy
+     * mới chưa seed) mặc định ĐÓNG (an toàn hơn, khớp chính sách "chỉ admin
+     * tạo tài khoản" — trước đây không đọc key này ở đâu cả nên field "Mở
+     * đăng ký" trong Cấu hình hệ thống chỉnh xong không có tác dụng gì). */
     @Transactional
     public AuthResponse register(RegisterRequest request) {
+        boolean open = configRepository.findById("REGISTRATION_OPEN")
+                .map(c -> "true".equalsIgnoreCase(c.getValue()))
+                .orElse(false);
+        if (!open) {
+            throw ApiException.forbidden(
+                    "Đăng ký công khai hiện đang tắt. Vui lòng liên hệ quản trị viên để được cấp tài khoản.");
+        }
         User user = createUserAccount(
                 request.username(), request.email(), request.password(), request.fullName());
         assignRole(user, DEFAULT_ROLE);
