@@ -1,23 +1,31 @@
 package com.meridian.rbac;
 
 import com.meridian.auth.dto.RoleAssignmentDto;
+import com.meridian.catalog.Course;
+import com.meridian.catalog.CourseRepository;
 import com.meridian.common.ApiException;
 import com.meridian.rbac.dto.AdminUserDto;
 import com.meridian.rbac.dto.AssignRoleRequest;
+import com.meridian.rbac.dto.CapabilityDto;
 import com.meridian.rbac.dto.CreateUserRequest;
 import com.meridian.rbac.dto.RoleDto;
 import com.meridian.rbac.dto.UpdateUserRequest;
+import com.meridian.rbac.dto.UserCourseGrantDto;
 import com.meridian.user.User;
 import com.meridian.user.UserRepository;
 import com.meridian.user.UserStatus;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Tác vụ quản trị RBAC: liệt kê user/role/capability, tạo tài khoản, gán/thu hồi role.
+ * Tác vụ quản trị RBAC: liệt kê user/role/capability, tạo tài khoản, gán/thu hồi role,
+ * và gán quyền lẻ theo khóa học (không qua role - xem UserCapabilityGrant, V47).
  * Việc kiểm quyền được thực hiện ở tầng controller qua @RequireSystemCapability.
  */
 @Service
@@ -27,17 +35,23 @@ public class RbacService {
     private final RoleRepository roleRepository;
     private final CapabilityRepository capabilityRepository;
     private final RoleAssignmentRepository roleAssignmentRepository;
+    private final UserCapabilityGrantRepository userCapabilityGrantRepository;
+    private final CourseRepository courseRepository;
     private final ContextService contextService;
     private final PasswordEncoder passwordEncoder;
 
     public RbacService(UserRepository userRepository, RoleRepository roleRepository,
             CapabilityRepository capabilityRepository,
             RoleAssignmentRepository roleAssignmentRepository,
+            UserCapabilityGrantRepository userCapabilityGrantRepository,
+            CourseRepository courseRepository,
             ContextService contextService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.capabilityRepository = capabilityRepository;
         this.roleAssignmentRepository = roleAssignmentRepository;
+        this.userCapabilityGrantRepository = userCapabilityGrantRepository;
+        this.courseRepository = courseRepository;
         this.contextService = contextService;
         this.passwordEncoder = passwordEncoder;
     }
@@ -91,10 +105,14 @@ public class RbacService {
         return roleRepository.findAll().stream().map(RoleDto::from).toList();
     }
 
+    /** Kèm mô tả tiếng Việt sẵn có ở bảng capabilities — cho màn tick chọn
+     * quyền lẻ theo khóa học, không phải chỉ 1 chuỗi tên kỹ thuật trơ. */
     @Transactional(readOnly = true)
-    public List<String> listCapabilities() {
+    public List<CapabilityDto> listCapabilitiesDetailed() {
         return capabilityRepository.findAll().stream()
-                .map(Capability::getName).sorted().toList();
+                .sorted(Comparator.comparing(Capability::getName))
+                .map(CapabilityDto::from)
+                .toList();
     }
 
     @Transactional
@@ -181,5 +199,74 @@ public class RbacService {
         UpdateUserRequest sanitized = new UpdateUserRequest(
                 req.fullName(), req.email(), req.newPassword(), req.currentPassword(), null);
         return updateUser(userId, sanitized);
+    }
+
+    // ============ Quyền lẻ theo khóa học (không qua role — xem V47) ============
+
+    /** Toàn bộ khóa học mà user này đang được gán ít nhất 1 quyền lẻ, kèm
+     * đúng danh sách quyền tại mỗi khóa — dùng cho màn "Quyền theo khóa học"
+     * ở trang chi tiết tài khoản admin. */
+    @Transactional(readOnly = true)
+    public List<UserCourseGrantDto> listCourseGrants(UUID userId) {
+        List<UserCapabilityGrant> grants = userCapabilityGrantRepository.findByUserId(userId);
+        Map<Long, List<UserCapabilityGrant>> byCourseId = grants.stream()
+                .filter(g -> g.getContext().getType() == ContextType.COURSE)
+                .collect(Collectors.groupingBy(g -> g.getContext().getInstanceId()));
+        if (byCourseId.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, String> titleById = courseRepository.findAllById(byCourseId.keySet()).stream()
+                .collect(Collectors.toMap(Course::getId, Course::getTitle));
+        return byCourseId.entrySet().stream()
+                .map(e -> new UserCourseGrantDto(
+                        e.getKey(),
+                        titleById.getOrDefault(e.getKey(), "(khóa học đã bị xóa)"),
+                        e.getValue().stream().map(g -> g.getCapability().getName()).sorted().toList()))
+                .sorted(Comparator.comparing(UserCourseGrantDto::courseTitle))
+                .toList();
+    }
+
+    /** Thay TOÀN BỘ quyền lẻ của user tại 1 khóa học bằng đúng danh sách
+     * capabilityNames (xóa hết grant cũ ở khóa đó, ghi lại từ đầu) — danh
+     * sách rỗng nghĩa là gỡ hết quyền lẻ của user ở khóa này (không đụng tới
+     * role_assignments hay quyền lẻ ở khóa KHÁC của cùng user). */
+    @Transactional
+    public List<UserCourseGrantDto> setCourseGrants(
+            UUID targetUserId, Long courseId, List<String> capabilityNames, UUID actingAdminId) {
+        User user = userRepository.findById(targetUserId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy người dùng"));
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy khóa học"));
+        Context context = course.getContext();
+        if (context == null) {
+            throw ApiException.badRequest("Khóa học này chưa có context, chưa gán được quyền lẻ");
+        }
+
+        userCapabilityGrantRepository.deleteByUserIdAndContextId(targetUserId, context.getId());
+        for (String capName : capabilityNames) {
+            Capability capability = capabilityRepository.findByName(capName)
+                    .orElseThrow(() -> ApiException.badRequest("Không tìm thấy quyền '" + capName + "'"));
+            UserCapabilityGrant grant = new UserCapabilityGrant();
+            grant.setUser(user);
+            grant.setCapability(capability);
+            grant.setContext(context);
+            grant.setPermission(Permission.ALLOW);
+            grant.setCreatedBy(actingAdminId);
+            userCapabilityGrantRepository.save(grant);
+        }
+        return listCourseGrants(targetUserId);
+    }
+
+    /** Gỡ hết quyền lẻ của user tại 1 khóa học — dùng cho nút "Gỡ" cả khối,
+     * thay vì bắt admin bỏ tick từng ô rồi lưu. */
+    @Transactional
+    public void clearCourseGrants(UUID targetUserId, Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy khóa học"));
+        Context context = course.getContext();
+        if (context == null) {
+            return;
+        }
+        userCapabilityGrantRepository.deleteByUserIdAndContextId(targetUserId, context.getId());
     }
 }

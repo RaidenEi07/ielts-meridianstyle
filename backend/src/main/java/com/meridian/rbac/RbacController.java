@@ -4,9 +4,12 @@ import com.meridian.auth.dto.RoleAssignmentDto;
 import com.meridian.common.ApiException;
 import com.meridian.rbac.dto.AdminUserDto;
 import com.meridian.rbac.dto.AssignRoleRequest;
+import com.meridian.rbac.dto.CapabilityDto;
 import com.meridian.rbac.dto.CreateUserRequest;
 import com.meridian.rbac.dto.RoleDto;
+import com.meridian.rbac.dto.SetCourseGrantsRequest;
 import com.meridian.rbac.dto.UpdateUserRequest;
+import com.meridian.rbac.dto.UserCourseGrantDto;
 import com.meridian.security.AuthenticatedUser;
 import com.meridian.security.CurrentUserProvider;
 import jakarta.validation.Valid;
@@ -19,6 +22,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -77,9 +81,9 @@ public class RbacController {
     }
 
     @GetMapping("/capabilities")
-    public List<String> listCapabilities() {
+    public List<CapabilityDto> listCapabilities() {
         requireSystem("role:assign");
-        return rbacService.listCapabilities();
+        return rbacService.listCapabilitiesDetailed();
     }
 
     @PostMapping("/role-assignments")
@@ -94,6 +98,31 @@ public class RbacController {
     public ResponseEntity<Void> revoke(@PathVariable Long id) {
         requireSystem("role:assign");
         rbacService.revokeAssignment(id);
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Quyền lẻ theo khóa học (không qua role) — cùng mức nhạy cảm với gán
+     * role nên dùng chung guard 'role:assign'. Xem UserCapabilityGrant/V47. */
+    @GetMapping("/users/{id}/course-grants")
+    public List<UserCourseGrantDto> listCourseGrants(@PathVariable UUID id) {
+        requireSystem("role:assign");
+        return rbacService.listCourseGrants(id);
+    }
+
+    /** Thay TOÀN BỘ quyền lẻ của user này tại khóa học này bằng đúng danh
+     * sách gửi lên (mảng rỗng = gỡ hết) — khớp UX tick checkbox rồi lưu. */
+    @PutMapping("/users/{id}/course-grants/{courseId}")
+    public List<UserCourseGrantDto> setCourseGrants(@PathVariable UUID id, @PathVariable Long courseId,
+            @Valid @RequestBody SetCourseGrantsRequest request) {
+        requireSystem("role:assign");
+        UUID actingAdminId = currentUserProvider.require().id();
+        return rbacService.setCourseGrants(id, courseId, request.capabilities(), actingAdminId);
+    }
+
+    @DeleteMapping("/users/{id}/course-grants/{courseId}")
+    public ResponseEntity<Void> clearCourseGrants(@PathVariable UUID id, @PathVariable Long courseId) {
+        requireSystem("role:assign");
+        rbacService.clearCourseGrants(id, courseId);
         return ResponseEntity.noContent().build();
     }
 

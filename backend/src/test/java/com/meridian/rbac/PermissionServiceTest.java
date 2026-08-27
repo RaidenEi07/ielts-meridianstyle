@@ -29,6 +29,9 @@ class PermissionServiceTest {
     @Mock
     private RoleAssignmentRepository roleAssignmentRepository;
 
+    @Mock
+    private UserCapabilityGrantRepository userCapabilityGrantRepository;
+
     private PermissionService permissionService;
 
     private final UUID userId = UUID.randomUUID();
@@ -38,7 +41,12 @@ class PermissionServiceTest {
 
     @BeforeEach
     void setUp() {
-        permissionService = new PermissionService(contextService, roleAssignmentRepository);
+        permissionService = new PermissionService(
+                contextService, roleAssignmentRepository, userCapabilityGrantRepository);
+        // Không stub gì cho userCapabilityGrantRepository ở đa số test bên
+        // dưới - mock trả list rỗng mặc định (Mockito ReturnsEmptyValues),
+        // đúng nghĩa "không có grant lẻ nào" cho các kịch bản chỉ test quyền
+        // qua role như trước khi thêm nguồn grant thứ 2 này.
     }
 
     private record FakeGrant(Long contextId, String capabilityName, Permission permission)
@@ -107,6 +115,54 @@ class PermissionServiceTest {
                 .thenReturn(List.of());
 
         assertThat(permissionService.hasCapability(userId, "system:manage", SYSTEM_CTX)).isFalse();
+    }
+
+    @Test
+    void directGrantWithNoMatchingRoleStillGrantsCapability() {
+        // Quyền lẻ (không qua role nào) tại đúng context đang kiểm tra - vd
+        // 1 tài khoản không hề có role "teacher" nhưng được tick riêng
+        // "grade:view" cho đúng 1 khóa học.
+        when(contextService.getInheritanceChainIds(COURSE_CTX))
+                .thenReturn(List.of(COURSE_CTX, CATEGORY_CTX, SYSTEM_CTX));
+        when(roleAssignmentRepository.findGrantsForUserInContexts(eq(userId), any()))
+                .thenReturn(List.of());
+        when(userCapabilityGrantRepository.findGrantsForUserInContexts(eq(userId), any()))
+                .thenReturn(List.of(new FakeGrant(COURSE_CTX, "grade:view", Permission.ALLOW)));
+
+        assertThat(permissionService.hasCapability(userId, "grade:view", COURSE_CTX)).isTrue();
+    }
+
+    @Test
+    void directGrantAtCourseDoesNotLeakToOtherCourse() {
+        // Đúng ý "khác nhau theo từng khóa học" - grant chỉ ở context course
+        // này, kiểm tra ở 1 course KHÁC (không nằm trong chuỗi kế thừa của
+        // course đang gán) thì không có hiệu lực.
+        Long otherCourseCtx = 99L;
+        when(contextService.getInheritanceChainIds(otherCourseCtx))
+                .thenReturn(List.of(otherCourseCtx, CATEGORY_CTX, SYSTEM_CTX));
+        when(roleAssignmentRepository.findGrantsForUserInContexts(eq(userId), any()))
+                .thenReturn(List.of());
+        when(userCapabilityGrantRepository.findGrantsForUserInContexts(eq(userId), any()))
+                .thenReturn(List.of()); // grant thật nằm ở COURSE_CTX, không nằm trong chain của otherCourseCtx
+
+        assertThat(permissionService.hasCapability(userId, "grade:view", otherCourseCtx)).isFalse();
+    }
+
+    @Test
+    void directGrantAndRoleGrantCombineFromBothSources() {
+        // Có role rộng (vd student: course:view) CỘNG THÊM 1 quyền lẻ riêng
+        // (vd grade:view chỉ ở khóa này) - cả 2 nguồn phải cộng dồn được,
+        // không nguồn nào ghi đè mất nguồn kia.
+        when(contextService.getInheritanceChainIds(COURSE_CTX))
+                .thenReturn(List.of(COURSE_CTX, CATEGORY_CTX, SYSTEM_CTX));
+        when(roleAssignmentRepository.findGrantsForUserInContexts(eq(userId), any()))
+                .thenReturn(List.of(new FakeGrant(SYSTEM_CTX, "course:view", Permission.ALLOW)));
+        when(userCapabilityGrantRepository.findGrantsForUserInContexts(eq(userId), any()))
+                .thenReturn(List.of(new FakeGrant(COURSE_CTX, "grade:view", Permission.ALLOW)));
+
+        Set<String> effective = permissionService.getEffectiveCapabilities(userId, COURSE_CTX);
+
+        assertThat(effective).contains("course:view", "grade:view");
     }
 
     @Test

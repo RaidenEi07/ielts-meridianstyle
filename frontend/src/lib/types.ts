@@ -652,6 +652,21 @@ export interface RoleOption {
   description: string | null;
 }
 
+/** 1 quyền lẻ trong hệ RBAC (vd "course:manage") kèm mô tả tiếng Việt sẵn có
+ * ở DB — dùng cho màn tick chọn quyền theo khóa học, xem CapabilityDto. */
+export interface Capability {
+  name: string;
+  description: string | null;
+}
+
+/** Toàn bộ quyền lẻ (không qua role) mà 1 tài khoản đang có tại 1 khóa học —
+ * xem UserCourseGrantDto. */
+export interface UserCourseGrant {
+  courseId: number;
+  courseTitle: string;
+  capabilities: string[];
+}
+
 export interface StudentSummary {
   id: string;
   username: string;

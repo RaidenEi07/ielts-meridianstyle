@@ -22,11 +22,14 @@ public class PermissionService {
 
     private final ContextService contextService;
     private final RoleAssignmentRepository roleAssignmentRepository;
+    private final UserCapabilityGrantRepository userCapabilityGrantRepository;
 
     public PermissionService(ContextService contextService,
-            RoleAssignmentRepository roleAssignmentRepository) {
+            RoleAssignmentRepository roleAssignmentRepository,
+            UserCapabilityGrantRepository userCapabilityGrantRepository) {
         this.contextService = contextService;
         this.roleAssignmentRepository = roleAssignmentRepository;
+        this.userCapabilityGrantRepository = userCapabilityGrantRepository;
     }
 
     /** Kiểm tra quyền tại một context cụ thể. */
@@ -70,8 +73,14 @@ public class PermissionService {
             depthOf.put(chain.get(i), i);
         }
 
+        // 2 nguồn grant độc lập, gộp chung 1 danh sách rồi resolve như nhau:
+        // qua role (role_assignments JOIN role_capabilities) và gán LẺ trực
+        // tiếp không qua role (user_capability_grants, xem V47) — cho phép
+        // từng tài khoản có quyền khác nhau, khác nhau theo từng context/
+        // khóa học, mà không cần tạo riêng 1 role cho mỗi tổ hợp quyền.
         List<CapabilityGrant> grants =
-                roleAssignmentRepository.findGrantsForUserInContexts(userId, chain);
+                new java.util.ArrayList<>(roleAssignmentRepository.findGrantsForUserInContexts(userId, chain));
+        grants.addAll(userCapabilityGrantRepository.findGrantsForUserInContexts(userId, chain));
 
         // Với mỗi capability giữ lại quyết định tại context cụ thể nhất.
         // PREVENT tại cùng mức thắng ALLOW.

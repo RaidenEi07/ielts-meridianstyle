@@ -10,6 +10,7 @@ import type {
   AuthResponse,
   Badge,
   BulkImportResult,
+  Capability,
   Category,
   ChildProfile,
   ChildProgress,
@@ -53,6 +54,7 @@ import type {
   SystemAnalytics,
   TeacherPublic,
   TypeBreakdown,
+  UserCourseGrant,
   ViolationResult,
   VocabSetSummary,
   VocabSetDetail,
@@ -1029,6 +1031,30 @@ export const usersAdminApi = {
 
   revokeRole: (token: string, assignmentId: number) =>
     apiFetch<void>(`/api/admin/role-assignments/${assignmentId}`, {
+      method: "DELETE",
+      token,
+    }),
+
+  /** Toàn bộ quyền lẻ (14 quyền, kèm mô tả) — cho màn tick chọn theo khóa học. */
+  capabilities: (token: string) =>
+    apiFetch<Capability[]>("/api/admin/capabilities", { token }),
+
+  /** Quyền lẻ theo khóa học mà 1 tài khoản đang có, không qua role — xem
+   * user_capability_grants (V47). */
+  courseGrants: (token: string, userId: string) =>
+    apiFetch<UserCourseGrant[]>(`/api/admin/users/${userId}/course-grants`, { token }),
+
+  /** Thay TOÀN BỘ quyền lẻ của user tại khóa học này bằng đúng danh sách
+   * capabilities (mảng rỗng = gỡ hết) — khớp UX tick checkbox rồi lưu 1 lần. */
+  setCourseGrants: (token: string, userId: string, courseId: number, capabilities: string[]) =>
+    apiFetch<UserCourseGrant[]>(`/api/admin/users/${userId}/course-grants/${courseId}`, {
+      method: "PUT",
+      body: { capabilities },
+      token,
+    }),
+
+  clearCourseGrants: (token: string, userId: string, courseId: number) =>
+    apiFetch<void>(`/api/admin/users/${userId}/course-grants/${courseId}`, {
       method: "DELETE",
       token,
     }),
