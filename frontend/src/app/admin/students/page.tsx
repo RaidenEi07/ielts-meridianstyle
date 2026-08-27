@@ -57,7 +57,9 @@ export default function AdminStudentsPage() {
     if (!token) return;
     usersAdminApi.list(token, search || undefined).then((users) => {
       setStudents(users.filter((u) => hasRole(u, "student")));
-      setTeachers(users.filter((u) => hasRole(u, "teacher") || hasRole(u, "manager")));
+      // Role "manager" đã gộp vào "teacher" (V45) — không còn tồn tại riêng,
+      // chỉ còn giữ 1 điều kiện.
+      setTeachers(users.filter((u) => hasRole(u, "teacher")));
     });
     setPage(0);
   }
