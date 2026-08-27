@@ -7,6 +7,8 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
+import com.meridian.admin.WebConfiguration;
+import com.meridian.admin.WebConfigurationRepository;
 import com.meridian.auth.dto.LoginRequest;
 import com.meridian.auth.dto.RegisterRequest;
 import com.meridian.common.ApiException;
@@ -42,13 +44,23 @@ class AuthServiceTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private JwtService jwtService;
     @Mock private Environment env;
+    @Mock private WebConfigurationRepository configRepository;
 
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
         authService = new AuthService(userRepository, roleRepository, roleAssignmentRepository,
-                contextService, permissionService, passwordEncoder, jwtService, env);
+                contextService, permissionService, passwordEncoder, jwtService, env, configRepository);
+    }
+
+    /** register() giờ chặn theo REGISTRATION_OPEN (xem AuthService) — các
+     * test đăng ký thành công cần bản ghi config value="true" như thật. */
+    private void stubRegistrationOpen() {
+        WebConfiguration cfg = new WebConfiguration();
+        cfg.setKey("REGISTRATION_OPEN");
+        cfg.setValue("true");
+        when(configRepository.findById("REGISTRATION_OPEN")).thenReturn(Optional.of(cfg));
     }
 
     private void stubTokenIssuance() {
@@ -61,6 +73,7 @@ class AuthServiceTest {
 
     @Test
     void registerCreatesUserWithStudentRoleAndReturnsTokens() {
+        stubRegistrationOpen();
         when(userRepository.existsByUsernameIgnoreCase("hocvien")).thenReturn(false);
         when(userRepository.existsByEmailIgnoreCase("hocvien@example.com")).thenReturn(false);
         when(userRepository.save(any(User.class))).thenAnswer(inv -> {
@@ -88,6 +101,7 @@ class AuthServiceTest {
 
     @Test
     void registerRejectsDuplicateUsername() {
+        stubRegistrationOpen();
         when(userRepository.existsByUsernameIgnoreCase("trung")).thenReturn(true);
 
         assertThatThrownBy(() -> authService.register(
@@ -98,6 +112,7 @@ class AuthServiceTest {
 
     @Test
     void registerRejectsDuplicateEmailEvenWithNewUsername() {
+        stubRegistrationOpen();
         when(userRepository.existsByUsernameIgnoreCase("aido")).thenReturn(false);
         when(userRepository.existsByEmailIgnoreCase("trung@example.com")).thenReturn(true);
 
@@ -105,6 +120,32 @@ class AuthServiceTest {
                 new RegisterRequest("aido", "trung@example.com", "Test@1234", "Ai Do")))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(409));
+    }
+
+    @Test
+    void registerRejectsWhenRegistrationClosed() {
+        WebConfiguration cfg = new WebConfiguration();
+        cfg.setKey("REGISTRATION_OPEN");
+        cfg.setValue("false");
+        when(configRepository.findById("REGISTRATION_OPEN")).thenReturn(Optional.of(cfg));
+
+        assertThatThrownBy(() -> authService.register(
+                new RegisterRequest("hocvien2", "hocvien2@example.com", "Test@1234", "Học Viên 2")))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(403));
+    }
+
+    /** Deploy mới chưa seed REGISTRATION_OPEN (findById trả empty) -> mặc
+     * định ĐÓNG, khớp chính sách "chỉ admin tạo tài khoản" thay vì mở toang
+     * lúc thiếu config. */
+    @Test
+    void registerRejectsWhenRegistrationConfigMissing() {
+        when(configRepository.findById("REGISTRATION_OPEN")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.register(
+                new RegisterRequest("hocvien3", "hocvien3@example.com", "Test@1234", "Học Viên 3")))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(403));
     }
 
     @Test
