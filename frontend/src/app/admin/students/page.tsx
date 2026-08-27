@@ -57,9 +57,9 @@ export default function AdminStudentsPage() {
     if (!token) return;
     usersAdminApi.list(token, search || undefined).then((users) => {
       setStudents(users.filter((u) => hasRole(u, "student")));
-      // Role "manager" đã gộp vào "teacher" (V45) — không còn tồn tại riêng,
-      // chỉ còn giữ 1 điều kiện.
-      setTeachers(users.filter((u) => hasRole(u, "teacher")));
+      // V46: khôi phục lại role "manager" riêng (V45 từng gộp vào "teacher"
+      // rồi bị yêu cầu hoàn tác) — cả 2 role đều gán được học sinh vào roster.
+      setTeachers(users.filter((u) => hasRole(u, "teacher") || hasRole(u, "manager")));
     });
     setPage(0);
   }
