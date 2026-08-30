@@ -90,6 +90,12 @@ export function KidsMatchingGame({
   onChange: (r: { matches: Record<string, string> }) => void;
 }) {
   const matches: Record<string, string> = answer?.matches ?? {};
+  // Đáp án đã dùng cho 1 mục thì bỏ khỏi khay kéo — nối từ là ghép 1-1,
+  // không giống DRAG_DROP_TEXT (có thể cho phép dùng lại 1 đáp án nhiều lần).
+  // Thiếu bước lọc này khiến 1 thẻ có thể thả được vào nhiều ô cùng lúc mà
+  // vẫn còn hiện trong khay — cùng dạng lỗi đã sửa ở DragDropSentence.
+  const usedValues = new Set(Object.values(matches));
+  const availablePool = pool.filter((o) => !usedValues.has(o.value));
 
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
@@ -120,7 +126,7 @@ export function KidsMatchingGame({
           ))}
         </div>
         <div className="flex flex-wrap justify-center gap-3 rounded-xl border border-border bg-surface p-4">
-          {pool.map((o, i) => (
+          {availablePool.map((o, i) => (
             <DraggablePoolTile key={`pool-${i}`} id={`pool-${i}`} option={o} />
           ))}
         </div>
