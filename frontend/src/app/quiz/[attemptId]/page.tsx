@@ -1094,7 +1094,7 @@ function QuizPlayerPageInner() {
               </button>
             ))}
           </div>
-          <div className="flex h-12 min-w-0 flex-1 items-end gap-1.5 overflow-x-auto -mt-5 pb-1">
+          <div className="flex h-12 min-w-0 flex-1 items-end gap-1.5 overflow-x-auto -mt-5 px-1 pb-1">
             {/* overflow-x-auto ép overflow-y thành auto (ẩn phần tràn theo
                 trục dọc) chứ không phải visible như mặc định — cần chỗ để lá
                 cờ nổi lên (-top-3.5, cần ~14px) không bị cắt mất.
@@ -1109,13 +1109,19 @@ function QuizPlayerPageInner() {
                 dấu hay không — rồi -mt-5 mới triệt tiêu ổn định đúng phần cao
                 thêm ở bước đo layout của hàng cha (0/5 câu, tab Part, nút Nộp
                 bài). pb-1 chừa thêm 4px dưới nút số — nút đang chọn (isCurrent)
-                có ring-2 ring-offset-1 nổi ra ngoài viền nút ~3px, không có
-                pb-1 thì bị overflow-y:auto cắt mất đúng phần viền đó (ảnh chụp
-                thật cho thấy rõ) — 48px(h-12)+(-20px, -mt-5)=28px hiệu quả,
-                y hệt bản trước (44-16=28) nên không đổi lại vị trí canh giữa,
-                chỉ thêm chỗ cho viền. Đã tự kiểm tra lại bằng số đo thật (không
-                chỉ nhìn): canh giữa khớp cả lúc không có câu nào đánh dấu lẫn
-                lúc có, ổn định qua nhiều lần đo liên tiếp. */}
+                có ring-2 ring-offset-1 nổi ra ngoài viền nút ~3px mọi phía,
+                không chỉ trên/dưới — px-1 chừa thêm 4px 2 bên trái/phải, vì
+                overflow-x-auto cũng cắt viền ở đúng mép trái của câu ĐẦU TIÊN
+                (hoặc mép phải của câu CUỐI khi cuộn hết) nếu câu đó đang được
+                chọn — không có pb-1/px-1 thì bị overflow-y:auto (theo trục
+                dọc) và biên cuộn ngang (theo trục ngang) cắt mất đúng phần
+                viền đó (ảnh chụp thật cho thấy rõ cả 2 trường hợp riêng biệt)
+                — 48px(h-12)+(-20px, -mt-5)=28px hiệu quả theo chiều dọc, y hệt
+                bản trước (44-16=28) nên không đổi lại vị trí canh giữa, chỉ
+                thêm chỗ cho viền; px-1 chỉ ảnh hưởng chiều ngang, không đụng
+                tới phép tính canh giữa dọc này. Đã tự kiểm tra lại bằng số đo
+                thật (không chỉ nhìn): canh giữa khớp cả lúc không có câu nào
+                đánh dấu lẫn lúc có, ổn định qua nhiều lần đo liên tiếp. */}
             {stepSlots(steps[stepIndex]).map((slot) => {
               const answered = isSlotAnswered(slot, answers);
               const isFlagged = flagged.has(slot.quizQuestionId);
