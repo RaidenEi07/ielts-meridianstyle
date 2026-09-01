@@ -1094,10 +1094,17 @@ function QuizPlayerPageInner() {
               </button>
             ))}
           </div>
-          <div className="flex min-w-0 flex-1 items-end gap-1.5 overflow-x-auto pt-4">
+          <div className="flex min-w-0 flex-1 items-end gap-1.5 overflow-x-auto pt-4 -mt-4">
             {/* overflow-x-auto ép overflow-y thành auto (ẩn phần tràn theo
                 trục dọc) chứ không phải visible như mặc định — pt-4 chừa đủ
-                chỗ để lá cờ nổi lên (-top-3.5) không bị cắt mất. */}
+                chỗ để lá cờ nổi lên (-top-3.5) không bị cắt mất. Nhưng pt-4
+                cũng làm khối này CAO hơn hẳn các phần tử khác cùng hàng
+                (0/5 câu, tab Part, nút Nộp bài) — items-center của hàng cha
+                canh giữa theo chiều cao TOÀN khối (gồm cả phần đệm trống
+                phía trên), nên dãy số bị lệch xuống dưới thấy rõ. -mt-4 triệt
+                tiêu đúng phần chiều cao pt-4 vừa thêm ở bước đo layout của
+                hàng cha (không đổi placement thật của nội dung bên trong,
+                lá cờ vẫn còn đủ chỗ) — khôi phục lại đúng vị trí canh giữa. */}
             {stepSlots(steps[stepIndex]).map((slot) => {
               const answered = isSlotAnswered(slot, answers);
               const isFlagged = flagged.has(slot.quizQuestionId);
