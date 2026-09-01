@@ -29,6 +29,7 @@ function DraggablePoolTile({ id, option }: { id: string; option: PlayerMatchingO
       style={style}
       {...listeners}
       {...attributes}
+      data-testid={`matching-pool-tile-${id}`}
       className={`cursor-grab touch-none select-none rounded-xl border-2 border-border bg-surface p-3 shadow-sm active:cursor-grabbing ${
         isDragging ? "z-10 opacity-70" : ""
       }`}
@@ -53,6 +54,7 @@ function DroppableTarget({
   return (
     <div
       ref={setNodeRef}
+      data-testid={`matching-target-${pair.id}`}
       className={`flex min-h-[130px] flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-3 transition-colors ${
         isOver ? "border-primary bg-primary-soft" : "border-border bg-soft"
       }`}
@@ -113,7 +115,7 @@ export function KidsMatchingGame({
 
   return (
     <DndContext onDragEnd={handleDragEnd}>
-      <div className="space-y-4">
+      <div className="space-y-4" data-testid="KidsMatchingGame">
         <div className="grid gap-3 sm:grid-cols-2">
           {pairs.map((p) => (
             <DroppableTarget

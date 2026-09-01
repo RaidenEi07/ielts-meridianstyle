@@ -875,6 +875,7 @@ function QuizPlayerPageInner() {
       */}
       {audioSrc && (
         <div
+          data-testid="quiz-audio-bar"
           className={
             attempt.audioControlsEnabled
               ? "flex justify-center border-b border-border bg-surface px-4 py-2"
@@ -914,7 +915,7 @@ function QuizPlayerPageInner() {
         cục giao diện phòng thi CD thật (logo trái, icon trạng thái phải),
         không đổi theo isExamMode — chỉ phần nội dung bên dưới đổi trắng-đen.
       */}
-      <header className="sticky top-0 z-20 flex items-center justify-between px-6 py-3"
+      <header data-testid="quiz-exam-header" className="sticky top-0 z-20 flex items-center justify-between px-6 py-3"
         style={{ background: "#262019", color: "#ECE4D8" }}>
         <Logo className="[&_span]:text-white" />
         <div className="flex items-center gap-4">
@@ -1069,7 +1070,7 @@ function QuizPlayerPageInner() {
         đầu, dải số câu cuộn ngang ở giữa — gọn hơn hẳn so với 2 hàng tách
         rời trước đây.
       */}
-      <nav className="fixed bottom-0 left-0 z-20 border-t border-border bg-surface px-4 py-2"
+      <nav data-testid="quiz-bottom-nav" className="fixed bottom-0 left-0 z-20 border-t border-border bg-surface px-4 py-2"
         style={{ right: fixedRightOffset }}>
         <div className="flex w-full items-center gap-2">
           <span className="shrink-0 text-xs text-muted">
