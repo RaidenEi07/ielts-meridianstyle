@@ -1094,24 +1094,28 @@ function QuizPlayerPageInner() {
               </button>
             ))}
           </div>
-          <div className="flex h-11 min-w-0 flex-1 items-end gap-1.5 overflow-x-auto -mt-4">
+          <div className="flex h-12 min-w-0 flex-1 items-end gap-1.5 overflow-x-auto -mt-5 pb-1">
             {/* overflow-x-auto ép overflow-y thành auto (ẩn phần tràn theo
                 trục dọc) chứ không phải visible như mặc định — cần chỗ để lá
                 cờ nổi lên (-top-3.5, cần ~14px) không bị cắt mất.
-                h-11 (44px) CỐ ĐỊNH — không dùng pt-4 trên khối auto-height —
+                h-12 (48px) CỐ ĐỊNH — không dùng pt-4 trên khối auto-height —
                 mới là điểm mấu chốt: co theo nội dung nghĩa là khối này cao
                 28px lúc không có câu nào đang đánh dấu trong tầm nhìn nhưng
                 cao hẳn khác (~34-59px, đã đo thực tế) ngay khi có câu đánh
                 dấu hoặc tuỳ nội dung Part — 1 khối luôn đổi chiều cao khiến
                 mọi cách bù trừ (kể cả pt-4 + -mt-4 cùng giá trị) chỉ đúng
                 tình cờ ở 1 trạng thái rồi lệch lại ở trạng thái khác, đã tự
-                kiểm chứng thấy vậy. Cố định hẳn 44px (dư so với 16px lá cờ
-                cần) làm khối này LUÔN cao y hệt nhau bất kể có đánh dấu hay
-                không — rồi -mt-4 mới triệt tiêu ổn định đúng phần cao thêm ở
-                bước đo layout của hàng cha (0/5 câu, tab Part, nút Nộp bài).
-                Đã tự kiểm tra lại bằng số đo thật (không chỉ nhìn): canh giữa
-                khớp cả lúc không có câu nào đánh dấu lẫn lúc có, ổn định qua
-                nhiều lần đo liên tiếp — không còn phụ thuộc trạng thái nữa. */}
+                kiểm chứng thấy vậy. Cố định hẳn 1 chiều cao — bất kể có đánh
+                dấu hay không — rồi -mt-5 mới triệt tiêu ổn định đúng phần cao
+                thêm ở bước đo layout của hàng cha (0/5 câu, tab Part, nút Nộp
+                bài). pb-1 chừa thêm 4px dưới nút số — nút đang chọn (isCurrent)
+                có ring-2 ring-offset-1 nổi ra ngoài viền nút ~3px, không có
+                pb-1 thì bị overflow-y:auto cắt mất đúng phần viền đó (ảnh chụp
+                thật cho thấy rõ) — 48px(h-12)+(-20px, -mt-5)=28px hiệu quả,
+                y hệt bản trước (44-16=28) nên không đổi lại vị trí canh giữa,
+                chỉ thêm chỗ cho viền. Đã tự kiểm tra lại bằng số đo thật (không
+                chỉ nhìn): canh giữa khớp cả lúc không có câu nào đánh dấu lẫn
+                lúc có, ổn định qua nhiều lần đo liên tiếp. */}
             {stepSlots(steps[stepIndex]).map((slot) => {
               const answered = isSlotAnswered(slot, answers);
               const isFlagged = flagged.has(slot.quizQuestionId);
