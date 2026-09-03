@@ -601,10 +601,23 @@ public class AttemptService {
         boolean allowReview = true;
         if (quizRepository.existsById(quizId)) {
             quizTitle = quiz.getTitle();
-            var course = quiz.getSection().getCourse();
-            courseId = course.getId();
-            courseTitle = course.getTitle();
             allowReview = quiz.isAllowReviewAfterSubmit();
+            // Section/Course có @SQLRestriction("deleted_at IS NULL") riêng —
+            // quiz còn tồn tại (check ở trên) không đảm bảo section/course của
+            // nó cũng còn (đã tự bắt gặp thật: course bị xóa mềm 1 mình, quiz
+            // + section bên dưới vẫn còn nguyên) — .getId() đọc thẳng proxy an
+            // toàn như quiz.getId() ở trên, nhưng .getCourse()/.getTitle() thì
+            // chạm DB và ném EntityNotFoundException nếu dính đúng ca đó, sập
+            // luôn cả API /api/attempts/me (500) chỉ vì 1 attempt cũ trỏ tới
+            // khóa học đã xóa từ lâu. Bọc try/catch — vẫn hiện được lịch sử làm
+            // bài, chỉ thiếu tên khóa học cho đúng attempt đó.
+            try {
+                var course = quiz.getSection().getCourse();
+                courseId = course.getId();
+                courseTitle = course.getTitle();
+            } catch (jakarta.persistence.EntityNotFoundException ignored) {
+                // section hoặc course đã bị xóa mềm sau khi quiz được tạo.
+            }
         }
         return new AttemptSummary(a.getId(), a.getUserId(), a.getAttemptNumber(),
                 a.getStatus().name(), a.getStartedAt(), a.getSubmittedAt(),
