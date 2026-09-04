@@ -867,6 +867,18 @@ export const gradebookApi = {
 export const gradingAdminApi = {
   answersForGrading: (token: string, attemptId: number) =>
     apiFetch<AnswerGradingDto[]>(`/api/admin/attempts/${attemptId}/answers`, { token }),
+
+  gradeAnswer: (
+    token: string,
+    attemptId: number,
+    answerId: number,
+    req: { awardedMark: number; reason?: string },
+  ) =>
+    apiFetch<AttemptResult>(`/api/admin/attempts/${attemptId}/answers/${answerId}/grade`, {
+      method: "PATCH",
+      body: req,
+      token,
+    }),
 };
 
 export const reportApi = {

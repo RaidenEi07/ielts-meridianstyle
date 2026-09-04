@@ -54,7 +54,7 @@ export default function TeacherStudentDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed, params.username]);
 
-  useEffect(() => {
+  function reloadGradebook() {
     if (!student) return;
     gradebookApi
       .forMyStudent(token, student.id)
@@ -67,8 +67,9 @@ export default function TeacherStudentDetailPage() {
       .wrongTypesForMyStudent(token, student.id)
       .then(setWrongTypes)
       .catch(() => setWrongTypes([]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [student, token]);
+  }
+
+  useEffect(reloadGradebook, [student, token]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!allowed) return;
@@ -179,6 +180,7 @@ export default function TeacherStudentDetailPage() {
               emptyLabel="Học sinh này chưa có điểm nào."
               token={token}
               studentName={student?.fullName}
+              onGraded={reloadGradebook}
             />
           </>
         )}

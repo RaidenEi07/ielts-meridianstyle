@@ -3,9 +3,10 @@
 import { ChevronDown, Download, FileDown, X } from "lucide-react";
 import Link from "next/link";
 import { Fragment, useEffect, useState } from "react";
-import { gradingAdminApi } from "@/lib/api";
+import { ApiError, gradingAdminApi } from "@/lib/api";
 import { downloadAttemptPdf, downloadGradebookCsv } from "@/lib/export";
 import { TYPE_META } from "@/lib/questionTypes";
+import { useToast } from "@/store/toast";
 import type { AnswerGradingDto, AttemptSummary, GradebookRow } from "@/lib/types";
 
 const STATUS: Record<string, { label: string; cls: string }> = {
@@ -20,6 +21,102 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleString("vi-VN");
 }
 
+/** Form chấm tay 1 câu Tự luận. API chấm tay (PATCH .../answers/{id}/grade) đã
+ * có sẵn ở backend từ trước — kèm cả lưu lịch sử ai chấm lúc nào — chỉ là chưa
+ * từng có giao diện nào gọi tới, nên trước đây màn này chỉ HIỆN được trạng
+ * thái "Chưa chấm" chứ không chấm được. */
+function ManualGradeForm({
+  token,
+  attemptId,
+  answer,
+  onGraded,
+}: {
+  token: string;
+  attemptId: number;
+  answer: AnswerGradingDto;
+  onGraded: () => void;
+}) {
+  const toast = useToast();
+  const [editing, setEditing] = useState(answer.awardedMark == null);
+  const [score, setScore] = useState(answer.awardedMark != null ? String(answer.awardedMark) : "");
+  const [reason, setReason] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    const mark = Number(score.replace(",", "."));
+    if (Number.isNaN(mark) || mark < 0 || (answer.mark != null && mark > answer.mark)) {
+      toast.error(`Điểm phải trong khoảng 0..${answer.mark ?? "?"}`);
+      return;
+    }
+    if (answer.answerId == null) return;
+    setSaving(true);
+    try {
+      await gradingAdminApi.gradeAnswer(token, attemptId, answer.answerId, {
+        awardedMark: mark,
+        reason: reason.trim() || undefined,
+      });
+      toast.success("Đã lưu điểm.");
+      setEditing(false);
+      setReason("");
+      onGraded();
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : "Chấm điểm thất bại");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!editing) {
+    return (
+      <button
+        type="button"
+        onClick={() => setEditing(true)}
+        className="text-xs font-semibold text-accent hover:underline"
+      >
+        {answer.awardedMark != null ? "Sửa điểm" : "Chấm điểm"}
+      </button>
+    );
+  }
+
+  return (
+    <div className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-bg p-2">
+      <input
+        type="number"
+        min={0}
+        max={answer.mark ?? undefined}
+        step={0.5}
+        value={score}
+        onChange={(e) => setScore(e.target.value)}
+        placeholder="Điểm"
+        className="input w-20 text-sm"
+      />
+      <span className="text-xs text-muted">/ {answer.mark ?? "—"}</span>
+      <input
+        type="text"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        placeholder="Nhận xét (tùy chọn)"
+        className="input min-w-[10rem] flex-1 text-sm"
+      />
+      <button
+        type="button"
+        disabled={saving || score === ""}
+        onClick={save}
+        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+      >
+        {saving ? "Đang lưu…" : "Lưu điểm"}
+      </button>
+      <button
+        type="button"
+        onClick={() => setEditing(false)}
+        className="text-xs text-muted hover:text-text"
+      >
+        Hủy
+      </button>
+    </div>
+  );
+}
+
 function AttemptDetailModal({
   attemptId,
   token,
@@ -27,6 +124,7 @@ function AttemptDetailModal({
   quizTitle,
   attempt,
   onClose,
+  onGraded,
 }: {
   attemptId: number;
   token: string;
@@ -34,16 +132,26 @@ function AttemptDetailModal({
   quizTitle: string;
   attempt: AttemptSummary;
   onClose: () => void;
+  /** Gọi lại sau khi chấm xong 1 câu — trang cha (sổ điểm ngoài modal này)
+   * đang giữ điểm/trạng thái cũ, tự refetch để không lệch với điểm vừa chấm. */
+  onGraded?: () => void;
 }) {
   const [answers, setAnswers] = useState<AnswerGradingDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  function loadAnswers() {
     gradingAdminApi
       .answersForGrading(token, attemptId)
       .then(setAnswers)
       .catch(() => setError("Không tải được chi tiết lượt làm bài"));
-  }, [token, attemptId]);
+  }
+
+  useEffect(loadAnswers, [token, attemptId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleGraded() {
+    loadAnswers();
+    onGraded?.();
+  }
 
   return (
     <div
@@ -93,38 +201,60 @@ function AttemptDetailModal({
               return (
                 <li
                   key={a.quizQuestionId}
-                  className="flex items-start gap-3 rounded-lg border border-border p-3 text-sm"
+                  className="flex flex-col gap-2 rounded-lg border border-border p-3 text-sm"
                 >
-                  <span
-                    className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
-                      !a.answered
-                        ? "bg-soft text-faint"
+                  <div className="flex items-start gap-3">
+                    <span
+                      className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                        !a.answered
+                          ? "bg-soft text-faint"
+                          : a.correct === true
+                            ? "bg-green-soft text-green"
+                            : a.correct === false
+                              ? "bg-red-soft text-red"
+                              : "bg-soft text-muted"
+                      }`}
+                    >
+                      {!a.answered
+                        ? "— Không trả lời"
                         : a.correct === true
-                          ? "bg-green-soft text-green"
+                          ? "✓ Đúng"
                           : a.correct === false
-                            ? "bg-red-soft text-red"
-                            : "bg-soft text-muted"
-                    }`}
-                  >
-                    {!a.answered
-                      ? "— Không trả lời"
-                      : a.correct === true
-                        ? "✓ Đúng"
-                        : a.correct === false
-                          ? "✗ Sai"
-                          : "Chưa chấm"}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium">{a.name ?? "—"}</p>
-                    {meta && (
-                      <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs ${meta.cls}`}>
-                        {meta.label}
-                      </span>
-                    )}
+                            ? "✗ Sai"
+                            : "Chưa chấm"}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">{a.name ?? "—"}</p>
+                      {meta && (
+                        <span className={`mt-1 inline-block rounded-full px-2 py-0.5 text-xs ${meta.cls}`}>
+                          {meta.label}
+                        </span>
+                      )}
+                    </div>
+                    <span className="shrink-0 font-mono text-xs text-muted">
+                      {a.awardedMark ?? "—"}/{a.mark ?? "—"}
+                    </span>
                   </div>
-                  <span className="shrink-0 font-mono text-xs text-muted">
-                    {a.awardedMark ?? "—"}/{a.mark ?? "—"}
-                  </span>
+                  {/* Essay chấm tay: cần thấy đúng bài học viên đã viết mới chấm
+                      được — trước đây modal này chỉ hiện trạng thái, không hiện
+                      bài làm lẫn ô nhập điểm nào cả. token có nghĩa đang ở chế độ
+                      admin/giáo viên chấm (selfView không mở modal này). */}
+                  {token && a.needsManualGrading && a.answered && a.answerId != null && (
+                    <div className="ml-9 space-y-2 border-t border-border pt-2">
+                      <div>
+                        <p className="mb-1 text-xs font-semibold text-muted">Bài làm của học viên</p>
+                        <p className="whitespace-pre-wrap rounded-lg bg-bg p-2 text-sm">
+                          {a.response?.trim() ? a.response : <span className="text-faint">(để trống)</span>}
+                        </p>
+                      </div>
+                      <ManualGradeForm
+                        token={token}
+                        attemptId={attemptId}
+                        answer={a}
+                        onGraded={handleGraded}
+                      />
+                    </div>
+                  )}
                 </li>
               );
             })}
@@ -141,6 +271,7 @@ export function GradebookTable({
   token,
   studentName,
   selfView,
+  onGraded,
 }: {
   rows: GradebookRow[];
   emptyLabel: string;
@@ -153,6 +284,11 @@ export function GradebookTable({
    * viên tự có quyền xem lượt của chính mình) thay vì gọi API chấm điểm
    * admin-only (quiz:regrade) mà học viên không có quyền. */
   selfView?: boolean;
+  /** Gọi lại sau khi admin/giáo viên chấm xong 1 câu Tự luận trong modal —
+   * `rows` là state của trang cha, chấm xong điểm cũ hiển thị ở bảng ngoài
+   * (best score, trạng thái Đã chấm/Chờ chấm) sẽ lệch với DB nếu trang cha
+   * không tự refetch lại `rows`. */
+  onGraded?: () => void;
 }) {
   const [expandedQuiz, setExpandedQuiz] = useState<number | null>(null);
   const [viewing, setViewing] = useState<{ attempt: AttemptSummary; quizTitle: string } | null>(null);
@@ -317,6 +453,7 @@ export function GradebookTable({
           quizTitle={viewing.quizTitle}
           attempt={viewing.attempt}
           onClose={() => setViewing(null)}
+          onGraded={onGraded}
         />
       )}
     </div>

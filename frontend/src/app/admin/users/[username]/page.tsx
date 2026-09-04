@@ -82,12 +82,8 @@ export default function AdminStudentDetailPage() {
       .finally(() => setUserLookupDone(true));
   }, [allowed, token, username]);
 
-  useEffect(() => {
+  function reloadGradebook() {
     if (!user) return;
-    enrollmentApi
-      .forStudentAsAdmin(token, user.id)
-      .then(setEnrollments)
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Không tải được danh sách ghi danh"));
     gradebookApi
       .forStudentAsAdmin(token, user.id)
       .then(setGradebook)
@@ -96,6 +92,16 @@ export default function AdminStudentDetailPage() {
       .wrongTypesAsAdmin(token, user.id)
       .then(setWrongTypes)
       .catch(() => setWrongTypes([]));
+  }
+
+  useEffect(() => {
+    if (!user) return;
+    enrollmentApi
+      .forStudentAsAdmin(token, user.id)
+      .then(setEnrollments)
+      .catch((e) => setError(e instanceof ApiError ? e.message : "Không tải được danh sách ghi danh"));
+    reloadGradebook();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, token]);
 
   async function handleUnenroll(enrollmentId: number, courseTitle: string) {
@@ -239,6 +245,7 @@ export default function AdminStudentDetailPage() {
                 emptyLabel="Học sinh này chưa có điểm nào."
                 token={token}
                 studentName={user?.fullName}
+                onGraded={reloadGradebook}
               />
               <WrongTypesSummary rows={wrongTypes} />
             </div>
