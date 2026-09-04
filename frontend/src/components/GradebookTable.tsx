@@ -21,6 +21,24 @@ function fmtDate(iso: string | null): string {
   return new Date(iso).toLocaleString("vi-VN");
 }
 
+/** answer.response của câu Tự luận lưu dạng {"text": "..."} (khớp payload
+ * WritingEditor gửi lên khi làm bài) — không phải chuỗi thô. Parse ra đúng
+ * nội dung học viên viết; nếu vì lý do gì đó không đúng dạng JSON này thì vẫn
+ * hiện được nguyên văn thay vì hiện lỗi hoặc mất trắng. */
+function essayText(response: string | null): string {
+  if (!response) return "";
+  try {
+    const parsed: unknown = JSON.parse(response);
+    if (parsed && typeof parsed === "object" && "text" in parsed) {
+      const t = (parsed as { text: unknown }).text;
+      if (typeof t === "string") return t;
+    }
+  } catch {
+    // không phải JSON — coi như chuỗi thô, hiện nguyên văn bên dưới.
+  }
+  return response;
+}
+
 /** Form chấm tay 1 câu Tự luận. API chấm tay (PATCH .../answers/{id}/grade) đã
  * có sẵn ở backend từ trước — kèm cả lưu lịch sử ai chấm lúc nào — chỉ là chưa
  * từng có giao diện nào gọi tới, nên trước đây màn này chỉ HIỆN được trạng
@@ -244,7 +262,11 @@ function AttemptDetailModal({
                       <div>
                         <p className="mb-1 text-xs font-semibold text-muted">Bài làm của học viên</p>
                         <p className="whitespace-pre-wrap rounded-lg bg-bg p-2 text-sm">
-                          {a.response?.trim() ? a.response : <span className="text-faint">(để trống)</span>}
+                          {essayText(a.response).trim() ? (
+                            essayText(a.response)
+                          ) : (
+                            <span className="text-faint">(để trống)</span>
+                          )}
                         </p>
                       </div>
                       <ManualGradeForm
