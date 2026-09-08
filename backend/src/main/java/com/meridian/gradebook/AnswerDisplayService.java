@@ -90,7 +90,7 @@ public class AnswerDisplayService {
         StringBuilder student = new StringBuilder();
         for (QuestionParts.MatchingPair p : q.matchingPairs()) {
             String chosen = matches == null ? "" : matches.path(String.valueOf(p.id())).asString("");
-            appendLine(correct, p.leftItem() + " → " + p.rightItem());
+            appendLine(correct, p.leftItem() + " → " + orNotConfigured(p.rightItem()));
             appendLine(student, p.leftItem() + " → " + (chosen.isBlank() ? "(bỏ trống)" : chosen));
         }
         return new Display(nullIfBlank(correct.toString()), nullIfBlank(student.toString()));
@@ -121,7 +121,7 @@ public class AnswerDisplayService {
         for (QuestionParts.DragItem d : q.dragItems()) {
             String chosen = placements == null ? "" : placements.path(String.valueOf(d.id())).asString("");
             String label = stripHtml(d.content());
-            appendLine(correct, label + " → " + d.correctTarget());
+            appendLine(correct, label + " → " + orNotConfigured(d.correctTarget()));
             appendLine(student, label + " → " + (chosen.isBlank() ? "(bỏ trống)" : chosen));
         }
         return new Display(nullIfBlank(correct.toString()), nullIfBlank(student.toString()));
@@ -133,7 +133,7 @@ public class AnswerDisplayService {
         StringBuilder student = new StringBuilder();
         for (QuestionParts.GridRow row : q.gridRows()) {
             String chosen = choices == null ? "" : choices.path(String.valueOf(row.id())).asString("");
-            appendLine(correct, row.rowText() + " → " + row.correctColumnLabel());
+            appendLine(correct, row.rowText() + " → " + orNotConfigured(row.correctColumnLabel()));
             appendLine(student, row.rowText() + " → " + (chosen.isBlank() ? "(bỏ trống)" : chosen));
         }
         return new Display(nullIfBlank(correct.toString()), nullIfBlank(student.toString()));
@@ -154,6 +154,15 @@ public class AnswerDisplayService {
 
     private String nullIfBlank(String s) {
         return (s == null || s.isBlank()) ? null : s;
+    }
+
+    /** Một số câu Kéo thả/Ghép nối/Lưới cũ có phần tử KHÔNG khai báo đáp án
+     * đúng (correctTarget/rightItem/correctColumnLabel rỗng) — GradingService
+     * chấm phần tử đó "đúng" một cách trùng hợp khi học sinh cũng bỏ trống
+     * (chuỗi rỗng so bằng chuỗi rỗng). Hiện rõ ràng thay vì để trống sau "→"
+     * trông như lỗi hiển thị. */
+    private String orNotConfigured(String s) {
+        return (s == null || s.isBlank()) ? "(chưa cấu hình đáp án đúng)" : s;
     }
 
     private String stripHtml(String s) {
