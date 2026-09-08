@@ -36,13 +36,15 @@ public class GradingAdminService {
     private final ContextService contextService;
     private final AttemptService attemptService;
     private final QuestionService questionService;
+    private final AnswerDisplayService answerDisplayService;
 
     public GradingAdminService(QuizAttemptAnswerRepository answerRepository,
             QuizAttemptRepository attemptRepository,
             QuizQuestionRepository quizQuestionRepository,
             GradeHistoryRepository gradeHistoryRepository,
             PermissionService permissionService, ContextService contextService,
-            AttemptService attemptService, QuestionService questionService) {
+            AttemptService attemptService, QuestionService questionService,
+            AnswerDisplayService answerDisplayService) {
         this.answerRepository = answerRepository;
         this.attemptRepository = attemptRepository;
         this.quizQuestionRepository = quizQuestionRepository;
@@ -51,6 +53,7 @@ public class GradingAdminService {
         this.contextService = contextService;
         this.attemptService = attemptService;
         this.questionService = questionService;
+        this.answerDisplayService = answerDisplayService;
     }
 
     /**
@@ -76,13 +79,18 @@ public class GradingAdminService {
         return quizQuestions.stream().map(qq -> {
             var q = questionService.getQuestion(qq.getQuestionId());
             String type = q.type();
+            String stem = q.stem() != null ? q.stem() : q.name();
             QuizAttemptAnswer a = answersByQuizQuestionId.get(qq.getId());
             if (a == null) {
+                var display = answerDisplayService.describe(q, null);
                 return new AnswerGradingDto(null, qq.getId(), type, q.name(), null,
-                        qq.getMark(), BigDecimal.ZERO, null, "ESSAY".equals(type), false);
+                        qq.getMark(), BigDecimal.ZERO, null, "ESSAY".equals(type), false,
+                        stem, display.correctAnswerText(), null);
             }
+            var display = answerDisplayService.describe(q, a.getResponse());
             return new AnswerGradingDto(a.getId(), qq.getId(), type, q.name(), a.getResponse(),
-                    qq.getMark(), a.getAwardedMark(), a.getCorrect(), "ESSAY".equals(type), true);
+                    qq.getMark(), a.getAwardedMark(), a.getCorrect(), "ESSAY".equals(type), true,
+                    stem, display.correctAnswerText(), display.studentAnswerText());
         }).toList();
     }
 

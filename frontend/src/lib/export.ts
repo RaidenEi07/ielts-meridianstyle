@@ -32,9 +32,54 @@ function safeFilePart(s: string): string {
   return s.trim().replace(/\s+/g, "-").replace(/[^\w-]/g, "");
 }
 
+/** Tên kỹ năng suy ra từ tên bài (quy ước đặt tên nhất quán trong ngân hàng
+ * đề: "reading 36", "listening 47", "writing 42 Task 1"...) — khớp đúng
+ * SKILL_KEYWORDS/SKILL_LABELS ở backend (ReportService/RecommendationService),
+ * để "điểm thành phần" theo kỹ năng xuất ra CSV không lệch quy ước với các
+ * chỗ khác trong app đã suy luận kỹ năng theo cách này. */
+const SKILL_LABELS: Record<string, string> = {
+  listening: "Nghe",
+  reading: "Đọc",
+  writing: "Viết",
+  speaking: "Nói",
+};
+
+function skillOfQuizTitle(title: string): string | null {
+  const lower = title.toLowerCase();
+  for (const kw of Object.keys(SKILL_LABELS)) {
+    if (lower.includes(kw)) return kw;
+  }
+  return null;
+}
+
 /** Xuất toàn bộ sổ điểm (danh sách bài + điểm cao nhất + từng lượt làm) ra CSV
- * — mở trực tiếp bằng Excel. Thêm BOM UTF-8 để tiếng Việt không bị lỗi font. */
+ * — mở trực tiếp bằng Excel. Thêm BOM UTF-8 để tiếng Việt không bị lỗi font.
+ * Có 2 phần: "điểm thành phần" (tổng hợp theo kỹ năng Nghe/Đọc/Viết/Nói, suy
+ * từ tên bài) rồi tới "điểm tổng" (chi tiết từng bài/lượt làm như trước). */
 export function downloadGradebookCsv(rows: GradebookRow[], studentName: string) {
+  const lines: string[] = [];
+
+  const bySkill = new Map<string, { count: number; score: number; max: number }>();
+  for (const r of rows) {
+    const skill = skillOfQuizTitle(r.quizTitle);
+    if (!skill || r.bestScore == null || r.maxScore == null) continue;
+    const agg = bySkill.get(skill) ?? { count: 0, score: 0, max: 0 };
+    agg.count += 1;
+    agg.score += r.bestScore;
+    agg.max += r.maxScore;
+    bySkill.set(skill, agg);
+  }
+  if (bySkill.size > 0) {
+    lines.push(csvCell("ĐIỂM THÀNH PHẦN THEO KỸ NĂNG"));
+    lines.push(["Kỹ năng", "Số bài", "Điểm đạt", "Điểm tối đa", "Tỷ lệ %"].map(csvCell).join(","));
+    for (const [skill, agg] of bySkill) {
+      const pct = agg.max > 0 ? Math.round((agg.score / agg.max) * 10000) / 100 : 0;
+      lines.push([SKILL_LABELS[skill], agg.count, agg.score, agg.max, pct].map(csvCell).join(","));
+    }
+    lines.push("");
+  }
+
+  lines.push(csvCell("ĐIỂM TỔNG THEO TỪNG BÀI"));
   const header = [
     "Bài",
     "Khóa học",
@@ -47,7 +92,7 @@ export function downloadGradebookCsv(rows: GradebookRow[], studentName: string) 
     "Ngày nộp",
     "Số lần chuyển tab",
   ];
-  const lines = [header.map(csvCell).join(",")];
+  lines.push(header.map(csvCell).join(","));
   for (const r of rows) {
     if (r.attemptList.length === 0) {
       lines.push(
@@ -142,8 +187,15 @@ async function htmlToPdf(html: string, widthPx: number, filename: string) {
   }
 }
 
-/** Xuất bài làm chi tiết của 1 lượt làm ra PDF — nội dung khớp với những gì
- * AttemptDetailModal đã hiển thị (không tự suy diễn thêm đáp án chi tiết). */
+function nl2br(text: string): string {
+  return escapeHtml(text).replace(/\n/g, "<br>");
+}
+
+/** Xuất bài làm chi tiết của 1 lượt làm ra PDF: bảng tổng quan (kết quả/điểm
+ * từng câu, xem nhanh) rồi tới chi tiết ĐỀ + ĐÁP ÁN từng câu (đề bài, đáp án
+ * đúng, học sinh đã trả lời gì) — dữ liệu lấy từ AnswerGradingDto.stem/
+ * correctAnswerText/studentAnswerText (backend diễn giải theo đúng cấu trúc
+ * từng dạng câu hỏi, xem AnswerDisplayService). */
 export async function downloadAttemptPdf(params: {
   studentName: string;
   quizTitle: string;
@@ -181,6 +233,25 @@ export async function downloadAttemptPdf(params: {
     })
     .join("");
 
+  const detailHtml = answers
+    .map((a, i) => {
+      const typeLabel = a.type ? (TYPE_META[a.type]?.label ?? a.type) : "—";
+      const studentAnswer = a.studentAnswerText
+        ? nl2br(a.studentAnswerText)
+        : `<span style="color:#9ca3af">(bỏ trống)</span>`;
+      return `<div style="margin-bottom:14px;padding:12px;border:1px solid #e2e8f0;border-radius:8px;break-inside:avoid">
+        <div style="font-size:12px;font-weight:600;color:#475569;margin-bottom:6px">Câu ${i + 1} — ${escapeHtml(a.name ?? "—")} (${escapeHtml(typeLabel)})</div>
+        ${a.stem ? `<div style="font-size:13px;margin-bottom:8px">${a.stem}</div>` : ""}
+        ${
+          a.correctAnswerText
+            ? `<div style="font-size:12px;margin-bottom:4px"><strong style="color:#16a34a">Đáp án đúng:</strong> ${nl2br(a.correctAnswerText)}</div>`
+            : ""
+        }
+        <div style="font-size:12px"><strong style="color:#334155">Học sinh trả lời:</strong> ${studentAnswer}</div>
+      </div>`;
+    })
+    .join("");
+
   const html = `
     <div style="padding:24px;color:#111827">
       <h1 style="font-size:22px;margin:0 0 16px">Báo cáo kết quả bài làm</h1>
@@ -203,6 +274,8 @@ export async function downloadAttemptPdf(params: {
         </thead>
         <tbody>${rowsHtml}</tbody>
       </table>
+      <h2 style="font-size:16px;margin:20px 0 12px">Chi tiết đề bài & đáp án</h2>
+      ${detailHtml}
     </div>`;
 
   await htmlToPdf(html, 900, `bai-lam-${safeFilePart(studentName)}-${safeFilePart(quizTitle)}-lot${attemptNumber}.pdf`);

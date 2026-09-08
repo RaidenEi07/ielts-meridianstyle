@@ -156,6 +156,19 @@ function AttemptDetailModal({
 }) {
   const [answers, setAnswers] = useState<AnswerGradingDto[] | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+
+  function toggleExpanded(quizQuestionId: number) {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(quizQuestionId)) {
+        next.delete(quizQuestionId);
+      } else {
+        next.add(quizQuestionId);
+      }
+      return next;
+    });
+  }
 
   function loadAnswers() {
     gradingAdminApi
@@ -253,6 +266,55 @@ function AttemptDetailModal({
                       {a.awardedMark ?? "—"}/{a.mark ?? "—"}
                     </span>
                   </div>
+                  {/* "Xem đề & đáp án": đề bài + đáp án đúng + học sinh đã trả
+                      lời gì — gộp ở đây thay vì luôn hiện sẵn, vì đề (stem) có
+                      thể dài (bài đọc, hình ảnh...) làm modal quá dài nếu hiện
+                      hết mọi câu cùng lúc. */}
+                  {a.stem && (
+                    <button
+                      type="button"
+                      onClick={() => toggleExpanded(a.quizQuestionId)}
+                      className="ml-9 flex items-center gap-1 self-start text-xs font-semibold text-accent hover:underline"
+                    >
+                      <ChevronDown
+                        className={`h-3.5 w-3.5 transition-transform ${
+                          expanded.has(a.quizQuestionId) ? "rotate-180" : ""
+                        }`}
+                      />
+                      {expanded.has(a.quizQuestionId) ? "Ẩn đề & đáp án" : "Xem đề & đáp án"}
+                    </button>
+                  )}
+                  {expanded.has(a.quizQuestionId) && (
+                    <div className="ml-9 space-y-2 border-t border-border pt-2">
+                      {a.stem && (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold text-muted">Đề bài</p>
+                          <div
+                            className="prose prose-sm dark:prose-invert max-w-none rounded-lg bg-bg p-2"
+                            dangerouslySetInnerHTML={{ __html: a.stem }}
+                          />
+                        </div>
+                      )}
+                      {a.correctAnswerText && (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold text-muted">Đáp án đúng</p>
+                          <p className="whitespace-pre-wrap rounded-lg bg-green-soft/40 p-2 text-sm">
+                            {a.correctAnswerText}
+                          </p>
+                        </div>
+                      )}
+                      {/* Essay đang chờ chấm đã hiện bài làm riêng ngay dưới
+                          (kèm ô nhập điểm) — không lặp lại ở đây. */}
+                      {!(token && a.needsManualGrading && a.answerId != null) && (
+                        <div>
+                          <p className="mb-1 text-xs font-semibold text-muted">Học sinh trả lời</p>
+                          <p className="whitespace-pre-wrap rounded-lg bg-bg p-2 text-sm">
+                            {a.studentAnswerText ?? <span className="text-faint">(để trống)</span>}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                   {/* Essay chấm tay: cần thấy đúng bài học viên đã viết mới chấm
                       được — trước đây modal này chỉ hiện trạng thái, không hiện
                       bài làm lẫn ô nhập điểm nào cả. token có nghĩa đang ở chế độ

@@ -554,6 +554,13 @@ export interface AnswerGradingDto {
   correct: boolean | null;
   needsManualGrading: boolean;
   answered: boolean;
+  /** Đề bài (HTML) — dùng cho màn "xem đề & đáp án" và xuất PDF. */
+  stem: string | null;
+  /** Đáp án đúng, dạng văn bản đọc được — null với Essay (chấm tay) hoặc khi
+   * câu hỏi không khai báo đáp án đúng. */
+  correctAnswerText: string | null;
+  /** Câu trả lời của học sinh, dạng văn bản đọc được — null khi bỏ trống. */
+  studentAnswerText: string | null;
 }
 
 export interface MonthlyPoint {

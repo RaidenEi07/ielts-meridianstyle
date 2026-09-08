@@ -17,5 +17,16 @@ public record AnswerGradingDto(
         BigDecimal awardedMark,
         Boolean correct,
         boolean needsManualGrading,
-        boolean answered) {
+        boolean answered,
+        /** Đề bài (HTML) — dùng cho màn "xem đề & đáp án" và xuất PDF, không
+         * chỉ hiện tên/nhãn ngắn như {@code name}. */
+        String stem,
+        /** Đáp án đúng, dạng văn bản đọc được — null với Essay (chấm tay, không
+         * có đáp án cố định) hoặc khi câu hỏi không khai báo đáp án đúng. */
+        String correctAnswerText,
+        /** Câu trả lời của học sinh, dạng văn bản đọc được (đã diễn giải từ
+         * response JSON theo đúng cấu trúc từng dạng câu hỏi — xem
+         * AnswerDisplayService, dùng lại cách đọc field của GradingService).
+         * Null khi học sinh bỏ trống. */
+        String studentAnswerText) {
 }
