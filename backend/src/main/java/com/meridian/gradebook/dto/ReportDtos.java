@@ -84,6 +84,47 @@ public final class ReportDtos {
     public record MonthlyPoint(String month, long enrollments, BigDecimal revenue) {
     }
 
+    /** 1 dòng học viên trong sổ điểm CẢ KHÓA HỌC — khác GradebookRow (1 dòng =
+     * 1 quiz của 1 học viên); ở đây gộp theo học viên trên toàn bộ đề trong
+     * khóa, dùng cho màn "quản lý điểm 1 khóa học" (chọn khóa → thấy hết học
+     * viên, không phải chọn học viên trước như sổ điểm cũ). */
+    public record CourseGradebookStudentRow(
+            UUID userId,
+            String userName,
+            String username,
+            int quizzesAttempted,
+            int totalQuizzes,
+            BigDecimal avgPercent,
+            BigDecimal bestBand,
+            Instant lastActivity) {
+    }
+
+    /** 1 dòng đề thi trong sổ điểm cả khóa học — cùng số liệu với
+     * QuizReportRow/QuizReportStats nhưng tính 1 lần cho MỌI đề trong khóa
+     * (1 query attempts, nhóm theo quiz) thay vì gọi quizReport() lặp lại cho
+     * từng đề — khóa nhiều đề (vd IELTS-PREP 150 đề) gọi kiểu đó sẽ rất chậm. */
+    public record CourseGradebookQuizRow(
+            Long quizId,
+            String quizTitle,
+            String sectionTitle,
+            BigDecimal maxScore,
+            long distinctStudents,
+            long graded,
+            BigDecimal avgScore,
+            BigDecimal passRate) {
+    }
+
+    public record CourseGradebook(
+            Long courseId,
+            String courseTitle,
+            long enrolledCount,
+            long totalQuizzes,
+            BigDecimal avgCompletionPercent,
+            BigDecimal avgScorePercent,
+            List<CourseGradebookStudentRow> students,
+            List<CourseGradebookQuizRow> quizzes) {
+    }
+
     public record SystemAnalytics(
             long totalUsers,
             long totalCourses,

@@ -1,10 +1,16 @@
 package com.meridian.gradebook;
 
+import com.meridian.catalog.Course;
+import com.meridian.catalog.CourseSection;
+import com.meridian.catalog.CourseSectionRepository;
 import com.meridian.catalog.Enrollment;
 import com.meridian.catalog.EnrollmentRepository;
 import com.meridian.catalog.CourseRepository;
 import com.meridian.common.ApiException;
 import com.meridian.gradebook.dto.ReportDtos.AttemptSummary;
+import com.meridian.gradebook.dto.ReportDtos.CourseGradebook;
+import com.meridian.gradebook.dto.ReportDtos.CourseGradebookQuizRow;
+import com.meridian.gradebook.dto.ReportDtos.CourseGradebookStudentRow;
 import com.meridian.gradebook.dto.ReportDtos.GradebookRow;
 import com.meridian.gradebook.dto.ReportDtos.MonthlyPoint;
 import com.meridian.gradebook.dto.ReportDtos.QuizReport;
@@ -29,6 +35,7 @@ import com.meridian.rbac.PermissionService;
 import com.meridian.user.UserRepository;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.Instant;
 import java.time.YearMonth;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
@@ -48,6 +55,7 @@ public class ReportService {
     private final QuizRepository quizRepository;
     private final EnrollmentRepository enrollmentRepository;
     private final CourseRepository courseRepository;
+    private final CourseSectionRepository courseSectionRepository;
     private final UserRepository userRepository;
     private final PermissionService permissionService;
     private final ContextService contextService;
@@ -57,6 +65,7 @@ public class ReportService {
 
     public ReportService(QuizAttemptRepository attemptRepository, QuizRepository quizRepository,
             EnrollmentRepository enrollmentRepository, CourseRepository courseRepository,
+            CourseSectionRepository courseSectionRepository,
             UserRepository userRepository, PermissionService permissionService,
             ContextService contextService, QuizAttemptAnswerRepository answerRepository,
             QuizQuestionRepository quizQuestionRepository, QuestionService questionService) {
@@ -64,6 +73,7 @@ public class ReportService {
         this.quizRepository = quizRepository;
         this.enrollmentRepository = enrollmentRepository;
         this.courseRepository = courseRepository;
+        this.courseSectionRepository = courseSectionRepository;
         this.userRepository = userRepository;
         this.permissionService = permissionService;
         this.contextService = contextService;
@@ -331,6 +341,142 @@ public class ReportService {
                 graded.size(), avg, max, min, passRate, avgViol);
         return new QuizReport(quizId, quiz.getTitle(),
                 attempts.isEmpty() ? null : attempts.get(0).getMaxScore(), stats, rows);
+    }
+
+    // ---- Course gradebook (quản lý điểm 1 khóa học) ----
+
+    /**
+     * Sổ điểm CẢ khóa học — khác {@link #gradebookForUser} (phải chọn 1 học
+     * viên trước) và {@link #quizReport} (phải chọn 1 đề trước): ở đây chọn
+     * 1 khóa học là thấy hết — mọi học viên đã ghi danh × mọi đề trong khóa,
+     * theo 2 chiều (theo học viên / theo đề). Cùng quyền 'report:viewlive'
+     * tính theo context của KHÓA HỌC như quizReport tính theo context của
+     * quiz — admin có report:viewlive hệ thống thì xem được mọi khóa; giáo
+     * viên chỉ được cấp report:viewlive riêng ở 1 khóa (qua "Quyền theo khóa
+     * học") thì chỉ xem được đúng khóa đó, không cần nằm trong roster nào.
+     */
+    @Transactional(readOnly = true)
+    public CourseGradebook courseGradebook(UUID uid, Long courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy khóa học"));
+        permissionService.requireCapability(uid, "report:viewlive", ctxId(course.getContext()));
+
+        List<CourseSection> sections = courseSectionRepository.findByCourseIdOrderBySortOrderAscIdAsc(courseId);
+        Map<Long, String> sectionTitleById = sections.stream()
+                .collect(Collectors.toMap(CourseSection::getId, CourseSection::getTitle));
+        List<Long> sectionIds = new ArrayList<>(sectionTitleById.keySet());
+
+        List<Quiz> quizzes = sectionIds.isEmpty()
+                ? List.of() : quizRepository.findBySectionIdIn(sectionIds);
+        List<Long> quizIds = quizzes.stream().map(Quiz::getId).toList();
+
+        // 1 query duy nhất cho MỌI attempt trong cả khóa — khóa nhiều đề (vd
+        // IELTS-PREP 150 đề) gọi quizReport() lặp lại 150 lần sẽ rất chậm.
+        List<QuizAttempt> attempts = quizIds.isEmpty()
+                ? List.of() : attemptRepository.findByQuizIdIn(quizIds);
+        Map<Long, List<QuizAttempt>> attemptsByQuiz = attempts.stream()
+                .collect(Collectors.groupingBy(a -> a.getQuiz().getId()));
+        Map<UUID, List<QuizAttempt>> attemptsByUser = attempts.stream()
+                .collect(Collectors.groupingBy(QuizAttempt::getUserId));
+
+        List<CourseGradebookQuizRow> quizRows = new ArrayList<>();
+        for (Quiz quiz : quizzes) {
+            List<QuizAttempt> qAttempts = attemptsByQuiz.getOrDefault(quiz.getId(), List.of());
+            List<QuizAttempt> graded = qAttempts.stream().filter(a -> a.getRawScore() != null).toList();
+            Map<UUID, List<QuizAttempt>> byUser = qAttempts.stream()
+                    .collect(Collectors.groupingBy(QuizAttempt::getUserId));
+            BigDecimal avg = graded.isEmpty() ? null : scale(
+                    graded.stream().map(QuizAttempt::getRawScore)
+                            .reduce(BigDecimal.ZERO, BigDecimal::add)
+                            .divide(BigDecimal.valueOf(graded.size()), 4, RoundingMode.HALF_UP));
+            long passCount = 0;
+            for (var e : byUser.entrySet()) {
+                QuizAttempt best = e.getValue().stream()
+                        .max(Comparator.comparing(a -> a.getRawScore() != null
+                                ? a.getRawScore() : BigDecimal.valueOf(-1)))
+                        .orElse(null);
+                if (quiz.getPassMark() != null && best != null && best.getRawScore() != null
+                        && best.getRawScore().compareTo(quiz.getPassMark()) >= 0) {
+                    passCount++;
+                }
+            }
+            BigDecimal passRate = byUser.isEmpty() ? null : scale(
+                    BigDecimal.valueOf(passCount)
+                            .divide(BigDecimal.valueOf(byUser.size()), 4, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal.valueOf(100)));
+            // .getSection().getId() đọc thẳng FK trên proxy lazy, không chạm DB
+            // — an toàn kể cả khi section đã bị xóa mềm sau khi quiz được tạo
+            // (khớp cách xử lý EntityNotFoundException đã sửa ở AttemptService,
+            // chỉ khác là ở đây tránh được từ đầu thay vì phải try/catch, vì
+            // đằng nào cũng chỉ cần đúng cái id để tra sectionTitleById).
+            String sectionTitle = sectionTitleById.getOrDefault(quiz.getSection().getId(), "—");
+            quizRows.add(new CourseGradebookQuizRow(quiz.getId(), quiz.getTitle(), sectionTitle,
+                    qAttempts.isEmpty() ? null : qAttempts.get(0).getMaxScore(),
+                    byUser.size(), graded.size(), avg, passRate));
+        }
+
+        List<Enrollment> enrollments = enrollmentRepository.findByCourseId(courseId);
+        List<CourseGradebookStudentRow> studentRows = new ArrayList<>();
+        for (Enrollment enr : enrollments) {
+            UUID userId = enr.getUser().getId();
+            List<QuizAttempt> userAttempts = attemptsByUser.getOrDefault(userId, List.of());
+            Map<Long, List<QuizAttempt>> byQuiz = userAttempts.stream()
+                    .collect(Collectors.groupingBy(a -> a.getQuiz().getId()));
+
+            List<BigDecimal> percents = new ArrayList<>();
+            BigDecimal bestBand = null;
+            for (List<QuizAttempt> qa : byQuiz.values()) {
+                QuizAttempt best = qa.stream()
+                        .max(Comparator.comparing(a -> a.getRawScore() != null
+                                ? a.getRawScore() : BigDecimal.valueOf(-1)))
+                        .orElse(null);
+                if (best == null) {
+                    continue;
+                }
+                if (best.getRawScore() != null && best.getMaxScore() != null
+                        && best.getMaxScore().compareTo(BigDecimal.ZERO) > 0) {
+                    percents.add(best.getRawScore()
+                            .divide(best.getMaxScore(), 6, RoundingMode.HALF_UP)
+                            .multiply(BigDecimal.valueOf(100)));
+                }
+                if (best.getBandScore() != null && (bestBand == null || best.getBandScore().compareTo(bestBand) > 0)) {
+                    bestBand = best.getBandScore();
+                }
+            }
+            Instant lastActivity = null;
+            for (QuizAttempt a : userAttempts) {
+                Instant t = a.getSubmittedAt() != null ? a.getSubmittedAt() : a.getStartedAt();
+                if (t != null && (lastActivity == null || t.isAfter(lastActivity))) {
+                    lastActivity = t;
+                }
+            }
+            BigDecimal avgPercent = percents.isEmpty() ? null : scale(
+                    percents.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                            .divide(BigDecimal.valueOf(percents.size()), 4, RoundingMode.HALF_UP));
+
+            studentRows.add(new CourseGradebookStudentRow(userId, enr.getUser().getFullName(),
+                    enr.getUser().getUsername(), byQuiz.size(), quizzes.size(), avgPercent, bestBand,
+                    lastActivity));
+        }
+        studentRows.sort(Comparator.comparing(CourseGradebookStudentRow::userName,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+
+        BigDecimal avgCompletion = (studentRows.isEmpty() || quizzes.isEmpty()) ? BigDecimal.ZERO : scale(
+                BigDecimal.valueOf(studentRows.stream()
+                        .mapToInt(CourseGradebookStudentRow::quizzesAttempted).sum())
+                        .divide(BigDecimal.valueOf((long) studentRows.size() * quizzes.size()), 6,
+                                RoundingMode.HALF_UP)
+                        .multiply(BigDecimal.valueOf(100)));
+        List<BigDecimal> validAvgs = studentRows.stream()
+                .map(CourseGradebookStudentRow::avgPercent)
+                .filter(p -> p != null)
+                .toList();
+        BigDecimal avgScorePercent = validAvgs.isEmpty() ? BigDecimal.ZERO : scale(
+                validAvgs.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                        .divide(BigDecimal.valueOf(validAvgs.size()), 4, RoundingMode.HALF_UP));
+
+        return new CourseGradebook(courseId, course.getTitle(), enrollments.size(), quizzes.size(),
+                avgCompletion, avgScorePercent, studentRows, quizRows);
     }
 
     // ---- Admin system analytics ----

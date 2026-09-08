@@ -3,6 +3,7 @@ package com.meridian.gradebook;
 import com.meridian.gradebook.dto.AnswerGradingDto;
 import com.meridian.gradebook.dto.GradeAnswerRequest;
 import com.meridian.gradebook.dto.GradeHistoryDto;
+import com.meridian.gradebook.dto.ReportDtos.CourseGradebook;
 import com.meridian.gradebook.dto.ReportDtos.GradebookRow;
 import com.meridian.gradebook.dto.ReportDtos.QuizReport;
 import com.meridian.gradebook.dto.ReportDtos.SystemAnalytics;
@@ -48,6 +49,11 @@ public class ReportController {
     @GetMapping("/analytics")
     public SystemAnalytics analytics() {
         return reportService.systemAnalytics(uid());
+    }
+
+    @GetMapping("/courses/{courseId}/gradebook")
+    public CourseGradebook courseGradebook(@PathVariable Long courseId) {
+        return reportService.courseGradebook(uid(), courseId);
     }
 
     @GetMapping("/students/{userId}/gradebook")

@@ -572,6 +572,43 @@ export interface SystemAnalytics {
   monthly: MonthlyPoint[];
 }
 
+/** 1 dòng học viên trong sổ điểm CẢ khóa học — khác GradebookRow (1 dòng = 1
+ * quiz của 1 học viên), ở đây gộp theo học viên trên toàn bộ đề trong khóa. */
+export interface CourseGradebookStudentRow {
+  userId: string;
+  userName: string;
+  username: string;
+  quizzesAttempted: number;
+  totalQuizzes: number;
+  avgPercent: number | null;
+  bestBand: number | null;
+  lastActivity: string | null;
+}
+
+/** 1 dòng đề thi trong sổ điểm cả khóa học — cùng số liệu với QuizReport
+ * nhưng tính 1 lần cho mọi đề trong khóa thay vì gọi riêng từng đề. */
+export interface CourseGradebookQuizRow {
+  quizId: number;
+  quizTitle: string;
+  sectionTitle: string | null;
+  maxScore: number | null;
+  distinctStudents: number;
+  graded: number;
+  avgScore: number | null;
+  passRate: number | null;
+}
+
+export interface CourseGradebook {
+  courseId: number;
+  courseTitle: string;
+  enrolledCount: number;
+  totalQuizzes: number;
+  avgCompletionPercent: number | null;
+  avgScorePercent: number | null;
+  students: CourseGradebookStudentRow[];
+  quizzes: CourseGradebookQuizRow[];
+}
+
 // ---- Admin tools (Giai đoạn 6) ----
 
 export interface AppNotification {

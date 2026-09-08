@@ -8,4 +8,6 @@ public interface QuizRepository extends JpaRepository<Quiz, Long> {
     List<Quiz> findBySectionIdOrderBySortOrderAscIdAsc(Long sectionId);
 
     long countBySectionId(Long sectionId);
+
+    List<Quiz> findBySectionIdIn(List<Long> sectionIds);
 }

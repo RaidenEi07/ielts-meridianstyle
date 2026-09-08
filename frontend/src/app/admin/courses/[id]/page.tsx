@@ -11,7 +11,7 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { arrayMove, SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { Search, X } from "lucide-react";
+import { BarChart3, Search, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { BulkRenameDialog } from "@/components/BulkRenameDialog";
 import { CharacterDubbingEditor } from "@/components/CharacterDubbingEditor";
@@ -292,6 +292,12 @@ function CourseEditForm({
           </span>
         </div>
         <div className="flex items-center gap-4">
+          <Link
+            href={`/admin/courses/${course.id}/gradebook`}
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-accent hover:bg-soft"
+          >
+            <BarChart3 className="h-4 w-4" /> Sổ điểm
+          </Link>
           <DistributeCourseButton courseId={course.id} token={token} />
           <button type="button" onClick={remove} className="text-sm text-red">
             Xóa khóa học

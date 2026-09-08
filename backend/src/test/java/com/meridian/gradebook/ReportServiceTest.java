@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 import com.meridian.catalog.CourseRepository;
+import com.meridian.catalog.CourseSectionRepository;
 import com.meridian.catalog.EnrollmentRepository;
 import com.meridian.gradebook.dto.ReportDtos.TypeBreakdown;
 import com.meridian.question.QuestionService;
@@ -35,6 +36,7 @@ class ReportServiceTest {
     @Mock private QuizRepository quizRepository;
     @Mock private EnrollmentRepository enrollmentRepository;
     @Mock private CourseRepository courseRepository;
+    @Mock private CourseSectionRepository courseSectionRepository;
     @Mock private UserRepository userRepository;
     @Mock private PermissionService permissionService;
     @Mock private ContextService contextService;
@@ -44,8 +46,8 @@ class ReportServiceTest {
 
     private ReportService reportService() {
         return new ReportService(attemptRepository, quizRepository, enrollmentRepository,
-                courseRepository, userRepository, permissionService, contextService,
-                answerRepository, quizQuestionRepository, questionService);
+                courseRepository, courseSectionRepository, userRepository, permissionService,
+                contextService, answerRepository, quizQuestionRepository, questionService);
     }
 
     private QuizAttempt attempt(Long id, AttemptStatus status) {

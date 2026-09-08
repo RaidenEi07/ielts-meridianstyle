@@ -17,6 +17,7 @@ import type {
   ChildSite,
   CourseAudienceGroup,
   CourseDetail,
+  CourseGradebook,
   CourseProgress,
   CourseSummary,
   DistributeResult,
@@ -884,6 +885,9 @@ export const gradingAdminApi = {
 export const reportApi = {
   analytics: (token: string) =>
     apiFetch<SystemAnalytics>("/api/admin/analytics", { token }),
+
+  courseGradebook: (token: string, courseId: number) =>
+    apiFetch<CourseGradebook>(`/api/admin/courses/${courseId}/gradebook`, { token }),
 };
 
 // ---- Roster giáo viên–học sinh ----
