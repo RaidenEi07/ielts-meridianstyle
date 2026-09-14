@@ -31,6 +31,7 @@ const SYSTEM_ONLY_CAPABILITIES = new Set([
   "role:assign",
   "user:bulkupload",
   "course:distribute",
+  "childsite:manage-accounts",
 ]);
 
 const ENROLLMENT_STATUS_META: Record<string, { label: string; cls: string }> = {

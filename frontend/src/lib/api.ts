@@ -52,6 +52,8 @@ import type {
   RoleOption,
   Section,
   StudentSummary,
+  SyncAccount,
+  SyncCourseGrant,
   SystemAnalytics,
   TeacherPublic,
   TypeBreakdown,
@@ -1004,6 +1006,50 @@ export const childSiteAdminApi = {
 
   remove: (token: string, id: number) =>
     apiFetch<void>(`/api/admin/child-sites/${id}`, { method: "DELETE", token }),
+};
+
+/** Web tổng xem/sửa role + quyền lẻ theo khóa của tài khoản ĐANG TỒN TẠI ở
+ * 1 web con cụ thể (cần childsite:manage-accounts, tách khỏi
+ * course:distribute — xem V49). Tài khoản vẫn do web con tự tạo, API này
+ * chỉ điều khiển role/quyền, không tạo/xóa tài khoản. */
+export const remoteAccountApi = {
+  list: (token: string, siteId: number, search?: string) =>
+    apiFetch<SyncAccount[]>(
+      `/api/admin/child-sites/${siteId}/accounts${search ? `?search=${encodeURIComponent(search)}` : ""}`,
+      { token },
+    ),
+
+  courseGrants: (token: string, siteId: number, userId: string) =>
+    apiFetch<SyncCourseGrant[]>(
+      `/api/admin/child-sites/${siteId}/accounts/${userId}/course-grants`,
+      { token },
+    ),
+
+  assignRole: (token: string, siteId: number, userId: string, roleShortname: string) =>
+    apiFetch<void>(`/api/admin/child-sites/${siteId}/accounts/${userId}/roles`, {
+      method: "POST",
+      body: { roleShortname },
+      token,
+    }),
+
+  revokeRole: (token: string, siteId: number, userId: string, roleShortname: string) =>
+    apiFetch<void>(
+      `/api/admin/child-sites/${siteId}/accounts/${userId}/roles/${encodeURIComponent(roleShortname)}`,
+      { method: "DELETE", token },
+    ),
+
+  setCourseGrants: (
+    token: string,
+    siteId: number,
+    userId: string,
+    courseShortname: string,
+    capabilities: string[],
+  ) =>
+    apiFetch<void>(`/api/admin/child-sites/${siteId}/accounts/${userId}/course-grants`, {
+      method: "PUT",
+      body: { courseShortname, capabilities },
+      token,
+    }),
 };
 
 // ---- Quản lý tài khoản & vai trò (cần user:manage / role:assign) ----

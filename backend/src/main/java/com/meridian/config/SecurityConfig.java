@@ -53,6 +53,7 @@ public class SecurityConfig {
                     .requestMatchers("/actuator/health", "/error").permitAll()
                     // Xác thực riêng bằng API key (CourseImportApiKeyFilter), không qua JWT.
                     .requestMatchers(HttpMethod.POST, "/api/catalog/import").permitAll()
+                    .requestMatchers("/api/rbac-sync/**").permitAll()
                     .anyRequest().authenticated())
             .exceptionHandling(eh -> eh.authenticationEntryPoint(
                     new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))

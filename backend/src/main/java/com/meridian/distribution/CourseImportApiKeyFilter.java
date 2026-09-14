@@ -14,17 +14,21 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 /**
- * Xác thực endpoint nhận khóa học ({@code POST /api/catalog/import}) bằng API key riêng của
- * web con (header {@code X-Meridian-Api-Key}) — request server-to-server từ web tổng, không
- * qua JWT người dùng. Key mong đợi được cấu hình 1 lần qua biến môi trường {@code MASTER_API_KEY}
- * (giống {@code SITE_ROLE}: bí mật riêng từng deployment, không phải config sửa được qua UI),
- * lấy đúng giá trị {@code apiKey} mà web tổng đã sinh cho web con này ở trang "Web con".
+ * Xác thực các endpoint chỉ web tổng gọi tới web con — nhận khóa học
+ * ({@code POST /api/catalog/import}) và đọc/sửa role + quyền lẻ tài khoản
+ * ({@code /api/rbac-sync/**}, mọi method) — bằng API key riêng của web con
+ * (header {@code X-Meridian-Api-Key}), request server-to-server từ web
+ * tổng, không qua JWT người dùng. Key mong đợi được cấu hình 1 lần qua biến
+ * môi trường {@code MASTER_API_KEY} (giống {@code SITE_ROLE}: bí mật riêng
+ * từng deployment, không phải config sửa được qua UI), lấy đúng giá trị
+ * {@code apiKey} mà web tổng đã sinh cho web con này ở trang "Web con".
  */
 @Component
 public class CourseImportApiKeyFilter extends OncePerRequestFilter {
 
     private static final String HEADER = "X-Meridian-Api-Key";
-    private static final String PATH = "/api/catalog/import";
+    private static final String IMPORT_PATH = "/api/catalog/import";
+    private static final String RBAC_SYNC_PREFIX = "/api/rbac-sync/";
 
     private final Environment env;
 
@@ -36,7 +40,10 @@ public class CourseImportApiKeyFilter extends OncePerRequestFilter {
     protected void doFilterInternal(@NonNull HttpServletRequest request,
             @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
-        if (!"POST".equals(request.getMethod()) || !PATH.equals(request.getRequestURI())) {
+        String uri = request.getRequestURI();
+        boolean isGuardedPath = ("POST".equals(request.getMethod()) && IMPORT_PATH.equals(uri))
+                || uri.startsWith(RBAC_SYNC_PREFIX);
+        if (!isGuardedPath) {
             filterChain.doFilter(request, response);
             return;
         }

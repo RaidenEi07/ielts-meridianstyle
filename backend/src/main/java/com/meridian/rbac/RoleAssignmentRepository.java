@@ -14,6 +14,8 @@ public interface RoleAssignmentRepository extends JpaRepository<RoleAssignment, 
 
     boolean existsByUserAndRoleAndContext(User user, Role role, Context context);
 
+    void deleteByUserAndRoleAndContext(User user, Role role, Context context);
+
     /**
      * Trả về tất cả grant (capability + ALLOW/PREVENT) cho user trong tập context cho trước
      * (thường là chuỗi từ context đích lên tới SYSTEM). Việc resolve theo độ ưu tiên

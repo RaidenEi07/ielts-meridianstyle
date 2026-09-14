@@ -49,6 +49,26 @@ export interface DistributeResult {
   warnings: string[];
 }
 
+/** 1 tài khoản ĐANG TỒN TẠI ở web con (tài khoản do web con tự tạo — xem
+ * V49), kèm role hệ thống hiện có. Chỉ mang định danh ổn định giữa 2 hệ
+ * thống (role shortname), không mang id số cục bộ nào của web con. */
+export interface SyncAccount {
+  userId: string;
+  username: string;
+  email: string;
+  fullName: string;
+  status: string;
+  roleShortnames: string[];
+}
+
+/** Quyền lẻ theo 1 khóa học cụ thể của 1 tài khoản web con — khớp theo
+ * courseShortname (không phải id cục bộ, khác hẳn giữa 2 hệ thống). */
+export interface SyncCourseGrant {
+  courseShortname: string;
+  courseTitle: string;
+  capabilities: string[];
+}
+
 // ---- Catalog (Giai đoạn 2) ----
 
 export interface ExamTemplateSummary {

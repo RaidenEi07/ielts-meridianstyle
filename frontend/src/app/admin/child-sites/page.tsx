@@ -202,6 +202,12 @@ export default function ChildSitesPage() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex gap-3">
+                        <Link
+                          href={`/admin/child-sites/${s.id}/accounts`}
+                          className="text-xs font-medium text-accent"
+                        >
+                          Tài khoản
+                        </Link>
                         <button
                           type="button"
                           onClick={() => setEditingId(s.id)}
