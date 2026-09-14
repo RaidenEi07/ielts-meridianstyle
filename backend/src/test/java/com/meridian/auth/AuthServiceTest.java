@@ -23,6 +23,8 @@ import com.meridian.security.JwtService;
 import com.meridian.user.User;
 import com.meridian.user.UserRepository;
 import com.meridian.user.UserStatus;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
@@ -193,6 +195,54 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.login(new LoginRequest("suspended", "Test@1234")))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(403));
+    }
+
+    @Test
+    void loginLocksAccountAfterMaxConsecutiveFailedAttempts() {
+        User user = activeUser("admin", "admin@meridian.edu.vn", "hashed");
+        when(userRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches(eq("wrong"), eq("hashed"))).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        for (int i = 0; i < 5; i++) {
+            assertThatThrownBy(() -> authService.login(new LoginRequest("admin", "wrong")))
+                    .isInstanceOf(ApiException.class)
+                    .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(401));
+        }
+
+        // Đủ 5 lần sai liên tiếp -> khóa tạm, đếm reset về 0 (đếm lại từ đầu sau khi hết khóa).
+        assertThat(user.getFailedLoginAttempts()).isEqualTo(0);
+        assertThat(user.getLockedUntil()).isNotNull().isAfter(Instant.now());
+    }
+
+    /** Khi đang khóa, dù gõ ĐÚNG mật khẩu vẫn bị chặn — status 429 (khác 401
+     * của "sai mật khẩu") chứng minh bị chặn ở bước kiểm khóa, trước khi kịp
+     * kiểm mật khẩu (nếu lọt qua bước khóa, passwordEncoder chưa stub sẽ trả
+     * false mặc định -> sẽ ra 401 chứ không phải 429). */
+    @Test
+    void loginRejectsEvenCorrectPasswordWhileLocked() {
+        User user = activeUser("admin", "admin@meridian.edu.vn", "hashed");
+        user.setLockedUntil(Instant.now().plus(Duration.ofMinutes(10)));
+        when(userRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> authService.login(new LoginRequest("admin", "Admin@123")))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(429));
+    }
+
+    @Test
+    void loginResetsFailedAttemptsAfterSuccess() {
+        User user = activeUser("admin", "admin@meridian.edu.vn", "hashed");
+        user.setFailedLoginAttempts(3);
+        when(userRepository.findByUsernameIgnoreCase("admin")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Admin@123", "hashed")).thenReturn(true);
+        when(userRepository.save(any(User.class))).thenAnswer(inv -> inv.getArgument(0));
+        stubTokenIssuance();
+
+        authService.login(new LoginRequest("admin", "Admin@123"));
+
+        assertThat(user.getFailedLoginAttempts()).isEqualTo(0);
+        assertThat(user.getLockedUntil()).isNull();
     }
 
     private User activeUser(String username, String email, String passwordHash) {

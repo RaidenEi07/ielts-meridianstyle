@@ -42,6 +42,16 @@ public class User {
     @Column(nullable = false, length = 20)
     private UserStatus status = UserStatus.ACTIVE;
 
+    /** Số lần đăng nhập sai LIÊN TIẾP gần nhất — reset về 0 ngay khi đăng
+     * nhập đúng, hoặc khi lockedUntil hết hạn (xem AuthService.login(), V50). */
+    @Column(name = "failed_login_attempts", nullable = false)
+    private int failedLoginAttempts = 0;
+
+    /** Có giá trị + còn ở tương lai = tài khoản đang tạm khóa do đăng nhập
+     * sai quá nhiều lần — tự hết hạn, không cần mở khóa thủ công (V50). */
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 

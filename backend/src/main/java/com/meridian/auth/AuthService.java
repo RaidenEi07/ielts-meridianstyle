@@ -22,6 +22,8 @@ import com.meridian.user.User;
 import com.meridian.user.UserRepository;
 import com.meridian.user.UserStatus;
 import io.jsonwebtoken.JwtException;
+import java.time.Duration;
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.core.env.Environment;
@@ -33,6 +35,11 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthService {
 
     private static final String DEFAULT_ROLE = "student";
+
+    /** Chống dò mật khẩu (V50) — sau sự cố thật 1 tài khoản bị lợi dụng qua
+     * mật khẩu mặc định mà không hề bị chặn dù gọi API đăng nhập liên tục. */
+    private static final int MAX_FAILED_LOGIN_ATTEMPTS = 5;
+    private static final Duration LOGIN_LOCKOUT_DURATION = Duration.ofMinutes(15);
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
@@ -131,20 +138,58 @@ public class AuthService {
         return issueTokens(user);
     }
 
-    @Transactional(readOnly = true)
+    // noRollbackFor: ApiException là RuntimeException -> mặc định Spring
+    // rollback CẢ giao dịch khi ném ra, kể cả câu save() đếm lần đăng nhập
+    // sai vừa chạy ngay trước đó trong CÙNG method -> không có cờ này, mỗi
+    // lần sai đều tự xóa dấu vết của chính nó, không bao giờ đếm dồn được
+    // (đã tự bắt gặp thật lúc verify trực tiếp: gõ sai 5 lần liên tiếp vẫn
+    // không hề bị khóa) — cùng lớp lỗi với AttemptService (xem ghi chú ở đó).
+    @Transactional(noRollbackFor = ApiException.class)
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByUsernameIgnoreCase(request.username())
                 .orElseThrow(() -> ApiException.unauthorized(
                         "Tên đăng nhập hoặc mật khẩu không đúng"));
 
+        // Tài khoản đang tạm khóa do sai quá MAX_FAILED_LOGIN_ATTEMPTS lần
+        // liên tiếp — từ chối thẳng, không kiểm mật khẩu (đỡ tốn BCrypt, và
+        // không cho biết thêm gì qua thời gian phản hồi). Tự hết hạn theo
+        // lockedUntil, không cần thao tác mở khóa thủ công.
+        if (user.getLockedUntil() != null && user.getLockedUntil().isAfter(Instant.now())) {
+            long minutesLeft = Duration.between(Instant.now(), user.getLockedUntil()).toMinutes() + 1;
+            throw ApiException.tooManyRequests(
+                    "Tài khoản tạm khóa do đăng nhập sai quá nhiều lần — thử lại sau khoảng "
+                            + minutesLeft + " phút.");
+        }
+
         if (!passwordEncoder.matches(request.password(), user.getPasswordHash())) {
+            registerFailedLoginAttempt(user);
             throw ApiException.unauthorized("Tên đăng nhập hoặc mật khẩu không đúng");
         }
+
+        if (user.getFailedLoginAttempts() > 0 || user.getLockedUntil() != null) {
+            user.setFailedLoginAttempts(0);
+            user.setLockedUntil(null);
+            userRepository.save(user);
+        }
+
         if (user.getStatus() != UserStatus.ACTIVE) {
             throw ApiException.forbidden("Tài khoản đang bị khóa hoặc chờ duyệt");
         }
 
         return issueTokens(user);
+    }
+
+    /** Tăng đếm sai liên tiếp; đủ ngưỡng thì khóa tạm LOGIN_LOCKOUT_DURATION
+     * và reset đếm về 0 (đếm lại từ đầu ngay sau khi hết khóa). */
+    private void registerFailedLoginAttempt(User user) {
+        int attempts = user.getFailedLoginAttempts() + 1;
+        if (attempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+            user.setLockedUntil(Instant.now().plus(LOGIN_LOCKOUT_DURATION));
+            user.setFailedLoginAttempts(0);
+        } else {
+            user.setFailedLoginAttempts(attempts);
+        }
+        userRepository.save(user);
     }
 
     @Transactional(readOnly = true)

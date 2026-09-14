@@ -37,4 +37,8 @@ public class ApiException extends RuntimeException {
     public static ApiException badRequest(String message) {
         return new ApiException(HttpStatus.BAD_REQUEST, message);
     }
+
+    public static ApiException tooManyRequests(String message) {
+        return new ApiException(HttpStatus.TOO_MANY_REQUESTS, message);
+    }
 }
