@@ -4,6 +4,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface QuestionRepository extends JpaRepository<Question, Long> {
 
@@ -32,4 +35,11 @@ public interface QuestionRepository extends JpaRepository<Question, Long> {
     Optional<Question> findByCategoryIdAndNameIgnoreCase(Long categoryId, String name);
 
     Optional<Question> findByMasterQuestionId(Long masterQuestionId);
+
+    /** Chỉ CourseImportService gọi, NGAY SAU khi ghi xong nội dung mới nhất
+     * từ web tổng — cố ý dùng UPDATE JPQL thẳng (không qua entity/@PreUpdate)
+     * để không tự bật {@code locallyModified} lại thành true ngay lập tức. */
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE Question q SET q.locallyModified = false WHERE q.id = :id")
+    void clearLocallyModified(@Param("id") Long id);
 }

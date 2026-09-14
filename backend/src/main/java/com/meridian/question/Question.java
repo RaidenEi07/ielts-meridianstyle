@@ -83,6 +83,15 @@ public class Question {
     @Column(name = "master_question_id")
     private Long masterQuestionId;
 
+    /** Bật TRUE mỗi khi câu hỏi bị sửa (xem {@link #onUpdate}) — chỉ
+     * CourseImportService chủ động tắt lại về false ngay sau khi ghi nội
+     * dung mới nhất từ web tổng, qua 1 UPDATE JPQL riêng (không đi qua
+     * lifecycle này để tránh tự bật lại ngay lập tức). Dùng để lần gửi lại
+     * (resend) SAU biết được câu hỏi này đã bị sửa cục bộ ở web con từ lần
+     * đồng bộ trước, tránh ghi đè mất bản đã sửa. */
+    @Column(name = "locally_modified", nullable = false)
+    private boolean locallyModified = false;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "question_tag_map",
@@ -109,5 +118,6 @@ public class Question {
     @PreUpdate
     void onUpdate() {
         updatedAt = Instant.now();
+        locallyModified = true;
     }
 }

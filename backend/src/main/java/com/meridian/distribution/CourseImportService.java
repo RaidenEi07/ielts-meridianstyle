@@ -128,16 +128,31 @@ public class CourseImportService {
         Long courseId;
         Optional<Course> existingCourse = courseRepository.findByShortname(cb.shortname());
         if (existingCourse.isPresent()) {
-            courseId = existingCourse.get().getId();
-            catalogService.updateCourse(actorId, courseId, new CourseRequests.UpdateCourse(
-                    category.getId(), cb.title(), cb.summary(), cb.coverImageUrl(), cb.price(),
-                    cb.status(), cb.descriptionHtml(), cb.objectives(), cb.prerequisites()));
+            Course existing = existingCourse.get();
+            courseId = existing.getId();
+            // Bảo vệ nội dung khóa học đã bị sửa CỤC BỘ ở web con (vd giáo viên
+            // tùy biến mô tả/giá riêng) — bỏ qua ghi đè, chỉ báo warning, thay vì
+            // luôn áp bản mới nhất từ web tổng lên như trước (xem V48).
+            if (existing.isLocallyModified()) {
+                warnings.add("Khóa học \"" + cb.title()
+                        + "\" đã bị sửa cục bộ ở web con — bỏ qua cập nhật nội dung khóa học từ web tổng để không ghi đè bản đã sửa.");
+            } else {
+                catalogService.updateCourse(actorId, courseId, new CourseRequests.UpdateCourse(
+                        category.getId(), cb.title(), cb.summary(), cb.coverImageUrl(), cb.price(),
+                        cb.status(), cb.descriptionHtml(), cb.objectives(), cb.prerequisites()));
+                courseRepository.clearLocallyModified(courseId);
+            }
             courseCreated = false;
         } else {
             CourseDetailDto created = catalogService.createCourse(actorId, new CourseRequests.CreateCourse(
                     category.getId(), cb.title(), cb.shortname(), cb.summary(), cb.coverImageUrl(),
                     cb.price(), cb.status(), cb.descriptionHtml(), cb.objectives(), cb.prerequisites()));
             courseId = created.id();
+            // createCourse() tự làm 2 lượt save (tạo rồi gắn context riêng) —
+            // lượt 2 đã có id nên bị @PreUpdate coi là "sửa", tự bật
+            // locallyModified lên true dù đây là khóa học VỪA đồng bộ, chưa ai
+            // đụng vào cục bộ. Tắt lại ngay cho đúng ý nghĩa của cờ này.
+            courseRepository.clearLocallyModified(courseId);
             courseCreated = true;
         }
 
@@ -201,20 +216,30 @@ public class CourseImportService {
             // Nhận diện ưu tiên theo masterId (ổn định qua các lần gửi lại, kể
             // cả khi câu hỏi đã bị đổi tên bên web tổng — trước đây dò thuần
             // theo tên nên đổi tên bên web tổng làm lần gửi lại tạo bản trùng
-            // thay vì cập nhật bản cũ). Với masterId đã khớp, LUÔN cập nhật
-            // toàn bộ nội dung để web con luôn phản ánh đúng bản mới nhất bên
-            // web tổng.
+            // thay vì cập nhật bản cũ). Với masterId đã khớp, cập nhật toàn bộ
+            // nội dung để web con phản ánh đúng bản mới nhất bên web tổng —
+            // TRỪ KHI câu hỏi đã bị sửa cục bộ ở web con từ lần đồng bộ trước
+            // (isLocallyModified, xem V48), khi đó bỏ qua để không ghi đè mất
+            // bản đã sửa.
             Optional<Question> byMaster = qb.masterId() != null
                     ? questionRepository.findByMasterQuestionId(qb.masterId())
                     : Optional.empty();
             if (byMaster.isPresent()) {
+                Question existing = byMaster.get();
+                if (existing.isLocallyModified()) {
+                    warnings.add("Câu hỏi \"" + qb.name()
+                            + "\" đã bị sửa cục bộ ở web con — bỏ qua cập nhật từ web tổng để không ghi đè bản đã sửa.");
+                    questionIdByRef.put(qb.refId(), existing.getId());
+                    continue;
+                }
                 try {
-                    QuestionDetailDto updated = questionService.updateQuestion(actorId, byMaster.get().getId(), req);
+                    QuestionDetailDto updated = questionService.updateQuestion(actorId, existing.getId(), req);
+                    questionRepository.clearLocallyModified(updated.id());
                     questionIdByRef.put(qb.refId(), updated.id());
                     questionsUpdated++;
                 } catch (ApiException e) {
                     warnings.add("Không cập nhật được câu hỏi \"" + qb.name() + "\": " + e.getMessage());
-                    questionIdByRef.put(qb.refId(), byMaster.get().getId());
+                    questionIdByRef.put(qb.refId(), existing.getId());
                 }
                 continue;
             }
@@ -229,6 +254,10 @@ public class CourseImportService {
                     Question entity = byName.get();
                     entity.setMasterQuestionId(qb.masterId());
                     questionRepository.save(entity);
+                    // Chỉ đang GẮN masterId lần đầu (bookkeeping), không phải
+                    // ai sửa nội dung cục bộ — không để save() ở trên (bị
+                    // @PreUpdate coi là "sửa") làm lần resend SAU bị chặn oan.
+                    questionRepository.clearLocallyModified(entity.getId());
                 }
                 questionIdByRef.put(qb.refId(), byName.get().getId());
                 questionsReused++;
@@ -241,6 +270,10 @@ public class CourseImportService {
                     Question entity = questionRepository.findById(created.id()).orElseThrow();
                     entity.setMasterQuestionId(qb.masterId());
                     questionRepository.save(entity);
+                    // save() ở trên đã có id nên bị @PreUpdate coi là "sửa", tự
+                    // bật locallyModified lên true dù đây chỉ là gắn masterId
+                    // lúc mới tạo, không phải ai sửa cục bộ. Tắt lại ngay.
+                    questionRepository.clearLocallyModified(entity.getId());
                 }
                 questionIdByRef.put(qb.refId(), created.id());
                 questionsCreated++;
