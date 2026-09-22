@@ -6,7 +6,6 @@ import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
 import type { Badge } from "@/lib/types";
 
 const TIME_PER_QUESTION = 15;
-const POINTS_PER_CORRECT = 10;
 
 type Phase = "question" | "feedback";
 
@@ -22,46 +21,47 @@ export function QuickRaceGame({
   const [questions, setQuestions] = useState<
     { questionId: number; stem: string; options: { id: number; content: string }[] }[] | null
   >(null);
+  // ID lượt chơi do SERVER cấp lúc bắt đầu — server tự cộng dồn số câu đúng
+  // vào đúng lượt này (checkRaceAnswer), rồi tự tính điểm lúc finishRound()
+  // thay vì nhận số điểm client tự cộng như trước (xem GameService, V51 —
+  // trước đây có thể gửi thẳng bất kỳ số điểm nào lên mà không cần chơi thật).
+  const roundIdRef = useRef<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeLeft, setTimeLeft] = useState(TIME_PER_QUESTION);
   const [phase, setPhase] = useState<Phase>("question");
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [feedback, setFeedback] = useState<boolean | null>(null);
-  // Ref chứ không phải state: đọc lại trong effect tính điểm cuối cùng (dưới đây)
-  // phải luôn thấy giá trị mới nhất — nếu dùng state, effect đó chỉ phụ thuộc
-  // [phase] nên sẽ đọc closure cũ (chưa cộng điểm câu cuối) khi kết quả chấm
-  // câu cuối trả về đúng lúc effect vừa lên lịch xong (mất điểm câu cuối).
-  const correctCountRef = useRef(0);
   const finishedRef = useRef(false);
 
   useEffect(() => {
     gameApi
       .raceRound(token, categoryId ?? undefined, 8)
-      .then((qs) => {
-        if (qs.length === 0) {
+      .then((round) => {
+        if (round.questions.length === 0) {
           setError("Chưa có câu hỏi cho danh mục này.");
           setQuestions([]);
           return;
         }
-        setQuestions(qs);
+        roundIdRef.current = round.roundId;
+        setQuestions(round.questions);
       })
       .catch((e) => setError(e instanceof ApiError ? e.message : "Không tải được lượt chơi"));
   }, [categoryId, token]);
 
   async function handleAnswer(optionId: number | null) {
-    if (phase !== "question") return;
+    if (phase !== "question" || roundIdRef.current == null) return;
     setSelectedId(optionId);
     setPhase("feedback");
     try {
       const result = await gameApi.checkRaceAnswer(
         token,
+        roundIdRef.current,
         questions![currentIndex].questionId,
         optionId,
       );
       setFeedback(result.correct);
       if (result.correct) {
-        correctCountRef.current += 1;
         playCorrectSound();
       } else {
         playIncorrectSound();
@@ -90,13 +90,12 @@ export function QuickRaceGame({
       if (!questions) return;
       const next = currentIndex + 1;
       if (next >= questions.length) {
-        if (finishedRef.current) return;
+        if (finishedRef.current || roundIdRef.current == null) return;
         finishedRef.current = true;
-        const points = correctCountRef.current * POINTS_PER_CORRECT;
         gameApi
-          .awardPoints(token, points, "Hoàn thành lượt Đua trả lời nhanh", "quick_race")
-          .then((newBadges) => onComplete(points, newBadges))
-          .catch(() => onComplete(points, []));
+          .finishRound(token, roundIdRef.current, "Hoàn thành lượt Đua trả lời nhanh")
+          .then((result) => onComplete(result.pointsEarned, result.badges))
+          .catch(() => onComplete(0, []));
       } else {
         setCurrentIndex(next);
         setSelectedId(null);

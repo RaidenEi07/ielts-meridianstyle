@@ -21,13 +21,20 @@ import com.meridian.question.QuestionType;
 import com.meridian.user.User;
 import com.meridian.user.UserRepository;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
 
+/**
+ * V51: mọi lượt chơi giờ đi qua {@link GameRound} do server tạo — "points"
+ * không còn là tham số client gửi được nữa (xem javadoc GameService), nên
+ * phần lớn test cũ quanh awardPoints() được viết lại quanh finishRound().
+ */
 @ExtendWith(MockitoExtension.class)
 class GameServiceTest {
 
@@ -38,14 +45,37 @@ class GameServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private BadgeRepository badgeRepository;
     @Mock private UserBadgeRepository userBadgeRepository;
+    @Mock private GameRoundRepository gameRoundRepository;
 
+    private final ObjectMapper json = new ObjectMapper();
     private GameService gameService;
 
     @BeforeEach
     void setUp() {
         gameService = new GameService(questionRepository, matchingPairRepository,
                 questionOptionRepository, pointsLedgerRepository, userRepository,
-                badgeRepository, userBadgeRepository);
+                badgeRepository, userBadgeRepository, gameRoundRepository, json);
+    }
+
+    private void stubRoundSave() {
+        when(gameRoundRepository.save(any(GameRound.class))).thenAnswer(inv -> {
+            GameRound r = inv.getArgument(0);
+            if (r.getId() == null) {
+                r.setId(999L);
+            }
+            return r;
+        });
+    }
+
+    private GameRound activeRound(UUID userId, Long roundId, String gameMode, int totalItems) {
+        GameRound round = new GameRound();
+        round.setId(roundId);
+        round.setUserId(userId);
+        round.setGameMode(gameMode);
+        round.setTotalItems(totalItems);
+        round.setAnsweredQuestionIds("[]");
+        round.setFinished(false);
+        return round;
     }
 
     private Question kidsQuestion(Long id, Long categoryId, QuestionType type) {
@@ -101,21 +131,26 @@ class GameServiceTest {
         return ub;
     }
 
+    // ---- startMemoryRound / startRaceRound ----
+
     @Test
     void startMemoryRoundCapsAtAvailablePairsWhenFewerThanRequested() {
+        stubRoundSave();
         Question q = kidsQuestion(1L, 5L, QuestionType.MATCHING);
         when(questionRepository.findByCategory_AudienceAndTypeOrderByCreatedAtDesc(
                 Audience.KIDS, QuestionType.MATCHING)).thenReturn(List.of(q));
         when(matchingPairRepository.findByQuestionIdIn(List.of(1L)))
                 .thenReturn(List.of(pair(1L, "cat", "cat.png"), pair(2L, "dog", "dog.png")));
 
-        var result = gameService.startMemoryRound(null, 6);
+        var result = gameService.startMemoryRound(UUID.randomUUID(), null, 6);
 
-        assertThat(result).hasSize(2);
+        assertThat(result.pairs()).hasSize(2);
+        assertThat(result.roundId()).isNotNull();
     }
 
     @Test
     void startMemoryRoundFiltersByCategoryWhenProvided() {
+        stubRoundSave();
         Question inCategory = kidsQuestion(1L, 5L, QuestionType.MATCHING);
         Question otherCategory = kidsQuestion(2L, 6L, QuestionType.MATCHING);
         when(questionRepository.findByCategory_AudienceAndTypeOrderByCreatedAtDesc(
@@ -123,14 +158,15 @@ class GameServiceTest {
         when(matchingPairRepository.findByQuestionIdIn(List.of(1L)))
                 .thenReturn(List.of(pair(1L, "cat", "cat.png")));
 
-        var result = gameService.startMemoryRound(5L, 6);
+        var result = gameService.startMemoryRound(UUID.randomUUID(), 5L, 6);
 
-        assertThat(result).hasSize(1);
+        assertThat(result.pairs()).hasSize(1);
         verify(matchingPairRepository).findByQuestionIdIn(List.of(1L));
     }
 
     @Test
     void startRaceRoundCapsAtAvailableQuestionsWhenFewerThanRequested() {
+        stubRoundSave();
         Question q1 = kidsQuestion(1L, 5L, QuestionType.MULTIPLE_CHOICE);
         Question q2 = kidsQuestion(2L, 5L, QuestionType.MULTIPLE_CHOICE);
         when(questionRepository.findByCategory_AudienceAndTypeOrderByCreatedAtDesc(
@@ -139,71 +175,161 @@ class GameServiceTest {
                 option(10L, 1L, "Blue", true), option(11L, 1L, "Red", false),
                 option(20L, 2L, "Sun", true), option(21L, 2L, "Moon", false)));
 
-        var result = gameService.startRaceRound(null, 8);
+        var result = gameService.startRaceRound(UUID.randomUUID(), null, 8);
 
-        assertThat(result).hasSize(2);
-        assertThat(result).allSatisfy(rq -> assertThat(rq.options()).hasSize(2));
+        assertThat(result.questions()).hasSize(2);
+        assertThat(result.questions()).allSatisfy(rq -> assertThat(rq.options()).hasSize(2));
+        assertThat(result.roundId()).isNotNull();
     }
 
     @Test
     void startRaceRoundNeverLeaksCorrectFlag() {
+        stubRoundSave();
         Question q1 = kidsQuestion(1L, 5L, QuestionType.MULTIPLE_CHOICE);
         when(questionRepository.findByCategory_AudienceAndTypeOrderByCreatedAtDesc(
                 Audience.KIDS, QuestionType.MULTIPLE_CHOICE)).thenReturn(List.of(q1));
         when(questionOptionRepository.findByQuestionIdIn(any()))
                 .thenReturn(List.of(option(10L, 1L, "Blue", true), option(11L, 1L, "Red", false)));
 
-        var result = gameService.startRaceRound(null, 8);
+        var result = gameService.startRaceRound(UUID.randomUUID(), null, 8);
 
         // RaceOptionDto chỉ có (id, content) — không có accessor nào lộ đáp án đúng.
-        assertThat(result.get(0).options()).extracting("id", "content")
+        assertThat(result.questions().get(0).options()).extracting("id", "content")
                 .containsExactlyInAnyOrder(
                         org.assertj.core.groups.Tuple.tuple(10L, "Blue"),
                         org.assertj.core.groups.Tuple.tuple(11L, "Red"));
     }
 
+    // ---- checkRaceAnswer ----
+
     @Test
-    void checkRaceAnswerReturnsTrueForCorrectOption() {
+    void checkRaceAnswerReturnsTrueForCorrectOptionAndAccumulatesOnTheRound() {
+        UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
         when(questionOptionRepository.findByQuestionIdOrderBySortOrderAsc(1L))
                 .thenReturn(List.of(option(10L, 1L, "Blue", true), option(11L, 1L, "Red", false)));
 
-        var result = gameService.checkRaceAnswer(1L, 10L);
+        var result = gameService.checkRaceAnswer(userId, 1L, 1L, 10L);
 
         assertThat(result.correct()).isTrue();
+        assertThat(round.getCorrectCount()).isEqualTo(1);
     }
 
     @Test
-    void checkRaceAnswerReturnsFalseForIncorrectOption() {
+    void checkRaceAnswerReturnsFalseForIncorrectOptionAndDoesNotAccumulate() {
+        UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
         when(questionOptionRepository.findByQuestionIdOrderBySortOrderAsc(1L))
                 .thenReturn(List.of(option(10L, 1L, "Blue", true), option(11L, 1L, "Red", false)));
 
-        var result = gameService.checkRaceAnswer(1L, 11L);
+        var result = gameService.checkRaceAnswer(userId, 1L, 1L, 11L);
 
         assertThat(result.correct()).isFalse();
+        assertThat(round.getCorrectCount()).isZero();
     }
 
     @Test
     void checkRaceAnswerReturnsFalseWhenTimedOutWithNoSelection() {
-        var result = gameService.checkRaceAnswer(1L, null);
+        UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
+
+        var result = gameService.checkRaceAnswer(userId, 1L, 1L, null);
 
         assertThat(result.correct()).isFalse();
+        assertThat(round.getCorrectCount()).isZero();
         verify(questionOptionRepository, never()).findByQuestionIdOrderBySortOrderAsc(any());
     }
 
+    /** Chính test chứng minh lỗ hổng "can thiệp tham số" cũ đã được chặn:
+     * spam đúng 1 câu nhiều lần không còn cộng dồn được nữa. */
     @Test
-    void awardPointsAcceptsQuickRaceMode() {
+    void checkRaceAnswerDoesNotDoubleCountTheSameQuestionAnsweredTwice() {
         UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
+        when(questionOptionRepository.findByQuestionIdOrderBySortOrderAsc(1L))
+                .thenReturn(List.of(option(10L, 1L, "Blue", true)));
 
-        gameService.awardPoints(userId, 80, "Hoàn thành lượt đua", "quick_race");
+        gameService.checkRaceAnswer(userId, 1L, 1L, 10L);
+        gameService.checkRaceAnswer(userId, 1L, 1L, 10L);
+        gameService.checkRaceAnswer(userId, 1L, 1L, 10L);
 
+        assertThat(round.getCorrectCount()).isEqualTo(1);
+    }
+
+    @Test
+    void checkRaceAnswerRejectsRoundBelongingToAnotherUser() {
+        UUID userId = UUID.randomUUID();
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> gameService.checkRaceAnswer(userId, 1L, 1L, 10L))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(404));
+    }
+
+    @Test
+    void checkRaceAnswerRejectsAlreadyFinishedRound() {
+        UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8);
+        round.setFinished(true);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
+
+        assertThatThrownBy(() -> gameService.checkRaceAnswer(userId, 1L, 1L, 10L))
+                .isInstanceOf(ApiException.class)
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(400));
+    }
+
+    // ---- finishRound (thay awardPoints cũ) ----
+
+    @Test
+    void finishRoundComputesPointsFromServerTrackedCorrectCountForRaceMode() {
+        UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8);
+        round.setCorrectCount(8);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
+
+        var result = gameService.finishRound(userId, 1L, "Hoàn thành lượt đua");
+
+        assertThat(result.pointsEarned()).isEqualTo(80);
+        assertThat(round.isFinished()).isTrue();
         verify(pointsLedgerRepository).save(any(PointsLedger.class));
     }
 
     @Test
-    void awardPointsRejectsNonPositivePoints() {
+    void finishRoundForMemoryModeUsesServerRecordedTotalItems() {
         UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 2L, GameService.MODE_MEMORY, 6);
+        when(gameRoundRepository.findByIdAndUserId(2L, userId)).thenReturn(Optional.of(round));
 
-        assertThatThrownBy(() -> gameService.awardPoints(userId, 0, "test", "memory_match"))
+        var result = gameService.finishRound(userId, 2L, "Hoàn thành lượt lật thẻ");
+
+        assertThat(result.pointsEarned()).isEqualTo(60);
+    }
+
+    @Test
+    void finishRoundWithZeroCorrectAnswersSavesNoLedgerEntryOrBadges() {
+        UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8); // correctCount mặc định 0
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
+
+        var result = gameService.finishRound(userId, 1L, "test");
+
+        assertThat(result.pointsEarned()).isZero();
+        assertThat(result.badges()).isEmpty();
+        verify(pointsLedgerRepository, never()).save(any());
+    }
+
+    @Test
+    void finishRoundRejectsAlreadyFinishedRound() {
+        UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8);
+        round.setFinished(true);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
+
+        assertThatThrownBy(() -> gameService.finishRound(userId, 1L, "test"))
                 .isInstanceOf(ApiException.class)
                 .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(400));
 
@@ -211,65 +337,65 @@ class GameServiceTest {
     }
 
     @Test
-    void awardPointsRejectsUnknownGameMode() {
+    void finishRoundRejectsRoundBelongingToAnotherUser() {
         UUID userId = UUID.randomUUID();
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> gameService.awardPoints(userId, 10, "test", "unknown_mode"))
+        assertThatThrownBy(() -> gameService.finishRound(userId, 1L, "test"))
                 .isInstanceOf(ApiException.class)
-                .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(400));
-
-        verify(pointsLedgerRepository, never()).save(any());
+                .satisfies(ex -> assertThat(((ApiException) ex).getStatus().value()).isEqualTo(404));
     }
 
     @Test
-    void awardPointsSavesValidEntry() {
+    void finishRoundFirstEverEarnsFirstPlayBadge() {
         UUID userId = UUID.randomUUID();
-
-        gameService.awardPoints(userId, 60, "Hoàn thành lượt chơi", "memory_match");
-
-        verify(pointsLedgerRepository).save(any(PointsLedger.class));
-    }
-
-    @Test
-    void awardPointsFirstEverEarnsFirstPlayBadge() {
-        UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8);
+        round.setCorrectCount(1);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
         when(pointsLedgerRepository.findByUserIdOrderByCreatedAtDesc(userId))
-                .thenReturn(List.of(ledgerEntry("memory_match")));
+                .thenReturn(List.of(ledgerEntry("quick_race")));
         when(badgeRepository.findAll()).thenReturn(List.of(badge(1L, "FIRST_PLAY")));
         when(userBadgeRepository.findByUserId(userId)).thenReturn(List.of());
 
-        var result = gameService.awardPoints(userId, 10, "test", "memory_match");
+        var result = gameService.finishRound(userId, 1L, "test");
 
-        assertThat(result).extracting("code").containsExactly("FIRST_PLAY");
+        assertThat(result.badges()).extracting("code").containsExactly("FIRST_PLAY");
         verify(userBadgeRepository).save(any(UserBadge.class));
     }
 
     @Test
-    void awardPointsDoesNotReawardAlreadyEarnedBadge() {
+    void finishRoundDoesNotReawardAlreadyEarnedBadge() {
         UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_MEMORY, 6);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
         when(pointsLedgerRepository.findByUserIdOrderByCreatedAtDesc(userId))
                 .thenReturn(List.of(ledgerEntry("memory_match")));
         when(badgeRepository.findAll()).thenReturn(List.of(badge(1L, "FIRST_PLAY")));
         when(userBadgeRepository.findByUserId(userId)).thenReturn(List.of(userBadge(userId, 1L)));
 
-        var result = gameService.awardPoints(userId, 10, "test", "memory_match");
+        var result = gameService.finishRound(userId, 1L, "test");
 
-        assertThat(result).isEmpty();
+        assertThat(result.badges()).isEmpty();
         verify(userBadgeRepository, never()).save(any());
     }
 
     @Test
-    void awardPointsEarnsBothModesBadgeAfterPlayingBothModes() {
+    void finishRoundEarnsBothModesBadgeAfterPlayingBothModes() {
         UUID userId = UUID.randomUUID();
+        GameRound round = activeRound(userId, 1L, GameService.MODE_RACE, 8);
+        round.setCorrectCount(1);
+        when(gameRoundRepository.findByIdAndUserId(1L, userId)).thenReturn(Optional.of(round));
         when(pointsLedgerRepository.findByUserIdOrderByCreatedAtDesc(userId))
                 .thenReturn(List.of(ledgerEntry("memory_match"), ledgerEntry("quick_race")));
         when(badgeRepository.findAll()).thenReturn(List.of(badge(1L, "BOTH_MODES")));
         when(userBadgeRepository.findByUserId(userId)).thenReturn(List.of());
 
-        var result = gameService.awardPoints(userId, 10, "test", "quick_race");
+        var result = gameService.finishRound(userId, 1L, "test");
 
-        assertThat(result).extracting("code").containsExactly("BOTH_MODES");
+        assertThat(result.badges()).extracting("code").containsExactly("BOTH_MODES");
     }
+
+    // ---- allBadgesWithStatus / leaderboard (không đổi ở V51) ----
 
     @Test
     void allBadgesWithStatusMarksEarnedCorrectly() {

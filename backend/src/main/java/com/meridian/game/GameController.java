@@ -1,18 +1,20 @@
 package com.meridian.game;
 
-import com.meridian.game.dto.GameDtos.AwardPointsRequest;
 import com.meridian.game.dto.GameDtos.BadgeDto;
 import com.meridian.game.dto.GameDtos.CheckAnswerRequest;
 import com.meridian.game.dto.GameDtos.CheckAnswerResult;
+import com.meridian.game.dto.GameDtos.FinishRoundRequest;
+import com.meridian.game.dto.GameDtos.FinishRoundResult;
 import com.meridian.game.dto.GameDtos.LeaderboardEntryDto;
-import com.meridian.game.dto.GameDtos.MemoryPairDto;
-import com.meridian.game.dto.GameDtos.RaceQuestionDto;
+import com.meridian.game.dto.GameDtos.StartMemoryRoundDto;
+import com.meridian.game.dto.GameDtos.StartRaceRoundDto;
 import com.meridian.question.Audience;
 import com.meridian.question.QuestionTaxonomyService;
 import com.meridian.question.dto.QuestionCategoryDto;
 import com.meridian.security.CurrentUserProvider;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -47,31 +49,31 @@ public class GameController {
     }
 
     @GetMapping("/memory/round")
-    public List<MemoryPairDto> memoryRound(
+    public StartMemoryRoundDto memoryRound(
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Integer pairCount) {
-        currentUser.require();
-        return gameService.startMemoryRound(categoryId, pairCount);
+        return gameService.startMemoryRound(currentUser.require().id(), categoryId, pairCount);
     }
 
     @GetMapping("/race/round")
-    public List<RaceQuestionDto> raceRound(
+    public StartRaceRoundDto raceRound(
             @RequestParam(required = false) Long categoryId,
             @RequestParam(required = false) Integer questionCount) {
-        currentUser.require();
-        return gameService.startRaceRound(categoryId, questionCount);
+        return gameService.startRaceRound(currentUser.require().id(), categoryId, questionCount);
     }
 
     @PostMapping("/race/check")
     public CheckAnswerResult checkRaceAnswer(@RequestBody CheckAnswerRequest request) {
-        currentUser.require();
-        return gameService.checkRaceAnswer(request.questionId(), request.selectedOptionId());
+        return gameService.checkRaceAnswer(currentUser.require().id(), request.roundId(),
+                request.questionId(), request.selectedOptionId());
     }
 
-    @PostMapping("/points")
-    public List<BadgeDto> awardPoints(@RequestBody AwardPointsRequest request) {
-        return gameService.awardPoints(currentUser.require().id(), request.points(), request.reason(),
-                request.gameMode());
+    /** Thay POST /api/game/points (V51) — không còn nhận "points" từ client,
+     * điểm do server tự tính từ đúng lượt roundId (xem GameService). */
+    @PostMapping("/rounds/{roundId}/finish")
+    public FinishRoundResult finishRound(@PathVariable Long roundId,
+            @RequestBody FinishRoundRequest request) {
+        return gameService.finishRound(currentUser.require().id(), roundId, request.reason());
     }
 
     @GetMapping("/leaderboard")

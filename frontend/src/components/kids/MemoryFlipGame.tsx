@@ -5,8 +5,6 @@ import { ApiError, gameApi } from "@/lib/api";
 import { playCorrectSound, playIncorrectSound } from "@/lib/kidsFeedback";
 import type { Badge } from "@/lib/types";
 
-const POINTS_PER_PAIR = 10;
-
 type Card = {
   cardId: string;
   pairId: number;
@@ -39,19 +37,23 @@ export function MemoryFlipGame({
   const [totalPairs, setTotalPairs] = useState(0);
   const busy = flipped.length === 2;
   const awardedRef = useRef(false);
+  // ID lượt chơi do SERVER cấp — điểm lúc kết thúc tính từ số cặp THẬT server
+  // đã phát cho đúng lượt này, không nhận số điểm client tự cộng nữa (V51).
+  const roundIdRef = useRef<number | null>(null);
 
   // Component được mount lại hoàn toàn qua `key` (categoryId/round) ở component
   // cha mỗi khi bắt đầu lượt mới — không cần tự reset state ở đây.
   useEffect(() => {
     gameApi
       .memoryRound(token, categoryId ?? undefined, 6)
-      .then((pairs) => {
-        if (pairs.length === 0) {
+      .then((round) => {
+        if (round.pairs.length === 0) {
           setError("Chưa có nội dung cho danh mục này.");
           setCards([]);
           return;
         }
-        const built: Card[] = pairs.flatMap((p) => [
+        roundIdRef.current = round.roundId;
+        const built: Card[] = round.pairs.flatMap((p) => [
           { cardId: `${p.pairId}-word`, pairId: p.pairId, kind: "word" as const, content: p.word },
           {
             cardId: `${p.pairId}-image`,
@@ -60,7 +62,7 @@ export function MemoryFlipGame({
             content: p.imageUrl ?? p.word,
           },
         ]);
-        setTotalPairs(pairs.length);
+        setTotalPairs(round.pairs.length);
         setCards(shuffle(built));
       })
       .catch((e) => setError(e instanceof ApiError ? e.message : "Không tải được lượt chơi"));
@@ -84,14 +86,13 @@ export function MemoryFlipGame({
   }, [busy, flipped, cards]);
 
   useEffect(() => {
-    if (totalPairs === 0 || awardedRef.current) return;
+    if (totalPairs === 0 || awardedRef.current || roundIdRef.current == null) return;
     if (matchedPairs.size === totalPairs) {
       awardedRef.current = true;
-      const points = totalPairs * POINTS_PER_PAIR;
       gameApi
-        .awardPoints(token, points, "Hoàn thành lượt Lật thẻ ghi nhớ", "memory_match")
-        .then((newBadges) => onComplete(points, newBadges))
-        .catch(() => onComplete(points, []));
+        .finishRound(token, roundIdRef.current, "Hoàn thành lượt Lật thẻ ghi nhớ")
+        .then((result) => onComplete(result.pointsEarned, result.badges))
+        .catch(() => onComplete(0, []));
     }
   }, [matchedPairs, totalPairs, token, onComplete]);
 

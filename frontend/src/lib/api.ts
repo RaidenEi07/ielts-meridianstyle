@@ -24,6 +24,7 @@ import type {
   DubbingCharacter,
   DubbingRecording,
   Enrollment,
+  FinishRoundResult,
   MeResponse,
   GradebookRow,
   HomeworkMaterial,
@@ -34,7 +35,6 @@ import type {
   VideoCheckpoint,
   LeaderboardEntry,
   LessonRecording,
-  MemoryPair,
   MyAttemptSummary,
   PassageSummary,
   PublicStats,
@@ -47,10 +47,11 @@ import type {
   QuizPageAdmin,
   QuizQuestionAdmin,
   QuizSummary,
-  RaceQuestion,
   RoleAssignment,
   RoleOption,
   Section,
+  StartMemoryRound,
+  StartRaceRound,
   StudentSummary,
   SyncAccount,
   SyncCourseGrant,
@@ -1381,7 +1382,7 @@ export const gameApi = {
     if (categoryId !== undefined) params.set("categoryId", String(categoryId));
     if (pairCount !== undefined) params.set("pairCount", String(pairCount));
     const qs = params.toString();
-    return apiFetch<MemoryPair[]>(`/api/game/memory/round${qs ? `?${qs}` : ""}`, { token });
+    return apiFetch<StartMemoryRound>(`/api/game/memory/round${qs ? `?${qs}` : ""}`, { token });
   },
 
   raceRound: (token: string, categoryId?: number, questionCount?: number) => {
@@ -1389,20 +1390,27 @@ export const gameApi = {
     if (categoryId !== undefined) params.set("categoryId", String(categoryId));
     if (questionCount !== undefined) params.set("questionCount", String(questionCount));
     const qs = params.toString();
-    return apiFetch<RaceQuestion[]>(`/api/game/race/round${qs ? `?${qs}` : ""}`, { token });
+    return apiFetch<StartRaceRound>(`/api/game/race/round${qs ? `?${qs}` : ""}`, { token });
   },
 
-  checkRaceAnswer: (token: string, questionId: number, selectedOptionId: number | null) =>
+  checkRaceAnswer: (
+    token: string,
+    roundId: number,
+    questionId: number,
+    selectedOptionId: number | null,
+  ) =>
     apiFetch<{ correct: boolean }>("/api/game/race/check", {
       method: "POST",
-      body: { questionId, selectedOptionId },
+      body: { roundId, questionId, selectedOptionId },
       token,
     }),
 
-  awardPoints: (token: string, points: number, reason: string, gameMode: string) =>
-    apiFetch<Badge[]>("/api/game/points", {
+  /** Thay awardPoints cũ — không còn gửi số điểm tự tính lên nữa, server tự
+   * tính từ đúng lượt roundId rồi trả lại điểm thật (Phase 19 V51). */
+  finishRound: (token: string, roundId: number, reason: string) =>
+    apiFetch<FinishRoundResult>(`/api/game/rounds/${roundId}/finish`, {
       method: "POST",
-      body: { points, reason, gameMode },
+      body: { reason },
       token,
     }),
 

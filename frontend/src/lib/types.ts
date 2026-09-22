@@ -769,6 +769,13 @@ export interface MemoryPair {
   imageUrl: string | null;
 }
 
+/** roundId dùng để gọi finishRound() lúc hoàn thành — điểm giờ do server tự
+ * tính từ đúng lượt này, không còn gửi số điểm tự tính lên nữa (Phase 19 V51). */
+export interface StartMemoryRound {
+  roundId: number;
+  pairs: MemoryPair[];
+}
+
 export interface LeaderboardEntry {
   fullName: string;
   totalPoints: number;
@@ -780,12 +787,24 @@ export interface RaceQuestion {
   options: { id: number; content: string }[];
 }
 
+export interface StartRaceRound {
+  roundId: number;
+  questions: RaceQuestion[];
+}
+
 export interface Badge {
   code: string;
   name: string;
   description: string;
   emoji: string;
   earned: boolean;
+}
+
+/** Điểm THẬT server vừa tính khi kết thúc 1 lượt chơi (V51) — thay vì client
+ * tự khai số điểm, giờ server trả về đúng con số nó tính để giao diện hiện. */
+export interface FinishRoundResult {
+  pointsEarned: number;
+  badges: Badge[];
 }
 
 // ---- Tài liệu bài tập về nhà (Phase 21) ----
