@@ -5,11 +5,15 @@
 # Usage:
 #   cp .env.example .env   # rồi chỉnh JWT_SECRET, mật khẩu cho production
 #   docker compose -f docker-compose.prod.yml up -d --build
+#
+# Stack thứ 2 trên cùng máy (vd web con): env riêng + tên project riêng, đặt STACK_NAME,
+# BACKEND_PORT, FRONTEND_PORT, DB_* trong env đó (tên container/volume/mạng tự tách):
+#   docker compose -p sunshine --env-file .env.sunshine -f docker-compose.prod.yml up -d --build
 
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: meridian-postgres
+    container_name: ${STACK_NAME:-meridian}-postgres
     restart: unless-stopped
     environment:
       POSTGRES_DB: ${DB_NAME:-meridian}
@@ -26,7 +30,7 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: meridian-backend
+    container_name: ${STACK_NAME:-meridian}-backend
     restart: unless-stopped
     depends_on:
       postgres:
@@ -68,7 +72,7 @@ services:
       args:
         NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-http://localhost:8090}
         NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:-http://localhost:3100}
-    container_name: meridian-frontend
+    container_name: ${STACK_NAME:-meridian}-frontend
     restart: unless-stopped
     depends_on:
       - backend

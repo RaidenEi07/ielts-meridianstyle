@@ -1,6 +1,7 @@
 # Env
 .env
-.env.local
+.env.*
+!.env.example
 
 # Build output
 backend/target/
