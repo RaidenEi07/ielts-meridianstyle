@@ -9,8 +9,9 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -18,18 +19,21 @@ import org.springframework.web.client.RestClient;
 @Service
 public class CourseDistributionService {
 
+    private static final Logger log = LoggerFactory.getLogger(CourseDistributionService.class);
     private static final String CAP = "course:distribute";
 
     private final ChildSiteRepository childSiteRepository;
     private final CourseExportService exportService;
     private final PermissionService permissionService;
+    private final ChildSiteUrlGuard urlGuard;
     private final RestClient restClient;
 
     public CourseDistributionService(ChildSiteRepository childSiteRepository, CourseExportService exportService,
-            PermissionService permissionService) {
+            PermissionService permissionService, ChildSiteUrlGuard urlGuard) {
         this.childSiteRepository = childSiteRepository;
         this.exportService = exportService;
         this.permissionService = permissionService;
+        this.urlGuard = urlGuard;
 
         // Đọc timeout ngắn (15s cũ) khiến khóa học lớn (vd ielts-prep, ~1800 câu
         // hỏi) luôn báo "thất bại" (SocketTimeoutException) trên web tổng dù
@@ -37,10 +41,10 @@ public class CourseDistributionService {
         // là 1-2 lượt ghi DB tuần tự bên web con nên tổng thời gian dễ vượt xa
         // 15s với khóa học nhiều câu hỏi. Nới lên vài phút vì đây là thao tác quản
         // trị không thường xuyên, không nhạy độ trễ như request người dùng cuối.
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(10));
-        factory.setReadTimeout(Duration.ofMinutes(10));
-        this.restClient = RestClient.builder().requestFactory(factory).build();
+        this.restClient = RestClient.builder()
+                .requestFactory(ChildSiteUrlGuard.noRedirectRequestFactory(
+                        Duration.ofSeconds(10), Duration.ofMinutes(10)))
+                .build();
     }
 
     public List<DistributeResultDto> distribute(UUID userId, Long courseId, List<Long> childSiteIds) {
@@ -66,8 +70,9 @@ public class CourseDistributionService {
             return new DistributeResultDto(siteId, site.getName(), false, "Web con đang tạm dừng", List.of());
         }
         try {
+            String baseUrl = urlGuard.requireSafeBaseUrl(site.getBaseUrl());
             CourseImportSummaryDto summary = restClient.post()
-                    .uri(site.getBaseUrl() + "/api/catalog/import")
+                    .uri(baseUrl + "/api/catalog/import")
                     .header("X-Meridian-Api-Key", site.getApiKey())
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(manifest)
@@ -76,7 +81,9 @@ public class CourseDistributionService {
             List<String> warnings = summary != null ? summary.warnings() : List.of();
             return new DistributeResultDto(siteId, site.getName(), true, null, warnings);
         } catch (Exception e) {
-            return new DistributeResultDto(siteId, site.getName(), false, e.getMessage(), List.of());
+            log.warn("Gửi khóa học tới web con id={} thất bại", siteId, e);
+            return new DistributeResultDto(siteId, site.getName(), false,
+                    "Gửi thất bại: " + ChildSiteUrlGuard.describeFailure(e), List.of());
         }
     }
 }

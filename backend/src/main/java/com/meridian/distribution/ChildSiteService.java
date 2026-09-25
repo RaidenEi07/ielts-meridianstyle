@@ -19,11 +19,14 @@ public class ChildSiteService {
     private static final String CAP = "course:distribute";
     private final ChildSiteRepository repository;
     private final PermissionService permissionService;
+    private final ChildSiteUrlGuard urlGuard;
     private final SecureRandom random = new SecureRandom();
 
-    public ChildSiteService(ChildSiteRepository repository, PermissionService permissionService) {
+    public ChildSiteService(ChildSiteRepository repository, PermissionService permissionService,
+            ChildSiteUrlGuard urlGuard) {
         this.repository = repository;
         this.permissionService = permissionService;
+        this.urlGuard = urlGuard;
     }
 
     @Transactional(readOnly = true)
@@ -37,7 +40,7 @@ public class ChildSiteService {
         permissionService.requireSystemCapability(uid, CAP);
         ChildSite c = new ChildSite();
         c.setName(req.name());
-        c.setBaseUrl(req.baseUrl());
+        c.setBaseUrl(urlGuard.requireSafeBaseUrl(req.baseUrl()));
         c.setApiKey(generateApiKey());
         return ChildSiteDto.from(repository.save(c));
     }
@@ -51,7 +54,7 @@ public class ChildSiteService {
             c.setName(req.name());
         }
         if (req.baseUrl() != null && !req.baseUrl().isBlank()) {
-            c.setBaseUrl(req.baseUrl());
+            c.setBaseUrl(urlGuard.requireSafeBaseUrl(req.baseUrl()));
         }
         if (req.active() != null) {
             c.setActive(req.active());

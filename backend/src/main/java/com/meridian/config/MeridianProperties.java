@@ -12,6 +12,11 @@ public class MeridianProperties {
     private final Jwt jwt = new Jwt();
     private final Cors cors = new Cors();
     private final Uploads uploads = new Uploads();
+    private final Distribution distribution = new Distribution();
+
+    public Distribution getDistribution() {
+        return distribution;
+    }
 
     public Jwt getJwt() {
         return jwt;
@@ -62,6 +67,19 @@ public class MeridianProperties {
 
         public void setIssuer(String issuer) {
             this.issuer = issuer;
+        }
+    }
+
+    public static class Distribution {
+        /** Chỉ bật khi dev/test cục bộ (web con giả lập ở http://localhost:...) — tắt kiểm tra chống SSRF. */
+        private boolean allowPrivateTargets = false;
+
+        public boolean isAllowPrivateTargets() {
+            return allowPrivateTargets;
+        }
+
+        public void setAllowPrivateTargets(boolean allowPrivateTargets) {
+            this.allowPrivateTargets = allowPrivateTargets;
         }
     }
 

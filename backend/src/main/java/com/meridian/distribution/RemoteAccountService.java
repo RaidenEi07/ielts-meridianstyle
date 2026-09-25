@@ -9,8 +9,9 @@ import com.meridian.rbac.PermissionService;
 import java.time.Duration;
 import java.util.List;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.MediaType;
-import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -26,26 +27,29 @@ import org.springframework.web.client.RestClient;
 @Service
 public class RemoteAccountService {
 
+    private static final Logger log = LoggerFactory.getLogger(RemoteAccountService.class);
     private static final String CAP = "childsite:manage-accounts";
 
     private final ChildSiteRepository childSiteRepository;
     private final PermissionService permissionService;
+    private final ChildSiteUrlGuard urlGuard;
     private final RestClient restClient;
 
-    public RemoteAccountService(ChildSiteRepository childSiteRepository, PermissionService permissionService) {
+    public RemoteAccountService(ChildSiteRepository childSiteRepository, PermissionService permissionService,
+            ChildSiteUrlGuard urlGuard) {
         this.childSiteRepository = childSiteRepository;
         this.permissionService = permissionService;
-
-        SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(10));
-        factory.setReadTimeout(Duration.ofSeconds(30));
-        this.restClient = RestClient.builder().requestFactory(factory).build();
+        this.urlGuard = urlGuard;
+        this.restClient = RestClient.builder()
+                .requestFactory(ChildSiteUrlGuard.noRedirectRequestFactory(
+                        Duration.ofSeconds(10), Duration.ofSeconds(30)))
+                .build();
     }
 
     public List<SyncAccountDto> listAccounts(UUID uid, Long childSiteId, String search) {
         permissionService.requireSystemCapability(uid, CAP);
         ChildSite site = requireSite(childSiteId);
-        String url = site.getBaseUrl() + "/api/rbac-sync/accounts"
+        String url = urlGuard.requireSafeBaseUrl(site.getBaseUrl()) + "/api/rbac-sync/accounts"
                 + (search != null && !search.isBlank() ? "?search=" + search : "");
         try {
             SyncAccountDto[] result = restClient.get().uri(url)
@@ -60,7 +64,8 @@ public class RemoteAccountService {
     public List<SyncCourseGrantDto> listCourseGrants(UUID uid, Long childSiteId, UUID targetUserId) {
         permissionService.requireSystemCapability(uid, CAP);
         ChildSite site = requireSite(childSiteId);
-        String url = site.getBaseUrl() + "/api/rbac-sync/accounts/" + targetUserId + "/course-grants";
+        String url = urlGuard.requireSafeBaseUrl(site.getBaseUrl())
+                + "/api/rbac-sync/accounts/" + targetUserId + "/course-grants";
         try {
             SyncCourseGrantDto[] result = restClient.get().uri(url)
                     .header("X-Meridian-Api-Key", site.getApiKey())
@@ -74,7 +79,7 @@ public class RemoteAccountService {
     public void assignRole(UUID uid, Long childSiteId, UUID targetUserId, String roleShortname) {
         permissionService.requireSystemCapability(uid, CAP);
         ChildSite site = requireSite(childSiteId);
-        String url = site.getBaseUrl() + "/api/rbac-sync/accounts/roles";
+        String url = urlGuard.requireSafeBaseUrl(site.getBaseUrl()) + "/api/rbac-sync/accounts/roles";
         try {
             restClient.post().uri(url)
                     .header("X-Meridian-Api-Key", site.getApiKey())
@@ -89,7 +94,8 @@ public class RemoteAccountService {
     public void revokeRole(UUID uid, Long childSiteId, UUID targetUserId, String roleShortname) {
         permissionService.requireSystemCapability(uid, CAP);
         ChildSite site = requireSite(childSiteId);
-        String url = site.getBaseUrl() + "/api/rbac-sync/accounts/" + targetUserId + "/roles/" + roleShortname;
+        String url = urlGuard.requireSafeBaseUrl(site.getBaseUrl())
+                + "/api/rbac-sync/accounts/" + targetUserId + "/roles/" + roleShortname;
         try {
             restClient.delete().uri(url)
                     .header("X-Meridian-Api-Key", site.getApiKey())
@@ -103,7 +109,8 @@ public class RemoteAccountService {
             String courseShortname, List<String> capabilities) {
         permissionService.requireSystemCapability(uid, CAP);
         ChildSite site = requireSite(childSiteId);
-        String url = site.getBaseUrl() + "/api/rbac-sync/accounts/" + targetUserId + "/course-grants";
+        String url = urlGuard.requireSafeBaseUrl(site.getBaseUrl())
+                + "/api/rbac-sync/accounts/" + targetUserId + "/course-grants";
         try {
             restClient.put().uri(url)
                     .header("X-Meridian-Api-Key", site.getApiKey())
@@ -121,6 +128,8 @@ public class RemoteAccountService {
     }
 
     private ApiException connectError(ChildSite site, Exception e) {
-        return ApiException.badRequest("Không kết nối được web con \"" + site.getName() + "\": " + e.getMessage());
+        log.warn("Gọi web con id={} thất bại", site.getId(), e);
+        return ApiException.badRequest(
+                "Không kết nối được web con \"" + site.getName() + "\": " + ChildSiteUrlGuard.describeFailure(e));
     }
 }
