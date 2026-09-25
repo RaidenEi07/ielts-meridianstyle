@@ -21,6 +21,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -31,6 +32,7 @@ import tools.jackson.databind.ObjectMapper;
  * xem frontend/public/audio) + 3 câu Note Completion (Short Answer).
  */
 @Component
+@ConditionalOnProperty(name = "meridian.seed-demo-data", havingValue = "true", matchIfMissing = true)
 @Order(7)
 public class ListeningDataInitializer implements CommandLineRunner {
 

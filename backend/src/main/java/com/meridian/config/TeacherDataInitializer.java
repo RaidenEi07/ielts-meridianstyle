@@ -15,12 +15,14 @@ import java.util.List;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 /** Seed hồ sơ giáo viên (nổi bật) cho trang chủ. */
 @Component
+@ConditionalOnProperty(name = "meridian.seed-demo-data", havingValue = "true", matchIfMissing = true)
 @Order(5)
 public class TeacherDataInitializer implements CommandLineRunner {
 

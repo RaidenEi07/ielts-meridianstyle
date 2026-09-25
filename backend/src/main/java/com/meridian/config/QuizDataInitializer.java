@@ -19,12 +19,14 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 /** Seed một quiz IELTS đã xuất bản với 3 câu khách quan để demo luồng làm bài. */
 @Component
+@ConditionalOnProperty(name = "meridian.seed-demo-data", havingValue = "true", matchIfMissing = true)
 @Order(4)
 public class QuizDataInitializer implements CommandLineRunner {
 

@@ -14,6 +14,7 @@ import com.meridian.quiz.QuizRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
@@ -22,6 +23,7 @@ import org.springframework.stereotype.Component;
  * và gắn các câu khách quan vào page đó (để render split-pane). Essay để riêng.
  */
 @Component
+@ConditionalOnProperty(name = "meridian.seed-demo-data", havingValue = "true", matchIfMissing = true)
 @Order(6)
 public class ExamDemoInitializer implements CommandLineRunner {
 
