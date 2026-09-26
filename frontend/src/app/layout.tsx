@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Be_Vietnam_Pro, Source_Serif_4 } from "next/font/google";
 import { ConfirmDialogHost } from "@/components/ConfirmDialogHost";
 import { ToastHost } from "@/components/ToastHost";
+import { getBrandThemeCss } from "@/lib/brandThemeServer";
 import "./globals.css";
 
 const beVietnam = Be_Vietnam_Pro({
@@ -54,11 +55,16 @@ const themeScript = `
 })();
 `;
 
-export default function RootLayout({
+// Màu thương hiệu (Cấu hình hệ thống) được đọc từ backend mỗi lần render để có mặt ngay trong HTML đầu
+// tiên, nên layout không prerender tĩnh được.
+export const dynamic = "force-dynamic";
+
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const brandCss = await getBrandThemeCss();
   return (
     <html
       lang="vi"
@@ -66,6 +72,8 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
+        {/* Luôn render (kể cả rỗng) để trang Cấu hình cập nhật tại chỗ sau khi lưu màu. */}
+        <style id="brand-theme" dangerouslySetInnerHTML={{ __html: brandCss }} />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full flex flex-col">

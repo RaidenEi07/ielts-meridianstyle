@@ -2,7 +2,7 @@ import Link from "next/link";
 
 export function Footer() {
   return (
-    <footer style={{ background: "#14110D", color: "#cbbfa9" }}>
+    <footer style={{ background: "var(--brand-footer-bg, #14110D)", color: "var(--brand-footer-text, #cbbfa9)" }}>
       <div className="mx-auto grid max-w-6xl gap-8 px-6 py-12 sm:grid-cols-2 md:grid-cols-4">
         <div>
           <div className="text-lg font-semibold text-white" style={{ fontFamily: "var(--font-serif)" }}>

@@ -40,13 +40,33 @@ class ConfigServiceTest {
         when(repository.findById(any())).thenReturn(Optional.empty());
         when(repository.findAll()).thenReturn(List.of());
 
-        service().update(uid, Map.of("PRIMARY_COLOR", "  #1e3a5f ", "ACCENT_COLOR", "#c2691d"));
+        service().update(uid, Map.of("PRIMARY_COLOR", "  #1e3a5f ", "ACCENT_COLOR", "#c2691d",
+                "BACKGROUND_COLOR", "#fff8e6"));
 
         ArgumentCaptor<WebConfiguration> saved = ArgumentCaptor.forClass(WebConfiguration.class);
-        verify(repository, org.mockito.Mockito.times(2)).save(saved.capture());
+        verify(repository, org.mockito.Mockito.times(3)).save(saved.capture());
         Map<String, String> byKey = new HashMap<>();
         saved.getAllValues().forEach(c -> byKey.put(c.getKey(), c.getValue()));
-        assertThat(byKey).containsEntry("PRIMARY_COLOR", "#1E3A5F").containsEntry("ACCENT_COLOR", "#C2691D");
+        assertThat(byKey).containsEntry("PRIMARY_COLOR", "#1E3A5F").containsEntry("ACCENT_COLOR", "#C2691D")
+                .containsEntry("BACKGROUND_COLOR", "#FFF8E6");
+    }
+
+    @Test
+    void backgroundColorIsValidatedLikeTheOtherColorsAndIsPublic() {
+        assertThatThrownBy(() -> service().update(uid, Map.of("BACKGROUND_COLOR", "cream")))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("BACKGROUND_COLOR");
+        verify(repository, never()).save(any());
+
+        WebConfiguration bg = new WebConfiguration();
+        bg.setKey("BACKGROUND_COLOR");
+        bg.setValue("#FBF8F3");
+        WebConfiguration secret = new WebConfiguration();
+        secret.setKey("SSL_FORCE_HTTPS");
+        secret.setValue("false");
+        when(repository.findAll()).thenReturn(List.of(bg, secret));
+        assertThat(service().publicConfig()).containsEntry("BACKGROUND_COLOR", "#FBF8F3")
+                .doesNotContainKey("SSL_FORCE_HTTPS");
     }
 
     @ParameterizedTest

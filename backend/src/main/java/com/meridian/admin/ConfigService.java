@@ -18,10 +18,10 @@ public class ConfigService {
     /** Các khóa được phép trả ra công khai (branding). */
     private static final Set<String> PUBLIC_KEYS = Set.of(
             "SITE_NAME", "SITE_TAGLINE", "SITE_LANGUAGE", "SITE_THEME_MODE",
-            "PRIMARY_COLOR", "ACCENT_COLOR", "SUPPORT_EMAIL", "REGISTRATION_OPEN",
+            "PRIMARY_COLOR", "ACCENT_COLOR", "BACKGROUND_COLOR", "SUPPORT_EMAIL", "REGISTRATION_OPEN",
             "HOMEPAGE_INFO_CARDS");
 
-    private static final Set<String> COLOR_KEYS = Set.of("PRIMARY_COLOR", "ACCENT_COLOR");
+    private static final Set<String> COLOR_KEYS = Set.of("PRIMARY_COLOR", "ACCENT_COLOR", "BACKGROUND_COLOR");
     private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-Fa-f]{6}$");
 
     private final WebConfigurationRepository repository;

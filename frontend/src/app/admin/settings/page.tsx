@@ -11,19 +11,18 @@ import {
   configApi,
   notificationApi,
 } from "@/lib/api";
-import { parseColorInput } from "@/lib/color";
+import { brandColorsFromConfig } from "@/lib/brandTheme";
 import type { Announcement } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useToast } from "@/store/toast";
+import { THEME_CONFIG_KEYS, ThemeSection } from "./ThemeSection";
 
 const LABELS: Record<string, string> = {
   SITE_NAME: "Tên hiển thị",
   SITE_TAGLINE: "Khẩu hiệu",
   SITE_LANGUAGE: "Ngôn ngữ",
   SITE_THEME_MODE: "Chế độ giao diện",
-  PRIMARY_COLOR: "Màu chủ đạo",
-  ACCENT_COLOR: "Màu nhấn",
   SUPPORT_EMAIL: "Email hỗ trợ",
   CACHE_TTL: "Cache TTL (giây)",
   SSL_FORCE_HTTPS: "Bắt buộc HTTPS",
@@ -33,6 +32,10 @@ const LABELS: Record<string, string> = {
 // Khóa này có UI chỉnh sửa riêng (HomepageInfoCardsSection) — không hiển thị
 // trong lưới cấu hình chung vì giá trị là JSON, không phải text đơn giản.
 const HOMEPAGE_INFO_CARDS_KEY = "HOMEPAGE_INFO_CARDS";
+
+// 3 màu thương hiệu có phần riêng (ThemeSection, có xem thử và lưu riêng) nên không nằm trong lưới chung
+// và cũng không đi kèm khi bấm "Lưu thay đổi" của lưới chung.
+const isThemeKey = (key: string) => (THEME_CONFIG_KEYS as readonly string[]).includes(key);
 
 interface HomepageInfoCard {
   icon: string;
@@ -73,18 +76,14 @@ export default function AdminSettingsPage() {
   }, [allowed, token]);
 
   async function saveConfig() {
-    const payload = { ...config };
-    for (const key of Object.keys(payload).filter((k) => k.endsWith("COLOR"))) {
-      const normalized = parseColorInput(payload[key]);
-      if (!normalized) {
-        toast.error(`${LABELS[key] ?? key}: mã màu không hợp lệ, cần dạng #1E3A5F`);
-        return;
-      }
-      payload[key] = normalized;
-    }
+    const payload = Object.fromEntries(Object.entries(config).filter(([key]) => !isThemeKey(key)));
     try {
       const updated = await configApi.update(token, payload);
-      setConfig(updated);
+      setConfig((current) => ({
+        ...updated,
+        // Màu đang nằm ở ThemeSection (có thể đã lưu riêng): giữ nguyên bản trang đang biết.
+        ...Object.fromEntries(THEME_CONFIG_KEYS.filter((k) => k in current).map((k) => [k, current[k]])),
+      }));
       setSavedMsg("Đã lưu cấu hình");
       setTimeout(() => setSavedMsg(null), 2500);
       toast.success("Đã lưu cấu hình");
@@ -140,7 +139,7 @@ export default function AdminSettingsPage() {
           {savedMsg && <p className="mb-3 text-sm text-green">{savedMsg}</p>}
           <div className="grid gap-4 sm:grid-cols-2">
             {Object.keys(config)
-              .filter((key) => key !== HOMEPAGE_INFO_CARDS_KEY)
+              .filter((key) => key !== HOMEPAGE_INFO_CARDS_KEY && !isThemeKey(key))
               .map((key) => (
                 <ConfigField
                   key={key}
@@ -152,6 +151,16 @@ export default function AdminSettingsPage() {
               ))}
           </div>
         </section>
+
+        {/* Màu sắc giao diện: xem thử trực tiếp, lưu riêng. Dựng lại (key) mỗi khi màu đã lưu đổi. */}
+        {Object.keys(config).length > 0 && (
+          <ThemeSection
+            key={`${config.PRIMARY_COLOR}|${config.ACCENT_COLOR}|${config.BACKGROUND_COLOR}`}
+            token={token}
+            saved={brandColorsFromConfig(config)}
+            onSaved={(colors) => setConfig((c) => ({ ...c, ...colors }))}
+          />
+        )}
 
         {/* 4 thẻ thông tin trang chủ */}
         <HomepageInfoCardsSection
@@ -184,10 +193,6 @@ function ConfigField({
   value: string;
   onChange: (v: string) => void;
 }) {
-  if (configKey.endsWith("COLOR")) {
-    return <ColorField name={name} configKey={configKey} value={value} onChange={onChange} />;
-  }
-
   const isBool = value === "true" || value === "false";
   const isTheme = configKey === "SITE_THEME_MODE";
 
@@ -214,71 +219,6 @@ function ConfigField({
         />
       )}
     </label>
-  );
-}
-
-// Ô chọn màu + ô nhập mã màu (dán được từ bên ngoài). config[key] giữ nguyên chuỗi đang gõ,
-// hợp lệ hay không do parseColorInput quyết định; saveConfig chặn lưu nếu còn mã sai.
-function ColorField({
-  name,
-  configKey,
-  value,
-  onChange,
-}: {
-  name: string;
-  configKey: string;
-  value: string;
-  onChange: (v: string) => void;
-}) {
-  const inputId = `config-color-${configKey}`;
-  const parsed = parseColorInput(value ?? "");
-  const invalid = parsed === null;
-
-  return (
-    <div data-testid={`ColorField-${configKey}`}>
-      <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-muted">
-        {name}
-      </label>
-      <div className="flex items-center gap-2">
-        <input
-          type="color"
-          value={(parsed ?? "#000000").toLowerCase()}
-          onChange={(e) => onChange(e.target.value.toUpperCase())}
-          aria-label={`${name} — chọn màu`}
-          data-testid={`color-picker-${configKey}`}
-          className="h-9 w-12 shrink-0 cursor-pointer rounded border border-border"
-        />
-        <input
-          id={inputId}
-          type="text"
-          value={value ?? ""}
-          onChange={(e) => onChange(e.target.value)}
-          onBlur={() => {
-            if (parsed && parsed !== value) onChange(parsed);
-          }}
-          onPaste={(e) => {
-            const pasted = parseColorInput(e.clipboardData.getData("text"));
-            if (pasted) {
-              e.preventDefault();
-              onChange(pasted);
-            }
-          }}
-          placeholder="#1E3A5F"
-          maxLength={32}
-          spellCheck={false}
-          autoComplete="off"
-          aria-invalid={invalid}
-          aria-describedby={invalid ? `${inputId}-error` : undefined}
-          data-testid={`color-hex-${configKey}`}
-          className={`input w-40 font-mono ${invalid ? "border-red!" : ""}`}
-        />
-      </div>
-      {invalid && (
-        <p id={`${inputId}-error`} className="mt-1 text-xs text-red">
-          Mã màu không hợp lệ — dùng dạng #1E3A5F, #1E3 hoặc rgb(30, 58, 95).
-        </p>
-      )}
-    </div>
   );
 }
 

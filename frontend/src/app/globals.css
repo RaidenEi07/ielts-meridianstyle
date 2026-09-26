@@ -7,24 +7,27 @@
 /* ===================================================================
    Design tokens — Anh ngữ Meridian (xem _design/DESIGN_HANDOFF.md)
    =================================================================== */
+/* Mỗi token đọc `--brand-*` do admin đặt ở Cấu hình hệ thống (layout.tsx nhét vào <style
+   id="brand-theme">, sinh bởi lib/brandTheme.ts). Chưa đặt thì rơi về màu chỉnh tay ở đây, nên
+   giao diện mặc định không đổi gì. .exam-mode bên dưới gán thẳng giá trị nên không bị ảnh hưởng. */
 :root {
-  --bg: #fbf8f3;
-  --surface: #ffffff;
-  --card: #fbf8f3;
-  --soft: #f4eee4;
-  --border: #ece4d8;
-  --text: #26211b;
-  --muted: #6b6155;
-  --faint: #a8997f;
-  --primary: #1e3a5f;
-  --primary-soft: #e7edf4;
-  --accent: #c2691d;
-  --accent-soft: #fbefe2;
-  --green: #1e6f43;
-  --green-soft: #e2eee4;
-  --red: #9b2c2c;
-  --red-soft: #f6e3e0;
-  --info: #0e7490;
+  --bg: var(--brand-bg, #fbf8f3);
+  --surface: var(--brand-surface, #ffffff);
+  --card: var(--brand-card, #fbf8f3);
+  --soft: var(--brand-soft, #f4eee4);
+  --border: var(--brand-border, #ece4d8);
+  --text: var(--brand-text, #26211b);
+  --muted: var(--brand-muted, #6b6155);
+  --faint: var(--brand-faint, #a8997f);
+  --primary: var(--brand-primary, #1e3a5f);
+  --primary-soft: var(--brand-primary-soft, #e7edf4);
+  --accent: var(--brand-accent, #c2691d);
+  --accent-soft: var(--brand-accent-soft, #fbefe2);
+  --green: var(--brand-green, #1e6f43);
+  --green-soft: var(--brand-green-soft, #e2eee4);
+  --red: var(--brand-red, #9b2c2c);
+  --red-soft: var(--brand-red-soft, #f6e3e0);
+  --info: var(--brand-info, #0e7490);
 
   /* Bảng màu categorical riêng cho biểu đồ (piechart "dạng câu hỏi hay sai"
      ở admin/users, admin/students, teacher/students) — KHÔNG dùng lại 4 màu
@@ -34,44 +37,44 @@
      định an toàn cho mù màu (CVD ΔE ≥ 8, normal-vision ΔE ≥ 15) — xem
      scripts/validate_palette.js của skill dataviz. Giữ NGUYÊN thứ tự khi
      dùng, không đảo lộn theo dữ liệu. */
-  --series-1: #2a78d6;
-  --series-2: #eb6834;
-  --series-3: #1baf7a;
-  --series-4: #eda100;
-  --series-5: #e87ba4;
-  --series-6: #008300;
-  --series-7: #4a3aa7;
-  --series-8: #e34948;
+  --series-1: var(--brand-series-1, #2a78d6);
+  --series-2: var(--brand-series-2, #eb6834);
+  --series-3: var(--brand-series-3, #1baf7a);
+  --series-4: var(--brand-series-4, #eda100);
+  --series-5: var(--brand-series-5, #e87ba4);
+  --series-6: var(--brand-series-6, #008300);
+  --series-7: var(--brand-series-7, #4a3aa7);
+  --series-8: var(--brand-series-8, #e34948);
 }
 
 .dark {
-  --bg: #16130f;
-  --surface: #1e1a15;
-  --card: #211c16;
-  --soft: #262019;
-  --border: #352d24;
-  --text: #ece4d8;
-  --muted: #a89a86;
-  --faint: #6b6155;
-  --primary: #5b8fd6;
-  --primary-soft: #22304a;
-  --accent: #e8923a;
-  --accent-soft: #3a2b18;
-  --green: #5bbe86;
-  --green-soft: #1c3326;
-  --red: #e08585;
-  --red-soft: #3a2220;
-  --info: #38bdf8;
+  --bg: var(--brand-bg, #16130f);
+  --surface: var(--brand-surface, #1e1a15);
+  --card: var(--brand-card, #211c16);
+  --soft: var(--brand-soft, #262019);
+  --border: var(--brand-border, #352d24);
+  --text: var(--brand-text, #ece4d8);
+  --muted: var(--brand-muted, #a89a86);
+  --faint: var(--brand-faint, #6b6155);
+  --primary: var(--brand-primary, #5b8fd6);
+  --primary-soft: var(--brand-primary-soft, #22304a);
+  --accent: var(--brand-accent, #e8923a);
+  --accent-soft: var(--brand-accent-soft, #3a2b18);
+  --green: var(--brand-green, #5bbe86);
+  --green-soft: var(--brand-green-soft, #1c3326);
+  --red: var(--brand-red, #e08585);
+  --red-soft: var(--brand-red-soft, #3a2220);
+  --info: var(--brand-info, #38bdf8);
 
   /* Cùng 8 bước, đã kiểm định riêng cho nền tối (xem :root ở trên). */
-  --series-1: #3987e5;
-  --series-2: #d95926;
-  --series-3: #199e70;
-  --series-4: #c98500;
-  --series-5: #d55181;
-  --series-6: #008300;
-  --series-7: #9085e9;
-  --series-8: #e66767;
+  --series-1: var(--brand-series-1, #3987e5);
+  --series-2: var(--brand-series-2, #d95926);
+  --series-3: var(--brand-series-3, #199e70);
+  --series-4: var(--brand-series-4, #c98500);
+  --series-5: var(--brand-series-5, #d55181);
+  --series-6: var(--brand-series-6, #008300);
+  --series-7: var(--brand-series-7, #9085e9);
+  --series-8: var(--brand-series-8, #e66767);
 }
 
 /* Chế độ thi (Academic/IELTS — đọc chia màn, nghe, viết): trắng-đen tuyệt đối
