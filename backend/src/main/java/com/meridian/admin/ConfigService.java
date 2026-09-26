@@ -1,9 +1,12 @@
 package com.meridian.admin;
 
 import java.util.LinkedHashMap;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Pattern;
+import com.meridian.common.ApiException;
 import com.meridian.rbac.PermissionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +20,9 @@ public class ConfigService {
             "SITE_NAME", "SITE_TAGLINE", "SITE_LANGUAGE", "SITE_THEME_MODE",
             "PRIMARY_COLOR", "ACCENT_COLOR", "SUPPORT_EMAIL", "REGISTRATION_OPEN",
             "HOMEPAGE_INFO_CARDS");
+
+    private static final Set<String> COLOR_KEYS = Set.of("PRIMARY_COLOR", "ACCENT_COLOR");
+    private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-Fa-f]{6}$");
 
     private final WebConfigurationRepository repository;
     private final PermissionService permissionService;
@@ -51,7 +57,11 @@ public class ConfigService {
     @Transactional
     public Map<String, String> update(UUID uid, Map<String, String> updates) {
         permissionService.requireSystemCapability(uid, "system:manage");
-        updates.forEach((key, value) -> {
+        // Kiểm tra hết trước khi ghi để 1 mã màu sai không làm cấu hình lưu dở dang.
+        Map<String, String> normalized = new LinkedHashMap<>();
+        updates.forEach((key, value) ->
+                normalized.put(key, COLOR_KEYS.contains(key) ? normalizeColor(key, value) : value));
+        normalized.forEach((key, value) -> {
             WebConfiguration c = repository.findById(key).orElseGet(() -> {
                 WebConfiguration nc = new WebConfiguration();
                 nc.setKey(key);
@@ -63,5 +73,13 @@ public class ConfigService {
             repository.save(c);
         });
         return allConfig(uid);
+    }
+
+    private static String normalizeColor(String key, String value) {
+        String trimmed = value == null ? "" : value.trim();
+        if (!HEX_COLOR.matcher(trimmed).matches()) {
+            throw ApiException.badRequest("Mã màu không hợp lệ cho " + key + " — cần dạng #RRGGBB");
+        }
+        return trimmed.toUpperCase(Locale.ROOT);
     }
 }

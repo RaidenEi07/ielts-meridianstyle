@@ -11,6 +11,7 @@ import {
   configApi,
   notificationApi,
 } from "@/lib/api";
+import { parseColorInput } from "@/lib/color";
 import type { Announcement } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
@@ -72,8 +73,17 @@ export default function AdminSettingsPage() {
   }, [allowed, token]);
 
   async function saveConfig() {
+    const payload = { ...config };
+    for (const key of Object.keys(payload).filter((k) => k.endsWith("COLOR"))) {
+      const normalized = parseColorInput(payload[key]);
+      if (!normalized) {
+        toast.error(`${LABELS[key] ?? key}: mã màu không hợp lệ, cần dạng #1E3A5F`);
+        return;
+      }
+      payload[key] = normalized;
+    }
     try {
-      const updated = await configApi.update(token, config);
+      const updated = await configApi.update(token, payload);
       setConfig(updated);
       setSavedMsg("Đã lưu cấu hình");
       setTimeout(() => setSavedMsg(null), 2500);
@@ -113,7 +123,10 @@ export default function AdminSettingsPage() {
 
       <main className="mx-auto max-w-4xl space-y-6 px-6 py-8">
         {/* Branding / config */}
-        <section className="rounded-lg border border-border bg-surface p-6">
+        <section
+          data-testid="branding-config-section"
+          className="rounded-lg border border-border bg-surface p-6"
+        >
           <div className="mb-4 flex items-center justify-between">
             <h1 className="text-xl font-bold">Thương hiệu & Cấu hình</h1>
             <button
@@ -171,24 +184,17 @@ function ConfigField({
   value: string;
   onChange: (v: string) => void;
 }) {
-  const isColor = configKey.endsWith("COLOR");
+  if (configKey.endsWith("COLOR")) {
+    return <ColorField name={name} configKey={configKey} value={value} onChange={onChange} />;
+  }
+
   const isBool = value === "true" || value === "false";
   const isTheme = configKey === "SITE_THEME_MODE";
 
   return (
     <label className="block">
       <span className="mb-1.5 block text-sm font-medium text-muted">{name}</span>
-      {isColor ? (
-        <div className="flex items-center gap-2">
-          <input
-            type="color"
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            className="h-9 w-12 rounded border border-border"
-          />
-          <span className="font-mono text-sm">{value}</span>
-        </div>
-      ) : isTheme ? (
+      {isTheme ? (
         <select value={value} onChange={(e) => onChange(e.target.value)} className="input">
           <option value="light">Sáng</option>
           <option value="dark">Tối</option>
@@ -208,6 +214,71 @@ function ConfigField({
         />
       )}
     </label>
+  );
+}
+
+// Ô chọn màu + ô nhập mã màu (dán được từ bên ngoài). config[key] giữ nguyên chuỗi đang gõ,
+// hợp lệ hay không do parseColorInput quyết định; saveConfig chặn lưu nếu còn mã sai.
+function ColorField({
+  name,
+  configKey,
+  value,
+  onChange,
+}: {
+  name: string;
+  configKey: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  const inputId = `config-color-${configKey}`;
+  const parsed = parseColorInput(value ?? "");
+  const invalid = parsed === null;
+
+  return (
+    <div data-testid={`ColorField-${configKey}`}>
+      <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-muted">
+        {name}
+      </label>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={(parsed ?? "#000000").toLowerCase()}
+          onChange={(e) => onChange(e.target.value.toUpperCase())}
+          aria-label={`${name} — chọn màu`}
+          data-testid={`color-picker-${configKey}`}
+          className="h-9 w-12 shrink-0 cursor-pointer rounded border border-border"
+        />
+        <input
+          id={inputId}
+          type="text"
+          value={value ?? ""}
+          onChange={(e) => onChange(e.target.value)}
+          onBlur={() => {
+            if (parsed && parsed !== value) onChange(parsed);
+          }}
+          onPaste={(e) => {
+            const pasted = parseColorInput(e.clipboardData.getData("text"));
+            if (pasted) {
+              e.preventDefault();
+              onChange(pasted);
+            }
+          }}
+          placeholder="#1E3A5F"
+          maxLength={32}
+          spellCheck={false}
+          autoComplete="off"
+          aria-invalid={invalid}
+          aria-describedby={invalid ? `${inputId}-error` : undefined}
+          data-testid={`color-hex-${configKey}`}
+          className={`input w-40 font-mono ${invalid ? "border-red!" : ""}`}
+        />
+      </div>
+      {invalid && (
+        <p id={`${inputId}-error`} className="mt-1 text-xs text-red">
+          Mã màu không hợp lệ — dùng dạng #1E3A5F, #1E3 hoặc rgb(30, 58, 95).
+        </p>
+      )}
+    </div>
   );
 }
 
