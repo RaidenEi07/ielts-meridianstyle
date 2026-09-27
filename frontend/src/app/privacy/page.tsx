@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StaticPageShell } from "@/components/StaticPageShell";
+import { getSiteConfig } from "@/lib/publicConfigServer";
 
 export const metadata: Metadata = {
-  title: "Chính sách bảo mật — Anh ngữ Meridian",
+  title: "Chính sách bảo mật",
 };
 
-export default function PrivacyPage() {
+export default async function PrivacyPage() {
+  const { siteName } = await getSiteConfig();
+
   return (
     <StaticPageShell title="Chính sách bảo mật">
       <p>
-        Anh ngữ Meridian tôn trọng quyền riêng tư của học viên và phụ huynh. Trang
+        {siteName} tôn trọng quyền riêng tư của học viên và phụ huynh. Trang
         này mô tả những dữ liệu chúng tôi thu thập và cách chúng tôi sử dụng chúng.
       </p>
 

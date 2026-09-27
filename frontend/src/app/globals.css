@@ -28,6 +28,9 @@
   --red: var(--brand-red, #9b2c2c);
   --red-soft: var(--brand-red-soft, #f6e3e0);
   --info: var(--brand-info, #0e7490);
+  /* Khung sau logo ảnh của trung tâm (Logo.tsx): trong suốt trên nền sáng, trắng trên nền tối để logo
+     đậm màu không chìm. */
+  --logo-chip: var(--brand-logo-chip, transparent);
 
   /* Bảng màu categorical riêng cho biểu đồ (piechart "dạng câu hỏi hay sai"
      ở admin/users, admin/students, teacher/students) — KHÔNG dùng lại 4 màu
@@ -65,6 +68,7 @@
   --red: var(--brand-red, #e08585);
   --red-soft: var(--brand-red-soft, #3a2220);
   --info: var(--brand-info, #38bdf8);
+  --logo-chip: var(--brand-logo-chip, #ffffff);
 
   /* Cùng 8 bước, đã kiểm định riêng cho nền tối (xem :root ở trên). */
   --series-1: var(--brand-series-1, #3987e5);

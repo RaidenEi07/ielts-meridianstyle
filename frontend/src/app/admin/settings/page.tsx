@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { PageHeader } from "@/components/PageHeader";
+import { useSetSiteConfig, useSiteConfig } from "@/components/SiteConfigProvider";
 import {
   ApiError,
   adminUserApi,
@@ -12,10 +13,12 @@ import {
   notificationApi,
 } from "@/lib/api";
 import { brandColorsFromConfig } from "@/lib/brandTheme";
+import { siteConfigFromPublic } from "@/lib/siteConfig";
 import type { Announcement } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useToast } from "@/store/toast";
+import { LogoField } from "./LogoField";
 import { THEME_CONFIG_KEYS, ThemeSection } from "./ThemeSection";
 
 const LABELS: Record<string, string> = {
@@ -37,6 +40,11 @@ const HOMEPAGE_INFO_CARDS_KEY = "HOMEPAGE_INFO_CARDS";
 // và cũng không đi kèm khi bấm "Lưu thay đổi" của lưới chung.
 const isThemeKey = (key: string) => (THEME_CONFIG_KEYS as readonly string[]).includes(key);
 
+// Logo có ô riêng (LogoField: tải ảnh, xem thử) chen giữa "Tên hiển thị/Khẩu hiệu" và các ô còn lại; hai khóa
+// của nó đi cùng "Lưu thay đổi" của lưới chung.
+const LOGO_KEYS = ["SITE_LOGO_URL", "SITE_LOGO_HIDE_NAME"];
+const IDENTITY_KEYS = ["SITE_NAME", "SITE_TAGLINE"];
+
 interface HomepageInfoCard {
   icon: string;
   title: string;
@@ -54,6 +62,8 @@ export default function AdminSettingsPage() {
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
   const [anns, setAnns] = useState<Announcement[]>([]);
   const toast = useToast();
+  const siteConfig = useSiteConfig();
+  const setSiteConfig = useSetSiteConfig();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -84,6 +94,13 @@ export default function AdminSettingsPage() {
         // Màu đang nằm ở ThemeSection (có thể đã lưu riêng): giữ nguyên bản trang đang biết.
         ...Object.fromEntries(THEME_CONFIG_KEYS.filter((k) => k in current).map((k) => [k, current[k]])),
       }));
+      // Tên/logo/email đổi ngay trên trang này (đầu trang, chân trang...) không cần tải lại; tiêu đề tab
+      // cũng đi theo nếu đang là tiêu đề mặc định của trang.
+      const next = siteConfigFromPublic(updated);
+      if (document.title === `${siteConfig.siteName} — ${siteConfig.tagline}`) {
+        document.title = `${next.siteName} — ${next.tagline}`;
+      }
+      setSiteConfig(next);
       setSavedMsg("Đã lưu cấu hình");
       setTimeout(() => setSavedMsg(null), 2500);
       toast.success("Đã lưu cấu hình");
@@ -138,9 +155,31 @@ export default function AdminSettingsPage() {
           </div>
           {savedMsg && <p className="mb-3 text-sm text-green">{savedMsg}</p>}
           <div className="grid gap-4 sm:grid-cols-2">
-            {Object.keys(config)
-              .filter((key) => key !== HOMEPAGE_INFO_CARDS_KEY && !isThemeKey(key))
-              .map((key) => (
+            {[
+              ...IDENTITY_KEYS.filter((key) => key in config),
+              ...(Object.keys(config).length > 0 ? ["LOGO"] : []),
+              ...Object.keys(config).filter(
+                (key) =>
+                  key !== HOMEPAGE_INFO_CARDS_KEY &&
+                  !isThemeKey(key) &&
+                  !LOGO_KEYS.includes(key) &&
+                  !IDENTITY_KEYS.includes(key),
+              ),
+            ].map((key) =>
+              key === "LOGO" ? (
+                <LogoField
+                  key={key}
+                  className="sm:col-span-2"
+                  token={token}
+                  siteName={config.SITE_NAME ?? ""}
+                  logoUrl={config.SITE_LOGO_URL ?? ""}
+                  hideName={config.SITE_LOGO_HIDE_NAME === "true"}
+                  onLogoUrlChange={(url) => setConfig((c) => ({ ...c, SITE_LOGO_URL: url }))}
+                  onHideNameChange={(hide) =>
+                    setConfig((c) => ({ ...c, SITE_LOGO_HIDE_NAME: String(hide) }))
+                  }
+                />
+              ) : (
                 <ConfigField
                   key={key}
                   name={LABELS[key] ?? key}
@@ -148,7 +187,8 @@ export default function AdminSettingsPage() {
                   value={config[key]}
                   onChange={(v) => setConfig((c) => ({ ...c, [key]: v }))}
                 />
-              ))}
+              ),
+            )}
           </div>
         </section>
 

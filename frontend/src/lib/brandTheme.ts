@@ -406,6 +406,7 @@ const ALL_VARS = [
   "red-soft",
   "info",
   ...SERIES_DARK.map((_, i) => `series-${i + 1}`),
+  "logo-chip",
   "footer-bg",
   "footer-text",
 ];
@@ -476,6 +477,9 @@ export function deriveBrandTheme(input: BrandColors): BrandTheme | null {
     }
     if (bg.alwaysDark) {
       notes.push("Nền tối: giao diện luôn dùng tông tối, nút Sáng/Tối của người dùng không đổi được gì.");
+      // Logo ảnh của trung tâm nằm trên khung trắng để không chìm vào nền tối (:root cũng tối ở đây).
+      light["logo-chip"] = "#FFFFFF";
+      dark["logo-chip"] = "#FFFFFF";
     }
   }
 

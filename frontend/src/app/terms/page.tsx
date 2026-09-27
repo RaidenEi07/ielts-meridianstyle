@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StaticPageShell } from "@/components/StaticPageShell";
+import { getSiteConfig } from "@/lib/publicConfigServer";
 
 export const metadata: Metadata = {
-  title: "Điều khoản sử dụng — Anh ngữ Meridian",
+  title: "Điều khoản sử dụng",
 };
 
-export default function TermsPage() {
+export default async function TermsPage() {
+  const { siteName } = await getSiteConfig();
+
   return (
     <StaticPageShell title="Điều khoản sử dụng">
       <p>
-        Khi tạo tài khoản và sử dụng nền tảng Anh ngữ Meridian, bạn đồng ý với các
+        Khi tạo tài khoản và sử dụng nền tảng {siteName}, bạn đồng ý với các
         điều khoản dưới đây.
       </p>
 
@@ -23,8 +26,8 @@ export default function TermsPage() {
 
       <h2>Nội dung khóa học</h2>
       <p>
-        Toàn bộ video, câu hỏi, tài liệu trong khóa học thuộc bản quyền của Anh
-        ngữ Meridian hoặc đối tác cấp phép. Học viên không được sao chép, phân
+        Toàn bộ video, câu hỏi, tài liệu trong khóa học thuộc bản quyền của{" "}
+        {siteName} hoặc đối tác cấp phép. Học viên không được sao chép, phân
         phối lại nội dung ra ngoài phạm vi học tập cá nhân.
       </p>
 

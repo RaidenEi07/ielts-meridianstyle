@@ -1,12 +1,15 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { StaticPageShell } from "@/components/StaticPageShell";
+import { getSiteConfig } from "@/lib/publicConfigServer";
 
 export const metadata: Metadata = {
-  title: "Liên hệ — Anh ngữ Meridian",
+  title: "Liên hệ",
 };
 
-export default function ContactPage() {
+export default async function ContactPage() {
+  const { siteName, supportEmail } = await getSiteConfig();
+
   return (
     <StaticPageShell title="Liên hệ">
       <p>
@@ -14,8 +17,12 @@ export default function ContactPage() {
         chúng tôi qua các kênh dưới đây.
       </p>
 
-      <h2>Email</h2>
-      <p>lienhe@meridian.edu.vn</p>
+      {supportEmail && (
+        <>
+          <h2>Email</h2>
+          <p>{supportEmail}</p>
+        </>
+      )}
 
       <h2>Điện thoại</h2>
       <p className="italic">[Điền số điện thoại liên hệ trước khi công khai]</p>
@@ -29,7 +36,7 @@ export default function ContactPage() {
         <Link href="/" className="text-accent hover:underline">
           trang chủ
         </Link>
-        , đội ngũ Meridian sẽ liên hệ trong 24h.
+        , đội ngũ {siteName} sẽ liên hệ trong 24h.
       </p>
     </StaticPageShell>
   );

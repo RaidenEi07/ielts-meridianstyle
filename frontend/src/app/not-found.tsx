@@ -3,7 +3,7 @@ import type { Metadata } from "next";
 import { Logo } from "@/components/Logo";
 
 export const metadata: Metadata = {
-  title: "Không tìm thấy trang — Anh ngữ Meridian",
+  title: "Không tìm thấy trang",
 };
 
 export default function NotFound() {

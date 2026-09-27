@@ -8,6 +8,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.meridian.common.ApiException;
+import com.meridian.config.MeridianProperties;
 import com.meridian.rbac.PermissionService;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -29,10 +30,15 @@ class ConfigServiceTest {
     @Mock WebConfigurationRepository repository;
     @Mock PermissionService permissionService;
 
+    private static final String UPLOADS = "https://api.school.vn";
+    private static final String LOGO = UPLOADS + "/uploads/images/3f9c1b7e-52aa-4d0e-9b1e-0a6c7d2e8f11.png";
+
     private final UUID uid = UUID.randomUUID();
 
     private ConfigService service() {
-        return new ConfigService(repository, permissionService);
+        MeridianProperties properties = new MeridianProperties();
+        properties.getUploads().setPublicBaseUrl(UPLOADS);
+        return new ConfigService(repository, permissionService, properties);
     }
 
     @Test
@@ -67,6 +73,67 @@ class ConfigServiceTest {
         when(repository.findAll()).thenReturn(List.of(bg, secret));
         assertThat(service().publicConfig()).containsEntry("BACKGROUND_COLOR", "#FBF8F3")
                 .doesNotContainKey("SSL_FORCE_HTTPS");
+    }
+
+    @Test
+    void acceptsAnUploadedLogoOfThisSystemAndAnEmptyValueToRemoveIt() {
+        when(repository.findById(any())).thenReturn(Optional.empty());
+        when(repository.findAll()).thenReturn(List.of());
+
+        service().update(uid, Map.of("SITE_LOGO_URL", "  " + LOGO + "  ", "SITE_LOGO_HIDE_NAME", " TRUE "));
+        service().update(uid, Map.of("SITE_LOGO_URL", ""));
+
+        ArgumentCaptor<WebConfiguration> saved = ArgumentCaptor.forClass(WebConfiguration.class);
+        verify(repository, org.mockito.Mockito.times(3)).save(saved.capture());
+        assertThat(saved.getAllValues()).extracting(WebConfiguration::getKey, WebConfiguration::getValue)
+                .containsExactlyInAnyOrder(
+                        org.assertj.core.groups.Tuple.tuple("SITE_LOGO_URL", LOGO),
+                        org.assertj.core.groups.Tuple.tuple("SITE_LOGO_HIDE_NAME", "true"),
+                        org.assertj.core.groups.Tuple.tuple("SITE_LOGO_URL", ""));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "https://evil.example/uploads/images/a.png",
+            "javascript:alert(1)",
+            "data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=",
+            "https://api.school.vn.evil.example/uploads/images/a.png",
+            "https://api.school.vn/uploads/audio/a.mp3",
+            "https://api.school.vn/uploads/images/",
+            "https://api.school.vn/uploads/images/../../application.properties",
+            "https://api.school.vn/uploads/images/a.png?x=1",
+            "https://api.school.vn/uploads/images/a b.png",
+            "https://api.school.vn/uploads/images/a.png\"onerror=\"alert(1)",
+            "/uploads/images/a.png"})
+    void rejectsALogoThatIsNotAnImageUploadedToThisSystem(String bad) {
+        assertThatThrownBy(() -> service().update(uid, Map.of("SITE_LOGO_URL", bad)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("SITE_LOGO_URL");
+        verify(repository, never()).save(any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"yes", "1", "", "  "})
+    void logoHideNameFlagMustBeTrueOrFalse(String bad) {
+        assertThatThrownBy(() -> service().update(uid, Map.of("SITE_LOGO_HIDE_NAME", bad)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("SITE_LOGO_HIDE_NAME");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void logoSettingsArePublicSoEveryPageCanRenderThem() {
+        WebConfiguration logo = new WebConfiguration();
+        logo.setKey("SITE_LOGO_URL");
+        logo.setValue(LOGO);
+        WebConfiguration hideName = new WebConfiguration();
+        hideName.setKey("SITE_LOGO_HIDE_NAME");
+        hideName.setValue("false");
+        when(repository.findAll()).thenReturn(List.of(logo, hideName));
+
+        assertThat(service().publicConfig())
+                .containsEntry("SITE_LOGO_URL", LOGO)
+                .containsEntry("SITE_LOGO_HIDE_NAME", "false");
     }
 
     @ParameterizedTest

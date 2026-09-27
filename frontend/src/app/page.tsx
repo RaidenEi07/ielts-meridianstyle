@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { CourseCard } from "@/components/CourseCard";
 import { Footer } from "@/components/Footer";
 import { SiteHeader } from "@/components/SiteHeader";
+import { useSiteConfig } from "@/components/SiteConfigProvider";
 import { ApiError, catalogApi, configApi, portalApi } from "@/lib/api";
 import type { CourseSummary, PublicStats, TeacherPublic } from "@/lib/types";
 
@@ -34,6 +35,7 @@ const TESTIMONIALS = [
 ];
 
 export default function HomePage() {
+  const { siteName } = useSiteConfig();
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [teachers, setTeachers] = useState<TeacherPublic[]>([]);
   const [stats, setStats] = useState<PublicStats | null>(null);
@@ -67,8 +69,7 @@ export default function HomePage() {
           </span>
           <h1 className="text-5xl font-bold leading-[1.08] tracking-tight md:text-6xl">
             Chinh phục band điểm{" "}
-            <em className="not-italic text-accent">mơ ước</em> cùng Anh ngữ
-            Meridian
+            <em className="not-italic text-accent">mơ ước</em> cùng {siteName}
           </h1>
           <p className="max-w-lg text-lg text-muted">
             Hệ thống quản lý khóa học và mô phỏng phòng thi IELTS đầy đủ
@@ -231,6 +232,7 @@ export default function HomePage() {
 }
 
 function ConsultationForm() {
+  const { siteName } = useSiteConfig();
   const [form, setForm] = useState({ name: "", email: "", phone: "", message: "" });
   const [state, setState] = useState<"idle" | "loading" | "done">("idle");
   const [error, setError] = useState<string | null>(null);
@@ -253,7 +255,7 @@ function ConsultationForm() {
     <div className="rounded-[18px] border border-border bg-primary p-8 text-white">
       <h2 className="text-2xl font-bold">Đăng ký tư vấn miễn phí</h2>
       <p className="mt-1 text-sm text-white/70">
-        Để lại thông tin, đội ngũ Meridian sẽ liên hệ trong 24h.
+        Để lại thông tin, đội ngũ {siteName} sẽ liên hệ trong 24h.
       </p>
       {state === "done" ? (
         <div className="mt-6 rounded-lg bg-white/10 p-6 text-center">

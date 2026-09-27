@@ -917,7 +917,7 @@ function QuizPlayerPageInner() {
       */}
       <header data-testid="quiz-exam-header" className="sticky top-0 z-20 flex items-center justify-between px-6 py-3"
         style={{ background: "#262019", color: "#ECE4D8" }}>
-        <Logo className="[&_span]:text-white" />
+        <Logo onDark className="[&_span]:text-white" />
         <div className="flex items-center gap-4">
           <Wifi className="h-4 w-4 opacity-60" aria-hidden />
           <span className="relative flex items-center">

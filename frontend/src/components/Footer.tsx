@@ -1,12 +1,17 @@
+"use client";
+
 import Link from "next/link";
+import { useSiteConfig } from "@/components/SiteConfigProvider";
 
 export function Footer() {
+  const { siteName, supportEmail } = useSiteConfig();
+
   return (
     <footer style={{ background: "var(--brand-footer-bg, #14110D)", color: "var(--brand-footer-text, #cbbfa9)" }}>
       <div className="mx-auto grid max-w-6xl gap-8 px-6 py-12 sm:grid-cols-2 md:grid-cols-4">
         <div>
           <div className="text-lg font-semibold text-white" style={{ fontFamily: "var(--font-serif)" }}>
-            Anh ngữ Meridian
+            {siteName}
           </div>
           <p className="mt-2 text-sm">Luyện thi IELTS theo chuẩn phòng thi máy.</p>
         </div>
@@ -29,13 +34,13 @@ export function Footer() {
         <div>
           <h4 className="mb-3 font-semibold text-white">Liên hệ</h4>
           <ul className="space-y-1.5 text-sm">
-            <li>lienhe@meridian.edu.vn</li>
+            {supportEmail && <li>{supportEmail}</li>}
             <li>Hà Nội · TP.HCM</li>
           </ul>
         </div>
       </div>
       <div className="border-t border-white/10 px-6 py-4 text-center text-xs">
-        <span>© 2026 Anh ngữ Meridian</span>
+        <span>© {new Date().getFullYear()} {siteName}</span>
         <span className="mx-2">·</span>
         <Link href="/terms" className="hover:text-white">
           Điều khoản sử dụng

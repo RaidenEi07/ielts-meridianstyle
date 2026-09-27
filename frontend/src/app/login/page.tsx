@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
+import { useSiteConfig } from "@/components/SiteConfigProvider";
 import { ApiError, configApi } from "@/lib/api";
 import { useAuthStore } from "@/store/auth";
 import { useToast } from "@/store/toast";
@@ -12,6 +13,7 @@ type Tab = "login" | "register";
 
 export default function AuthPage() {
   const router = useRouter();
+  const { siteName } = useSiteConfig();
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
 
@@ -77,7 +79,7 @@ export default function AuthPage() {
           }}
         />
         <Link href="/">
-          <Logo className="relative text-white [&_span]:text-white" />
+          <Logo onDark className="relative text-white [&_span]:text-white" />
         </Link>
         <div className="relative space-y-6">
           <h2
@@ -107,7 +109,7 @@ export default function AuthPage() {
             </div>
           </div>
         </div>
-        <p className="relative text-sm text-white/60">© 2026 Anh ngữ Meridian</p>
+        <p className="relative text-sm text-white/60">© {new Date().getFullYear()} {siteName}</p>
       </aside>
 
       {/* Cột phải — form */}
