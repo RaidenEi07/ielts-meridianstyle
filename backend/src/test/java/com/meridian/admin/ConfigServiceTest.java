@@ -75,6 +75,9 @@ class ConfigServiceTest {
                 .doesNotContainKey("SSL_FORCE_HTTPS");
     }
 
+    /** Hai khóa chứa URL ảnh do admin tải lên, kiểm tra y hệt nhau. */
+    private static final List<String> IMAGE_KEYS = List.of("SITE_LOGO_URL", "HOMEPAGE_HERO_IMAGE_URL");
+
     @Test
     void acceptsAnUploadedLogoOfThisSystemAndAnEmptyValueToRemoveIt() {
         when(repository.findById(any())).thenReturn(Optional.empty());
@@ -92,6 +95,23 @@ class ConfigServiceTest {
                         org.assertj.core.groups.Tuple.tuple("SITE_LOGO_URL", ""));
     }
 
+    @Test
+    void acceptsAnUploadedHeroImageOfThisSystemAndAnEmptyValueToRemoveIt() {
+        when(repository.findById(any())).thenReturn(Optional.empty());
+        when(repository.findAll()).thenReturn(List.of());
+        String hero = UPLOADS + "/uploads/images/0b8e5c1a-77d3-4f1e-8a52-3c9d6e1f2a40.jpg";
+
+        service().update(uid, Map.of("HOMEPAGE_HERO_IMAGE_URL", "  " + hero + " "));
+        service().update(uid, Map.of("HOMEPAGE_HERO_IMAGE_URL", "   "));
+
+        ArgumentCaptor<WebConfiguration> saved = ArgumentCaptor.forClass(WebConfiguration.class);
+        verify(repository, org.mockito.Mockito.times(2)).save(saved.capture());
+        assertThat(saved.getAllValues()).extracting(WebConfiguration::getKey, WebConfiguration::getValue)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("HOMEPAGE_HERO_IMAGE_URL", hero),
+                        org.assertj.core.groups.Tuple.tuple("HOMEPAGE_HERO_IMAGE_URL", ""));
+    }
+
     @ParameterizedTest
     @ValueSource(strings = {
             "https://evil.example/uploads/images/a.png",
@@ -105,10 +125,13 @@ class ConfigServiceTest {
             "https://api.school.vn/uploads/images/a b.png",
             "https://api.school.vn/uploads/images/a.png\"onerror=\"alert(1)",
             "/uploads/images/a.png"})
-    void rejectsALogoThatIsNotAnImageUploadedToThisSystem(String bad) {
-        assertThatThrownBy(() -> service().update(uid, Map.of("SITE_LOGO_URL", bad)))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("SITE_LOGO_URL");
+    void rejectsAnImageThatIsNotUploadedToThisSystem(String bad) {
+        for (String key : IMAGE_KEYS) {
+            assertThatThrownBy(() -> service().update(uid, Map.of(key, bad)))
+                    .as(key)
+                    .isInstanceOf(ApiException.class)
+                    .hasMessageContaining(key);
+        }
         verify(repository, never()).save(any());
     }
 
@@ -122,18 +145,22 @@ class ConfigServiceTest {
     }
 
     @Test
-    void logoSettingsArePublicSoEveryPageCanRenderThem() {
+    void logoAndHeroImageSettingsArePublicSoEveryPageCanRenderThem() {
         WebConfiguration logo = new WebConfiguration();
         logo.setKey("SITE_LOGO_URL");
         logo.setValue(LOGO);
         WebConfiguration hideName = new WebConfiguration();
         hideName.setKey("SITE_LOGO_HIDE_NAME");
         hideName.setValue("false");
-        when(repository.findAll()).thenReturn(List.of(logo, hideName));
+        WebConfiguration hero = new WebConfiguration();
+        hero.setKey("HOMEPAGE_HERO_IMAGE_URL");
+        hero.setValue(LOGO);
+        when(repository.findAll()).thenReturn(List.of(logo, hideName, hero));
 
         assertThat(service().publicConfig())
                 .containsEntry("SITE_LOGO_URL", LOGO)
-                .containsEntry("SITE_LOGO_HIDE_NAME", "false");
+                .containsEntry("SITE_LOGO_HIDE_NAME", "false")
+                .containsEntry("HOMEPAGE_HERO_IMAGE_URL", LOGO);
     }
 
     @ParameterizedTest

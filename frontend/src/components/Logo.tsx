@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
 import { useSiteConfig } from "@/components/SiteConfigProvider";
 import type { SiteConfig } from "@/lib/siteConfig";
+import { useBrokenImage } from "@/lib/useBrokenImage";
 
 export function Logo({
   className = "",
@@ -20,9 +20,9 @@ export function Logo({
 }) {
   const site = useSiteConfig();
   const { siteName, logoUrl, logoOnly } = { ...site, ...preview };
-  // Ảnh lỗi (bị xóa, mạng) → nhớ URL hỏng để rơi về huy hiệu chữ cái; đổi sang URL khác thì thử lại.
-  const [failedUrl, setFailedUrl] = useState("");
-  const showLogo = logoUrl !== "" && logoUrl !== failedUrl;
+  // Ảnh lỗi (bị xóa, mạng) → rơi về huy hiệu chữ cái.
+  const image = useBrokenImage(logoUrl);
+  const showLogo = logoUrl !== "" && !image.broken;
 
   // Chữ cái đầu của TỪ CUỐI (vd. "Anh ngữ Meridian" → "M") — giữ đúng huy hiệu
   // hiện tại thay vì lấy chữ cái đầu toàn bộ tên (sẽ ra "A", sai ý đồ thiết kế).
@@ -41,17 +41,9 @@ export function Logo({
         >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            ref={(el) => {
-              // Ảnh do server dựng có thể đã tải hỏng TRƯỚC khi React gắn onError (lúc hydrate) nên sự kiện
-              // lỗi bị bỏ lỡ: kiểm tra lại trạng thái ngay khi phần tử được gắn. SVG bỏ qua vì có thể
-              // báo naturalWidth = 0 dù vẫn hiển thị bình thường (thiếu width/height).
-              if (el && el.complete && el.naturalWidth === 0 && !/\.svg$/i.test(logoUrl)) {
-                setFailedUrl(logoUrl);
-              }
-            }}
+            {...image.imgProps}
             src={logoUrl}
             alt={logoOnly ? siteName : ""}
-            onError={() => setFailedUrl(logoUrl)}
             className="block h-9 w-auto max-w-40 object-contain"
           />
         </span>

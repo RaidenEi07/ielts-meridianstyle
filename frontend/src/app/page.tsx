@@ -9,6 +9,7 @@ import { SiteHeader } from "@/components/SiteHeader";
 import { useSiteConfig } from "@/components/SiteConfigProvider";
 import { ApiError, catalogApi, configApi, portalApi } from "@/lib/api";
 import type { CourseSummary, PublicStats, TeacherPublic } from "@/lib/types";
+import { useBrokenImage } from "@/lib/useBrokenImage";
 
 interface HomepageInfoCard {
   icon: string;
@@ -35,7 +36,10 @@ const TESTIMONIALS = [
 ];
 
 export default function HomePage() {
-  const { siteName } = useSiteConfig();
+  const { siteName, heroImageUrl } = useSiteConfig();
+  // Ảnh đầu trang chủ do admin tải lên (Cấu hình hệ thống); chưa có hoặc không tải được thì hiện họa tiết sọc mẫu.
+  const heroImage = useBrokenImage(heroImageUrl);
+  const showHeroImage = heroImageUrl !== "" && !heroImage.broken;
   const [courses, setCourses] = useState<CourseSummary[]>([]);
   const [teachers, setTeachers] = useState<TeacherPublic[]>([]);
   const [stats, setStats] = useState<PublicStats | null>(null);
@@ -94,12 +98,29 @@ export default function HomePage() {
         {/* Ảnh hero + floating badges */}
         <div className="relative">
           <div
-            className="aspect-[4/3] w-full rounded-[18px] border border-border"
-            style={{
-              background:
-                "repeating-linear-gradient(45deg, var(--soft), var(--soft) 14px, var(--card) 14px, var(--card) 28px)",
-            }}
-          />
+            data-testid="hero-image"
+            className="aspect-[4/3] w-full overflow-hidden rounded-[18px] border border-border"
+            style={
+              showHeroImage
+                ? undefined
+                : {
+                    background:
+                      "repeating-linear-gradient(45deg, var(--soft), var(--soft) 14px, var(--card) 14px, var(--card) 28px)",
+                  }
+            }
+          >
+            {showHeroImage && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                {...heroImage.imgProps}
+                src={heroImageUrl}
+                alt=""
+                fetchPriority="high"
+                decoding="async"
+                className="h-full w-full object-cover"
+              />
+            )}
+          </div>
           <div className="absolute -bottom-4 -left-4 rounded-2xl bg-surface px-5 py-3 shadow-[0_16px_40px_-10px_rgba(38,33,27,.22)]">
             <div className="text-3xl font-bold text-green" style={{ fontFamily: "var(--font-serif)" }}>
               92%

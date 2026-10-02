@@ -1,4 +1,4 @@
-// Tên, khẩu hiệu, logo và email hỗ trợ của trung tâm, đọc từ cấu hình công khai (Cấu hình hệ thống).
+// Tên, khẩu hiệu, logo, ảnh đầu trang chủ và email hỗ trợ của trung tâm, đọc từ cấu hình công khai (Cấu hình hệ thống).
 // Module thuần (không React/DOM) để dùng được ở server (layout, trang tĩnh, ảnh chia sẻ) lẫn trình duyệt.
 
 export interface SiteConfig {
@@ -8,6 +8,8 @@ export interface SiteConfig {
   logoUrl: string;
   /** Có logo thì chỉ hiện logo, không ghi tên bên cạnh (cho logo đã có sẵn chữ). */
   logoOnly: boolean;
+  /** URL ảnh đầu trang chủ đã tải lên; rỗng = chưa có, trang chủ hiện họa tiết sọc mẫu. */
+  heroImageUrl: string;
   /** Rỗng = không hiện email liên hệ. */
   supportEmail: string;
 }
@@ -18,6 +20,7 @@ export const SITE_DEFAULTS: Readonly<SiteConfig> = {
   tagline: "Hệ thống luyện thi IELTS",
   logoUrl: "",
   logoOnly: false,
+  heroImageUrl: "",
   supportEmail: "",
 };
 
@@ -34,6 +37,7 @@ export function siteConfigFromPublic(config: Record<string, string | undefined>)
     tagline: text(config.SITE_TAGLINE, SITE_DEFAULTS.tagline),
     logoUrl: safeImageUrl(config.SITE_LOGO_URL),
     logoOnly: config.SITE_LOGO_HIDE_NAME === "true",
+    heroImageUrl: safeImageUrl(config.HOMEPAGE_HERO_IMAGE_URL),
     supportEmail: (config.SUPPORT_EMAIL ?? "").trim(),
   };
 }

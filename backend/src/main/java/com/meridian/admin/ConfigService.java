@@ -20,12 +20,13 @@ public class ConfigService {
     private static final Set<String> PUBLIC_KEYS = Set.of(
             "SITE_NAME", "SITE_TAGLINE", "SITE_LANGUAGE", "SITE_THEME_MODE",
             "PRIMARY_COLOR", "ACCENT_COLOR", "BACKGROUND_COLOR", "SITE_LOGO_URL", "SITE_LOGO_HIDE_NAME",
-            "SUPPORT_EMAIL", "REGISTRATION_OPEN", "HOMEPAGE_INFO_CARDS");
+            "HOMEPAGE_HERO_IMAGE_URL", "SUPPORT_EMAIL", "REGISTRATION_OPEN", "HOMEPAGE_INFO_CARDS");
 
     private static final Set<String> COLOR_KEYS = Set.of("PRIMARY_COLOR", "ACCENT_COLOR", "BACKGROUND_COLOR");
     private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-Fa-f]{6}$");
 
-    private static final String LOGO_URL_KEY = "SITE_LOGO_URL";
+    /** Khóa chứa URL ảnh do admin tải lên: logo trung tâm và ảnh đầu trang chủ. */
+    private static final Set<String> UPLOADED_IMAGE_KEYS = Set.of("SITE_LOGO_URL", "HOMEPAGE_HERO_IMAGE_URL");
     private static final String LOGO_HIDE_NAME_KEY = "SITE_LOGO_HIDE_NAME";
     /** Tên file MediaService sinh ra: UUID + đuôi, không có dấu "/" hay ký tự lạ. */
     private static final Pattern UPLOADED_FILE_NAME = Pattern.compile("^[A-Za-z0-9._-]+$");
@@ -86,8 +87,8 @@ public class ConfigService {
         if (COLOR_KEYS.contains(key)) {
             return normalizeColor(key, value);
         }
-        if (LOGO_URL_KEY.equals(key)) {
-            return normalizeLogoUrl(value);
+        if (UPLOADED_IMAGE_KEYS.contains(key)) {
+            return normalizeUploadedImageUrl(key, value);
         }
         if (LOGO_HIDE_NAME_KEY.equals(key)) {
             return normalizeFlag(key, value);
@@ -104,10 +105,11 @@ public class ConfigService {
     }
 
     /**
-     * Logo chỉ được là ảnh đã tải lên chính hệ thống này (MediaService.storeImage) hoặc rỗng để gỡ logo.
-     * Không nhận URL ngoài: URL này được nhúng vào mọi trang, và máy chủ web cũng đọc nó khi dựng ảnh chia sẻ.
+     * Ảnh chỉ được là ảnh đã tải lên chính hệ thống này (MediaService.storeImage) hoặc rỗng để gỡ ảnh.
+     * Không nhận URL ngoài: URL này được nhúng vào mọi trang (logo còn được máy chủ web đọc khi dựng ảnh
+     * chia sẻ), nên không để admin trỏ sang một máy chủ tùy ý.
      */
-    private String normalizeLogoUrl(String value) {
+    private String normalizeUploadedImageUrl(String key, String value) {
         String trimmed = value == null ? "" : value.trim();
         if (trimmed.isEmpty()) {
             return "";
@@ -115,7 +117,7 @@ public class ConfigService {
         String prefix = properties.getUploads().getPublicBaseUrl() + "/uploads/images/";
         if (!trimmed.startsWith(prefix) || !UPLOADED_FILE_NAME.matcher(trimmed.substring(prefix.length())).matches()) {
             throw ApiException.badRequest(
-                    "Logo không hợp lệ cho " + LOGO_URL_KEY + " — cần là ảnh đã tải lên hệ thống");
+                    "Ảnh không hợp lệ cho " + key + " — cần là ảnh đã tải lên hệ thống");
         }
         return trimmed;
     }

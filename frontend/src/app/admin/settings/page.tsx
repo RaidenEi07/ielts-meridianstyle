@@ -18,6 +18,7 @@ import type { Announcement } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useToast } from "@/store/toast";
+import { HeroImageField } from "./HeroImageField";
 import { LogoField } from "./LogoField";
 import { THEME_CONFIG_KEYS, ThemeSection } from "./ThemeSection";
 
@@ -40,9 +41,10 @@ const HOMEPAGE_INFO_CARDS_KEY = "HOMEPAGE_INFO_CARDS";
 // và cũng không đi kèm khi bấm "Lưu thay đổi" của lưới chung.
 const isThemeKey = (key: string) => (THEME_CONFIG_KEYS as readonly string[]).includes(key);
 
-// Logo có ô riêng (LogoField: tải ảnh, xem thử) chen giữa "Tên hiển thị/Khẩu hiệu" và các ô còn lại; hai khóa
-// của nó đi cùng "Lưu thay đổi" của lưới chung.
+// Logo và ảnh đầu trang chủ có ô riêng (LogoField, HeroImageField: tải ảnh, xem thử) chen giữa "Tên hiển
+// thị/Khẩu hiệu" và các ô còn lại; các khóa của chúng đi cùng "Lưu thay đổi" của lưới chung.
 const LOGO_KEYS = ["SITE_LOGO_URL", "SITE_LOGO_HIDE_NAME"];
+const HERO_IMAGE_KEY = "HOMEPAGE_HERO_IMAGE_URL";
 const IDENTITY_KEYS = ["SITE_NAME", "SITE_TAGLINE"];
 
 interface HomepageInfoCard {
@@ -157,16 +159,25 @@ export default function AdminSettingsPage() {
           <div className="grid gap-4 sm:grid-cols-2">
             {[
               ...IDENTITY_KEYS.filter((key) => key in config),
-              ...(Object.keys(config).length > 0 ? ["LOGO"] : []),
+              ...(Object.keys(config).length > 0 ? ["LOGO", "HERO"] : []),
               ...Object.keys(config).filter(
                 (key) =>
                   key !== HOMEPAGE_INFO_CARDS_KEY &&
+                  key !== HERO_IMAGE_KEY &&
                   !isThemeKey(key) &&
                   !LOGO_KEYS.includes(key) &&
                   !IDENTITY_KEYS.includes(key),
               ),
             ].map((key) =>
-              key === "LOGO" ? (
+              key === "HERO" ? (
+                <HeroImageField
+                  key={key}
+                  className="sm:col-span-2"
+                  token={token}
+                  imageUrl={config[HERO_IMAGE_KEY] ?? ""}
+                  onChange={(url) => setConfig((c) => ({ ...c, [HERO_IMAGE_KEY]: url }))}
+                />
+              ) : key === "LOGO" ? (
                 <LogoField
                   key={key}
                   className="sm:col-span-2"
@@ -189,6 +200,17 @@ export default function AdminSettingsPage() {
                 />
               ),
             )}
+          </div>
+          {/* Thẻ này dài (có 2 khung ảnh), nên có thêm nút Lưu ở cuối để khỏi phải cuộn lên. */}
+          <div className="mt-5 flex justify-end">
+            <button
+              type="button"
+              onClick={saveConfig}
+              data-testid="branding-save-bottom"
+              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white"
+            >
+              Lưu thay đổi
+            </button>
           </div>
         </section>
 
