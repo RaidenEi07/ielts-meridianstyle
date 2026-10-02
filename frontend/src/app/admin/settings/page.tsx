@@ -19,6 +19,7 @@ import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useToast } from "@/store/toast";
 import { HeroImageField } from "./HeroImageField";
+import { HOMEPAGE_CONTENT_KEYS, HomepageContentSection } from "./HomepageContentSection";
 import { LogoField } from "./LogoField";
 import { THEME_CONFIG_KEYS, ThemeSection } from "./ThemeSection";
 
@@ -28,6 +29,8 @@ const LABELS: Record<string, string> = {
   SITE_LANGUAGE: "Ngôn ngữ",
   SITE_THEME_MODE: "Chế độ giao diện",
   SUPPORT_EMAIL: "Email hỗ trợ",
+  SUPPORT_PHONE: "Số điện thoại hỗ trợ",
+  SUPPORT_ADDRESS: "Địa chỉ trung tâm",
   CACHE_TTL: "Cache TTL (giây)",
   SSL_FORCE_HTTPS: "Bắt buộc HTTPS",
   REGISTRATION_OPEN: "Mở đăng ký",
@@ -37,9 +40,11 @@ const LABELS: Record<string, string> = {
 // trong lưới cấu hình chung vì giá trị là JSON, không phải text đơn giản.
 const HOMEPAGE_INFO_CARDS_KEY = "HOMEPAGE_INFO_CARDS";
 
-// 3 màu thương hiệu có phần riêng (ThemeSection, có xem thử và lưu riêng) nên không nằm trong lưới chung
-// và cũng không đi kèm khi bấm "Lưu thay đổi" của lưới chung.
-const isThemeKey = (key: string) => (THEME_CONFIG_KEYS as readonly string[]).includes(key);
+// Khóa của các phần có xem thử/nút lưu riêng (3 màu thương hiệu ở ThemeSection; con số nổi bật, nhãn giáo viên
+// và lời chứng thực ở HomepageContentSection) nên không nằm trong lưới chung và cũng không đi kèm khi bấm
+// "Lưu thay đổi" của lưới chung, kẻo ghi đè giá trị vừa lưu ở phần riêng bằng bản cũ.
+const SECTION_KEYS: readonly string[] = [...THEME_CONFIG_KEYS, ...HOMEPAGE_CONTENT_KEYS];
+const isSectionKey = (key: string) => SECTION_KEYS.includes(key);
 
 // Logo và ảnh đầu trang chủ có ô riêng (LogoField, HeroImageField: tải ảnh, xem thử) chen giữa "Tên hiển
 // thị/Khẩu hiệu" và các ô còn lại; các khóa của chúng đi cùng "Lưu thay đổi" của lưới chung.
@@ -88,13 +93,13 @@ export default function AdminSettingsPage() {
   }, [allowed, token]);
 
   async function saveConfig() {
-    const payload = Object.fromEntries(Object.entries(config).filter(([key]) => !isThemeKey(key)));
+    const payload = Object.fromEntries(Object.entries(config).filter(([key]) => !isSectionKey(key)));
     try {
       const updated = await configApi.update(token, payload);
       setConfig((current) => ({
         ...updated,
-        // Màu đang nằm ở ThemeSection (có thể đã lưu riêng): giữ nguyên bản trang đang biết.
-        ...Object.fromEntries(THEME_CONFIG_KEYS.filter((k) => k in current).map((k) => [k, current[k]])),
+        // Phần có nút lưu riêng (màu, nội dung trang chủ) có thể đã lưu: giữ nguyên bản trang đang biết.
+        ...Object.fromEntries(SECTION_KEYS.filter((k) => k in current).map((k) => [k, current[k]])),
       }));
       // Tên/logo/email đổi ngay trên trang này (đầu trang, chân trang...) không cần tải lại; tiêu đề tab
       // cũng đi theo nếu đang là tiêu đề mặc định của trang.
@@ -164,7 +169,7 @@ export default function AdminSettingsPage() {
                 (key) =>
                   key !== HOMEPAGE_INFO_CARDS_KEY &&
                   key !== HERO_IMAGE_KEY &&
-                  !isThemeKey(key) &&
+                  !isSectionKey(key) &&
                   !LOGO_KEYS.includes(key) &&
                   !IDENTITY_KEYS.includes(key),
               ),
@@ -221,6 +226,23 @@ export default function AdminSettingsPage() {
             token={token}
             saved={brandColorsFromConfig(config)}
             onSaved={(colors) => setConfig((c) => ({ ...c, ...colors }))}
+          />
+        )}
+
+        {/* Con số nổi bật, nhãn giáo viên, lời chứng thực: lưu riêng. Dựng lại (key) mỗi khi giá trị đã lưu đổi. */}
+        {Object.keys(config).length > 0 && (
+          <HomepageContentSection
+            key={HOMEPAGE_CONTENT_KEYS.map((k) => config[k] ?? "").join("|")}
+            token={token}
+            config={config}
+            onSaved={(updated) => {
+              setConfig((c) => ({
+                ...c,
+                ...Object.fromEntries(HOMEPAGE_CONTENT_KEYS.map((k) => [k, updated[k] ?? ""])),
+              }));
+              // Trang chủ/trang đăng nhập đổi ngay khi chuyển trang trong phiên này, không cần tải lại.
+              setSiteConfig(siteConfigFromPublic(updated));
+            }}
           />
         )}
 

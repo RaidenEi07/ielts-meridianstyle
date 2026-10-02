@@ -23,6 +23,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import tools.jackson.databind.ObjectMapper;
 
 @ExtendWith(MockitoExtension.class)
 class ConfigServiceTest {
@@ -38,7 +39,17 @@ class ConfigServiceTest {
     private ConfigService service() {
         MeridianProperties properties = new MeridianProperties();
         properties.getUploads().setPublicBaseUrl(UPLOADS);
-        return new ConfigService(repository, permissionService, properties);
+        return new ConfigService(repository, permissionService, properties, new ObjectMapper());
+    }
+
+    /** Lưu 1 khóa rồi trả về đúng giá trị đã ghi (sau khi chuẩn hóa). */
+    private String saveAndGet(String key, String value) {
+        when(repository.findById(any())).thenReturn(Optional.empty());
+        when(repository.findAll()).thenReturn(List.of());
+        service().update(uid, Map.of(key, value));
+        ArgumentCaptor<WebConfiguration> saved = ArgumentCaptor.forClass(WebConfiguration.class);
+        verify(repository).save(saved.capture());
+        return saved.getValue().getValue();
     }
 
     @Test
@@ -204,5 +215,144 @@ class ConfigServiceTest {
         Map<String, String> byKey = new HashMap<>();
         saved.getAllValues().forEach(c -> byKey.put(c.getKey(), c.getValue()));
         assertThat(byKey).containsEntry("SITE_NAME", "  Sunshine School  ").containsEntry("SUPPORT_EMAIL", "a@b.vn");
+    }
+
+    // ------------------------------------------------------------------------------------------------
+    // Nội dung trang chủ / liên hệ có thể sửa: con số nổi bật, nhãn, điện thoại, địa chỉ, lời chứng thực
+    // ------------------------------------------------------------------------------------------------
+
+    /** Khóa → số ký tự tối đa (khớp SHORT_TEXT_LIMITS trong ConfigService). */
+    private static final Map<String, Integer> SHORT_TEXT_LIMITS = Map.of(
+            "HOMEPAGE_HIGHLIGHT_VALUE", 12,
+            "HOMEPAGE_HIGHLIGHT_LABEL", 40,
+            "HOMEPAGE_TEACHERS_LABEL", 40,
+            "SUPPORT_PHONE", 40,
+            "SUPPORT_ADDRESS", 200);
+
+    @Test
+    void shortHomepageTextsAreTrimmedAndAcceptExactlyTheLimit() {
+        SHORT_TEXT_LIMITS.forEach((key, limit) -> {
+            org.mockito.Mockito.clearInvocations(repository);
+            assertThat(saveAndGet(key, "  " + "x".repeat(limit) + "  ")).as(key).isEqualTo("x".repeat(limit));
+        });
+    }
+
+    @Test
+    void shortHomepageTextsCanBeEmptiedToHideThem() {
+        for (String key : SHORT_TEXT_LIMITS.keySet()) {
+            org.mockito.Mockito.clearInvocations(repository);
+            assertThat(saveAndGet(key, "   ")).as(key).isEmpty();
+        }
+    }
+
+    @Test
+    void shortHomepageTextsOverTheLimitAreRejected() {
+        SHORT_TEXT_LIMITS.forEach((key, limit) ->
+                assertThatThrownBy(() -> service().update(uid, Map.of(key, "x".repeat(limit + 1))))
+                        .as(key)
+                        .isInstanceOf(ApiException.class)
+                        .hasMessageContaining(key));
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testimonialsAreNormalizedToCompactJsonKeepingOnlyKnownFields() {
+        String saved = saveAndGet("HOMEPAGE_TESTIMONIALS", """
+                [ {"name": "  Hoàng Anh ", "band": " 7.5", "text": "  Rất tốt  ", "extra": "bị bỏ"},
+                  {"text": "Không tên, không band"} ]
+                """);
+
+        assertThat(saved).isEqualTo(
+                "[{\"name\":\"Hoàng Anh\",\"band\":\"7.5\",\"text\":\"Rất tốt\"},"
+                        + "{\"name\":\"\",\"band\":\"\",\"text\":\"Không tên, không band\"}]");
+    }
+
+    @Test
+    void emptyTestimonialsValueMeansNoTestimonialsAtAll() {
+        for (String empty : List.of("", "   ", "[]", " [ ] ")) {
+            org.mockito.Mockito.clearInvocations(repository);
+            assertThat(saveAndGet("HOMEPAGE_TESTIMONIALS", empty)).as("'" + empty + "'").isEqualTo("[]");
+        }
+    }
+
+    @Test
+    void testimonialsAtTheLimitsAreAccepted() {
+        String item = "{\"name\":\"" + "n".repeat(80) + "\",\"band\":\"" + "b".repeat(10) + "\",\"text\":\""
+                + "t".repeat(600) + "\"}";
+        String twelve = "[" + String.join(",", java.util.Collections.nCopies(12, item)) + "]";
+
+        assertThat(saveAndGet("HOMEPAGE_TESTIMONIALS", twelve)).isEqualTo(twelve);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "not json at all",
+            "{\"name\":\"x\",\"text\":\"y\"}",
+            "\"just a string\"",
+            "42",
+            "[1]",
+            "[\"text\"]",
+            "[null]",
+            "[{\"name\":\"x\"}]",
+            "[{\"name\":\"x\",\"text\":\"\"}]",
+            "[{\"name\":\"x\",\"text\":\"   \"}]",
+            "[{\"name\":\"x\",\"text\":null}]",
+            "[{\"name\":\"x\",\"text\":5}]",
+            "[{\"name\":{\"a\":1},\"text\":\"y\"}]",
+            "[{\"name\":7,\"text\":\"y\"}]",
+            "[{\"band\":7.5,\"text\":\"y\"}]",
+            "[{\"text\":[\"y\"]}]"})
+    void malformedTestimonialsAreRejectedAndNothingIsSaved(String bad) {
+        assertThatThrownBy(() -> service().update(uid, Map.of("HOMEPAGE_TESTIMONIALS", bad)))
+                .isInstanceOf(ApiException.class)
+                .hasMessageContaining("HOMEPAGE_TESTIMONIALS");
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void testimonialsOverTheLimitsAreRejected() {
+        String tooMany = "[" + String.join(",", java.util.Collections.nCopies(13, "{\"text\":\"ok\"}")) + "]";
+        List<String> bad = List.of(
+                tooMany,
+                "[{\"name\":\"" + "n".repeat(81) + "\",\"text\":\"ok\"}]",
+                "[{\"band\":\"" + "b".repeat(11) + "\",\"text\":\"ok\"}]",
+                "[{\"text\":\"" + "t".repeat(601) + "\"}]");
+
+        for (String value : bad) {
+            assertThatThrownBy(() -> service().update(uid, Map.of("HOMEPAGE_TESTIMONIALS", value)))
+                    .isInstanceOf(ApiException.class)
+                    .hasMessageContaining("HOMEPAGE_TESTIMONIALS");
+        }
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void oneBadTestimonialPreventsEveryOtherKeyFromBeingSaved() {
+        Map<String, String> updates = new LinkedHashMap<>();
+        updates.put("HOMEPAGE_HIGHLIGHT_VALUE", "95%");
+        updates.put("HOMEPAGE_TESTIMONIALS", "[{\"name\":\"x\"}]");
+
+        assertThatThrownBy(() -> service().update(uid, updates)).isInstanceOf(ApiException.class);
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void homepageContentAndContactDetailsArePublic() {
+        List<WebConfiguration> all = new java.util.ArrayList<>();
+        for (String key : List.of("HOMEPAGE_HIGHLIGHT_VALUE", "HOMEPAGE_HIGHLIGHT_LABEL", "HOMEPAGE_TEACHERS_LABEL",
+                "HOMEPAGE_TESTIMONIALS", "SUPPORT_PHONE", "SUPPORT_ADDRESS")) {
+            WebConfiguration c = new WebConfiguration();
+            c.setKey(key);
+            c.setValue("v");
+            all.add(c);
+        }
+        WebConfiguration secret = new WebConfiguration();
+        secret.setKey("CACHE_TTL");
+        secret.setValue("300");
+        all.add(secret);
+        when(repository.findAll()).thenReturn(all);
+
+        assertThat(service().publicConfig()).containsOnlyKeys("HOMEPAGE_HIGHLIGHT_VALUE", "HOMEPAGE_HIGHLIGHT_LABEL",
+                "HOMEPAGE_TEACHERS_LABEL", "HOMEPAGE_TESTIMONIALS", "SUPPORT_PHONE", "SUPPORT_ADDRESS");
     }
 }

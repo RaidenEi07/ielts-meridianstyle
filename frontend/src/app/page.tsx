@@ -17,26 +17,14 @@ interface HomepageInfoCard {
   description: string;
 }
 
-const TESTIMONIALS = [
-  {
-    name: "Hoàng Anh",
-    band: "7.5",
-    text: "Mô phỏng phòng thi máy giống thi thật đến từng chi tiết. Mình vào phòng thi không hề bỡ ngỡ.",
-  },
-  {
-    name: "Thùy Dung",
-    band: "8.0",
-    text: "Giáo viên tận tâm, lộ trình rõ ràng. Từ 6.0 lên 8.0 chỉ sau một khóa học.",
-  },
-  {
-    name: "Minh Quân",
-    band: "7.0",
-    text: "Ngân hàng đề phong phú, chấm tự động nhanh. Biết ngay điểm yếu để cải thiện.",
-  },
-];
+// Số cột của dải số liệu ở màn rộng, theo số ô (3 khi ẩn con số nổi bật, 4 khi có). Viết sẵn cả chuỗi class để
+// Tailwind nhận ra lúc build.
+const STAT_COLUMNS: Record<number, string> = { 3: "sm:grid-cols-3", 4: "sm:grid-cols-4" };
 
 export default function HomePage() {
-  const { siteName, heroImageUrl } = useSiteConfig();
+  // Con số nổi bật, nhãn giáo viên và lời chứng thực do admin nhập ở Cấu hình hệ thống (rỗng = ẩn).
+  const { siteName, heroImageUrl, highlightValue, highlightLabel, teachersLabel, testimonials } =
+    useSiteConfig();
   // Ảnh đầu trang chủ do admin tải lên (Cấu hình hệ thống); chưa có hoặc không tải được thì hiện họa tiết sọc mẫu.
   const heroImage = useBrokenImage(heroImageUrl);
   const showHeroImage = heroImageUrl !== "" && !heroImage.broken;
@@ -44,6 +32,13 @@ export default function HomePage() {
   const [teachers, setTeachers] = useState<TeacherPublic[]>([]);
   const [stats, setStats] = useState<PublicStats | null>(null);
   const [infoCards, setInfoCards] = useState<HomepageInfoCard[]>([]);
+
+  const statCells: [string, string][] = [
+    ...(highlightValue ? ([[highlightValue, highlightLabel]] as [string, string][]) : []),
+    [stats ? `${stats.publishedCourses}+` : "—", "Khóa học"],
+    [stats ? `${stats.teachers}` : "—", teachersLabel],
+    [stats ? `${stats.students}+` : "—", "Học viên"],
+  ];
 
   useEffect(() => {
     catalogApi.courses().then((c) => setCourses(c.slice(0, 3))).catch(() => {});
@@ -121,32 +116,41 @@ export default function HomePage() {
               />
             )}
           </div>
-          <div className="absolute -bottom-4 -left-4 rounded-2xl bg-surface px-5 py-3 shadow-[0_16px_40px_-10px_rgba(38,33,27,.22)]">
-            <div className="text-3xl font-bold text-green" style={{ fontFamily: "var(--font-serif)" }}>
-              92%
+          {highlightValue && (
+            <div
+              data-testid="hero-highlight"
+              className="absolute -bottom-4 -left-4 rounded-2xl bg-surface px-5 py-3 shadow-[0_16px_40px_-10px_rgba(38,33,27,.22)]"
+            >
+              <div className="text-3xl font-bold text-green" style={{ fontFamily: "var(--font-serif)" }}>
+                {highlightValue}
+              </div>
+              {highlightLabel && <div className="text-xs text-muted">{highlightLabel}</div>}
             </div>
-            <div className="text-xs text-muted">Đạt mục tiêu</div>
-          </div>
+          )}
           <div className="absolute -right-3 -top-3 rounded-full bg-red px-4 py-2 text-sm font-bold text-white shadow-lg">
             CDT
           </div>
         </div>
       </section>
 
-      {/* Stats strip */}
+      {/* Stats strip: con số nổi bật (nếu admin nhập) + 3 số thật lấy từ hệ thống */}
       <section className="border-y border-border bg-soft">
-        <dl className="mx-auto grid max-w-6xl grid-cols-2 gap-px overflow-hidden bg-border sm:grid-cols-4">
-          {[
-            ["92%", "Đạt mục tiêu"],
-            [stats ? `${stats.publishedCourses}+` : "—", "Khóa học"],
-            [stats ? `${stats.teachers}` : "—", "Giáo viên IELTS 8.0+"],
-            [stats ? `${stats.students}+` : "—", "Học viên"],
-          ].map(([num, label]) => (
-            <div key={label} className="bg-soft px-6 py-8 text-center">
+        <dl
+          data-testid="stats-strip"
+          className={`mx-auto grid max-w-6xl grid-cols-2 gap-px overflow-hidden bg-border ${STAT_COLUMNS[statCells.length]}`}
+        >
+          {statCells.map(([num, label], i) => (
+            <div
+              key={i}
+              // Trên điện thoại (2 cột), ô lẻ cuối chiếm cả hàng để khỏi lộ ô trống màu viền.
+              className={`bg-soft px-6 py-8 text-center ${
+                statCells.length % 2 === 1 && i === statCells.length - 1 ? "col-span-2 sm:col-span-1" : ""
+              }`}
+            >
               <dt className="text-3xl font-semibold md:text-4xl" style={{ fontFamily: "var(--font-serif)" }}>
                 {num}
               </dt>
-              <dd className="mt-1 text-sm text-muted">{label}</dd>
+              {label && <dd className="mt-1 text-sm text-muted">{label}</dd>}
             </div>
           ))}
         </dl>
@@ -225,27 +229,41 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Testimonials + form tư vấn */}
-      <section className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-16 md:grid-cols-2">
-        <div>
-          <h2 className="mb-6 text-3xl font-bold">Học viên nói gì</h2>
-          <div className="space-y-4">
-            {TESTIMONIALS.map((t) => (
-              <div key={t.name} className="rounded-card border border-border bg-surface p-5">
-                <p className="text-muted">“{t.text}”</p>
-                <div className="mt-3 flex items-center gap-2">
-                  <span className="font-semibold">{t.name}</span>
-                  <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent">
-                    Band {t.band}
-                  </span>
+      {/* Lời chứng thực (admin nhập ở Cấu hình hệ thống) + form tư vấn. Chưa có lời nào thì ẩn cả mục
+          và form tư vấn đứng một mình ở giữa. */}
+      {testimonials.length > 0 ? (
+        <section
+          data-testid="testimonials-section"
+          className="mx-auto grid w-full max-w-6xl gap-10 px-6 py-16 md:grid-cols-2"
+        >
+          <div>
+            <h2 className="mb-6 text-3xl font-bold">Học viên nói gì</h2>
+            <div className="space-y-4">
+              {testimonials.map((t, i) => (
+                <div key={i} className="rounded-card border border-border bg-surface p-5">
+                  <p className="text-muted">“{t.text}”</p>
+                  {(t.name || t.band) && (
+                    <div className="mt-3 flex items-center gap-2">
+                      {t.name && <span className="font-semibold">{t.name}</span>}
+                      {t.band && (
+                        <span className="rounded-full bg-accent-soft px-2.5 py-0.5 text-xs font-bold text-accent">
+                          Band {t.band.replace(/^band\s+/i, "")}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
-        </div>
 
-        <ConsultationForm />
-      </section>
+          <ConsultationForm />
+        </section>
+      ) : (
+        <section className="mx-auto w-full max-w-2xl px-6 py-16">
+          <ConsultationForm />
+        </section>
+      )}
 
       <Footer />
     </div>

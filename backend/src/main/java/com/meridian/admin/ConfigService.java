@@ -1,6 +1,8 @@
 package com.meridian.admin;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
@@ -11,6 +13,8 @@ import com.meridian.config.MeridianProperties;
 import com.meridian.rbac.PermissionService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
 
 /** Cấu hình site (key-value). Đọc branding công khai; sửa cần system:manage. */
 @Service
@@ -20,7 +24,9 @@ public class ConfigService {
     private static final Set<String> PUBLIC_KEYS = Set.of(
             "SITE_NAME", "SITE_TAGLINE", "SITE_LANGUAGE", "SITE_THEME_MODE",
             "PRIMARY_COLOR", "ACCENT_COLOR", "BACKGROUND_COLOR", "SITE_LOGO_URL", "SITE_LOGO_HIDE_NAME",
-            "HOMEPAGE_HERO_IMAGE_URL", "SUPPORT_EMAIL", "REGISTRATION_OPEN", "HOMEPAGE_INFO_CARDS");
+            "HOMEPAGE_HERO_IMAGE_URL", "HOMEPAGE_HIGHLIGHT_VALUE", "HOMEPAGE_HIGHLIGHT_LABEL",
+            "HOMEPAGE_TEACHERS_LABEL", "HOMEPAGE_TESTIMONIALS", "SUPPORT_EMAIL", "SUPPORT_PHONE",
+            "SUPPORT_ADDRESS", "REGISTRATION_OPEN", "HOMEPAGE_INFO_CARDS");
 
     private static final Set<String> COLOR_KEYS = Set.of("PRIMARY_COLOR", "ACCENT_COLOR", "BACKGROUND_COLOR");
     private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-Fa-f]{6}$");
@@ -31,15 +37,35 @@ public class ConfigService {
     /** Tên file MediaService sinh ra: UUID + đuôi, không có dấu "/" hay ký tự lạ. */
     private static final Pattern UPLOADED_FILE_NAME = Pattern.compile("^[A-Za-z0-9._-]+$");
 
+    /**
+     * Ô văn bản ngắn của nội dung trang chủ / liên hệ → số ký tự tối đa. Rỗng được phép (ẩn mục đó).
+     * Frontend (lib/siteConfig.ts, HOMEPAGE_LIMITS) dùng cùng các con số cho maxLength của ô nhập.
+     */
+    private static final Map<String, Integer> SHORT_TEXT_LIMITS = Map.of(
+            "HOMEPAGE_HIGHLIGHT_VALUE", 12,
+            "HOMEPAGE_HIGHLIGHT_LABEL", 40,
+            "HOMEPAGE_TEACHERS_LABEL", 40,
+            "SUPPORT_PHONE", 40,
+            "SUPPORT_ADDRESS", 200);
+
+    private static final String TESTIMONIALS_KEY = "HOMEPAGE_TESTIMONIALS";
+    // Giới hạn lời chứng thực (khớp lib/siteConfig.ts).
+    private static final int MAX_TESTIMONIALS = 12;
+    private static final int MAX_TESTIMONIAL_NAME = 80;
+    private static final int MAX_TESTIMONIAL_BAND = 10;
+    private static final int MAX_TESTIMONIAL_TEXT = 600;
+
     private final WebConfigurationRepository repository;
     private final PermissionService permissionService;
     private final MeridianProperties properties;
+    private final ObjectMapper json;
 
     public ConfigService(WebConfigurationRepository repository,
-            PermissionService permissionService, MeridianProperties properties) {
+            PermissionService permissionService, MeridianProperties properties, ObjectMapper json) {
         this.repository = repository;
         this.permissionService = permissionService;
         this.properties = properties;
+        this.json = json;
     }
 
     @Transactional(readOnly = true)
@@ -93,7 +119,76 @@ public class ConfigService {
         if (LOGO_HIDE_NAME_KEY.equals(key)) {
             return normalizeFlag(key, value);
         }
+        if (SHORT_TEXT_LIMITS.containsKey(key)) {
+            return normalizeShortText(key, value, SHORT_TEXT_LIMITS.get(key));
+        }
+        if (TESTIMONIALS_KEY.equals(key)) {
+            return normalizeTestimonials(key, value);
+        }
         return value;
+    }
+
+    private static String normalizeShortText(String key, String value, int maxLength) {
+        String trimmed = value == null ? "" : value.trim();
+        if (trimmed.length() > maxLength) {
+            throw ApiException.badRequest("Nội dung quá dài cho " + key + " — tối đa " + maxLength + " ký tự");
+        }
+        return trimmed;
+    }
+
+    /**
+     * Lời chứng thực: mảng JSON các {name, band, text}. Chuẩn hóa (cắt khoảng trắng, bỏ trường lạ) rồi ghi lại
+     * dạng gọn; rỗng hoặc [] nghĩa là không có lời nào (trang chủ ẩn cả mục). Dữ liệu này hiện thẳng trên
+     * trang chủ nên chặn từ gốc: sai cấu trúc hay quá dài thì từ chối chứ không lưu dở.
+     */
+    private String normalizeTestimonials(String key, String value) {
+        String raw = value == null ? "" : value.trim();
+        if (raw.isEmpty()) {
+            return "[]";
+        }
+        JsonNode root;
+        try {
+            root = json.readTree(raw);
+        } catch (Exception e) {
+            throw invalidTestimonials(key, "không phải JSON hợp lệ");
+        }
+        if (root == null || !root.isArray()) {
+            throw invalidTestimonials(key, "cần là một danh sách");
+        }
+        if (root.size() > MAX_TESTIMONIALS) {
+            throw invalidTestimonials(key, "tối đa " + MAX_TESTIMONIALS + " lời chứng thực");
+        }
+        List<Map<String, String>> out = new ArrayList<>();
+        for (JsonNode item : root) {
+            if (!item.isObject()) {
+                throw invalidTestimonials(key, "mỗi lời chứng thực cần là một đối tượng {name, band, text}");
+            }
+            Map<String, String> entry = new LinkedHashMap<>();
+            entry.put("name", testimonialField(key, item, "name", MAX_TESTIMONIAL_NAME, false));
+            entry.put("band", testimonialField(key, item, "band", MAX_TESTIMONIAL_BAND, false));
+            entry.put("text", testimonialField(key, item, "text", MAX_TESTIMONIAL_TEXT, true));
+            out.add(entry);
+        }
+        return json.writeValueAsString(out);
+    }
+
+    private static String testimonialField(String key, JsonNode item, String field, int maxLength, boolean required) {
+        JsonNode node = item.get(field);
+        if (node != null && !node.isNull() && !node.isString()) {
+            throw invalidTestimonials(key, "trường " + field + " phải là chữ");
+        }
+        String text = node == null || node.isNull() ? "" : node.asString("").trim();
+        if (required && text.isEmpty()) {
+            throw invalidTestimonials(key, "trường " + field + " không được để trống");
+        }
+        if (text.length() > maxLength) {
+            throw invalidTestimonials(key, "trường " + field + " tối đa " + maxLength + " ký tự");
+        }
+        return text;
+    }
+
+    private static ApiException invalidTestimonials(String key, String reason) {
+        return ApiException.badRequest("Lời chứng thực không hợp lệ cho " + key + " — " + reason);
     }
 
     private static String normalizeColor(String key, String value) {

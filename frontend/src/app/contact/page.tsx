@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 };
 
 export default async function ContactPage() {
-  const { siteName, supportEmail } = await getSiteConfig();
+  const { siteName, supportEmail, supportPhone, supportAddress } = await getSiteConfig();
 
   return (
     <StaticPageShell title="Liên hệ">
@@ -24,12 +24,19 @@ export default async function ContactPage() {
         </>
       )}
 
-      <h2>Điện thoại</h2>
-      <p className="italic">[Điền số điện thoại liên hệ trước khi công khai]</p>
+      {supportPhone && (
+        <>
+          <h2>Điện thoại</h2>
+          <p>{supportPhone}</p>
+        </>
+      )}
 
-      <h2>Địa chỉ</h2>
-      <p>Hà Nội · TP.HCM</p>
-      <p className="italic">[Điền địa chỉ cụ thể từng cơ sở trước khi công khai]</p>
+      {supportAddress && (
+        <>
+          <h2>Địa chỉ</h2>
+          <p>{supportAddress}</p>
+        </>
+      )}
 
       <p className="!mt-10 text-sm">
         Bạn cũng có thể để lại thông tin ở form tư vấn tại{" "}

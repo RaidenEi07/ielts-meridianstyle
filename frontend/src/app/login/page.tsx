@@ -13,7 +13,7 @@ type Tab = "login" | "register";
 
 export default function AuthPage() {
   const router = useRouter();
-  const { siteName } = useSiteConfig();
+  const { siteName, highlightValue, highlightLabel } = useSiteConfig();
   const login = useAuthStore((s) => s.login);
   const register = useAuthStore((s) => s.register);
 
@@ -89,15 +89,17 @@ export default function AuthPage() {
             Học thông minh, thi tự tin theo chuẩn IELTS Computer-Delivered.
           </h2>
           <div className="flex gap-10">
-            <div>
-              <div
-                className="text-4xl font-semibold"
-                style={{ fontFamily: "var(--font-serif)" }}
-              >
-                92%
+            {highlightValue && (
+              <div data-testid="login-highlight">
+                <div
+                  className="text-4xl font-semibold"
+                  style={{ fontFamily: "var(--font-serif)" }}
+                >
+                  {highlightValue}
+                </div>
+                {highlightLabel && <div className="text-sm text-white/70">{highlightLabel}</div>}
               </div>
-              <div className="text-sm text-white/70">Học viên đạt mục tiêu</div>
-            </div>
+            )}
             <div>
               <div
                 className="text-4xl font-semibold"

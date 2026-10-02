@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useSiteConfig } from "@/components/SiteConfigProvider";
 
 export function Footer() {
-  const { siteName, supportEmail } = useSiteConfig();
+  const { siteName, supportEmail, supportPhone, supportAddress } = useSiteConfig();
+  const hasContact = supportEmail !== "" || supportPhone !== "" || supportAddress !== "";
 
   return (
     <footer style={{ background: "var(--brand-footer-bg, #14110D)", color: "var(--brand-footer-text, #cbbfa9)" }}>
@@ -35,7 +36,11 @@ export function Footer() {
           <h4 className="mb-3 font-semibold text-white">Liên hệ</h4>
           <ul className="space-y-1.5 text-sm">
             {supportEmail && <li>{supportEmail}</li>}
-            <li>Hà Nội · TP.HCM</li>
+            {supportPhone && <li>{supportPhone}</li>}
+            {supportAddress && <li>{supportAddress}</li>}
+            {!hasContact && (
+              <li><Link href="/contact" className="hover:text-white">Trang Liên hệ</Link></li>
+            )}
           </ul>
         </div>
       </div>
