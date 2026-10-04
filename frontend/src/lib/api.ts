@@ -94,13 +94,25 @@ export function configureTokenRefresher(fn: () => Promise<string | null>) {
   tokenRefresher = fn;
 }
 
+// Token đang hiệu lực, cũng do auth store đăng ký. Access token chỉ sống vài phút và được làm mới ngầm mà KHÔNG
+// đổi `accessToken` mà các component đang theo dõi (xem store/auth.ts), vì mọi useEffect có `token` trong deps sẽ
+// chạy lại và đặt lại state mỗi lần token đổi (mất bản nháp đang soạn, đáp án đang làm bài...). Hệ quả: token mà
+// component truyền vào đây có thể đã cũ, nên luôn gửi token mới nhất thay vì token component đang cầm.
+let liveTokenGetter: (() => string | null) | null = null;
+export function configureLiveToken(fn: () => string | null) {
+  liveTokenGetter = fn;
+}
+function bearerToken(token: string): string {
+  return liveTokenGetter?.() ?? token;
+}
+
 export async function apiFetch<T>(
   path: string,
   { method = "GET", body, token, _retried = false }: RequestOptions = {},
 ): Promise<T> {
   const headers: Record<string, string> = {};
   if (body !== undefined) headers["Content-Type"] = "application/json";
-  if (token) headers["Authorization"] = `Bearer ${token}`;
+  if (token) headers["Authorization"] = `Bearer ${bearerToken(token)}`;
 
   let res: Response;
   try {
@@ -731,7 +743,7 @@ async function exportCategoryZip(
   try {
     res = await fetch(
       `${API_BASE_URL}/api/admin/question-bank/categories/${categoryId}/export`,
-      { headers: { Authorization: `Bearer ${token}` } },
+      { headers: { Authorization: `Bearer ${bearerToken(token)}` } },
     );
   } catch {
     throw new ApiError(0, "Không thể kết nối tới máy chủ. Backend đã chạy chưa?");
@@ -764,7 +776,7 @@ async function importBundleZip(
   try {
     res = await fetch(`${API_BASE_URL}/api/admin/question-bank/import`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${bearerToken(token)}` },
       body: form,
     });
   } catch {
@@ -1148,7 +1160,7 @@ async function uploadMedia(
   try {
     res = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${bearerToken(token)}` },
       body: form,
     });
   } catch {

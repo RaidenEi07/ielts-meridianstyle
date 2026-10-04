@@ -40,6 +40,9 @@ import type {
 } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 
+/** Thử lại lưu đáp án khi lỗi mạng/máy chủ tạm thời: chờ lần lượt từng khoảng này (ms) rồi bỏ cuộc cho tới lần sửa kế tiếp. */
+const SAVE_RETRY_DELAYS_MS = [1000, 3000, 8000, 15000];
+
 function fmt(sec: number): string {
   const m = Math.floor(sec / 60);
   const s = sec % 60;
@@ -410,6 +413,8 @@ function QuizPlayerPageInner() {
   const router = useRouter();
   const returnTo = useSearchParams().get("returnTo");
   const { accessToken, hydrated } = useAuthStore();
+  // Chỉ cần biết còn đăng nhập hay không: giá trị token KHÔNG được làm trigger tải lại bài làm (xem effect tải bên dưới).
+  const hasToken = Boolean(accessToken);
 
   const [attempt, setAttempt] = useState<AttemptPlayer | null>(null);
   const [result, setResult] = useState<AttemptResult | null>(null);
@@ -465,6 +470,55 @@ function QuizPlayerPageInner() {
   }
   const [pendingMarkFocus, setPendingMarkFocus] = useState<string | null>(null);
 
+  // Lưu đáp án lên máy chủ: mỗi câu hỏi chỉ có TỐI ĐA 1 yêu cầu đang bay. Gõ liên tiếp thì chỉ cập nhật "giá trị mới
+  // nhất" và gửi ngay khi yêu cầu trước xong, nên máy chủ luôn nhận đúng thứ tự (không bao giờ giữ lại bản cũ do các
+  // yêu cầu song song về không đúng thứ tự). Lỗi mạng/máy chủ tạm thời thì thử lại vài lần thay vì lặng lẽ bỏ mất đáp
+  // án — giao diện đã hiện đáp án đó rồi nên học viên không hề biết nó chưa được lưu.
+  const saveSlotsRef = useRef(new Map<number, { latest: unknown; dirty: boolean; running: boolean }>());
+  const tokenRef = useRef(token);
+  useEffect(() => {
+    tokenRef.current = token;
+  }, [token]);
+
+  const pumpSave = useCallback(
+    async (quizQuestionId: number) => {
+      const slot = saveSlotsRef.current.get(quizQuestionId);
+      if (!slot || slot.running) return;
+      slot.running = true;
+      try {
+        let failures = 0;
+        while (slot.dirty) {
+          slot.dirty = false;
+          try {
+            await quizApi.saveAnswer(attemptId, quizQuestionId, slot.latest, tokenRef.current);
+            failures = 0;
+          } catch (err) {
+            // 4xx (trừ 401 chưa làm mới được, 408, 429) = máy chủ từ chối thật (bài đã nộp, hết giờ...): thử lại vô ích.
+            const permanent =
+              err instanceof ApiError &&
+              err.status >= 400 &&
+              err.status < 500 &&
+              ![401, 408, 429].includes(err.status);
+            if (permanent || ++failures > SAVE_RETRY_DELAYS_MS.length) break;
+            slot.dirty = true; // gửi lại (giá trị mới nhất, nếu trong lúc chờ người dùng đã sửa tiếp)
+            await new Promise((resolve) => setTimeout(resolve, SAVE_RETRY_DELAYS_MS[failures - 1]));
+          }
+        }
+      } finally {
+        slot.running = false;
+      }
+    },
+    [attemptId],
+  );
+
+  /** Chờ các yêu cầu lưu đáp án đang bay xong (tối đa `timeoutMs`) — đáp án vừa gõ phải tới máy chủ TRƯỚC khi chấm. */
+  const waitForPendingSaves = useCallback(async (timeoutMs: number) => {
+    const until = Date.now() + timeoutMs;
+    while (Date.now() < until && [...saveSlotsRef.current.values()].some((s) => s.running)) {
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }, []);
+
   // Nộp bài xong VẪN giữ nguyên `attempt` (không set null) — toàn bộ hạ tầng
   // điều hướng (steps/orderedSlots/goToQuestion/notes...) đều dựng từ
   // `attempt`, giữ lại để màn xem lại tái dùng nguyên giao diện làm bài thay
@@ -473,6 +527,7 @@ function QuizPlayerPageInner() {
     if (submittingRef.current) return;
     submittingRef.current = true;
     try {
+      await waitForPendingSaves(4000);
       const r = await quizApi.submit(attemptId, token);
       setResult(r);
       toast.success("Đã nộp bài");
@@ -489,11 +544,14 @@ function QuizPlayerPageInner() {
       toast.error(err instanceof ApiError ? err.message : "Nộp bài thất bại, vui lòng thử lại");
       submittingRef.current = false;
     }
-  }, [attemptId, token, toast]);
+  }, [attemptId, token, toast, waitForPendingSaves]);
 
+  // Tải bài làm ĐÚNG MỘT LẦN cho mỗi lượt làm (không chạy lại khi access token được làm mới, kể cả nếu giá trị
+  // token đổi vì lý do nào đó): kết quả tải sẽ GHI ĐÈ `answers` bằng bản đã lưu ở máy chủ, mà bản đó thường chưa
+  // có đáp án vừa gõ (yêu cầu lưu còn đang bay) nên đáp án bị "bật lại" trên màn hình dù thực ra đã lưu.
   useEffect(() => {
     if (!hydrated) return;
-    if (!accessToken) {
+    if (!hasToken) {
       router.replace("/login");
       return;
     }
@@ -516,7 +574,7 @@ function QuizPlayerPageInner() {
       .catch(() => {})
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hydrated, accessToken, attemptId]);
+  }, [hydrated, hasToken, attemptId]);
 
   // Timer — dừng hẳn khi đã có kết quả (xem lại), không tính giờ/tự nộp lại nữa.
   useEffect(() => {
@@ -546,7 +604,8 @@ function QuizPlayerPageInner() {
         // cầu: chỉ cần theo dõi, không ép nộp).
         const res = await quizApi.logEvent(attemptId, "TAB_SWITCH", "rời khỏi bài thi", token);
         setViolations(res.violations);
-        toast.error(`⚠ Cảnh báo chuyển tab (${res.violations}/${attempt.maxViolations})`);
+        // Cùng key: cảnh báo mới thay cảnh báo cũ, không chồng nhiều cái lên nhau.
+        toast.error(`⚠ Cảnh báo chuyển tab (${res.violations}/${attempt.maxViolations})`, "quiz-tab-switch");
       } catch {
         /* ignore */
       }
@@ -567,8 +626,13 @@ function QuizPlayerPageInner() {
   const setAnswer = useCallback((q: PlayerQuestion, response: any) => {
     if (result) return;
     setAnswers((prev) => ({ ...prev, [q.quizQuestionId]: response }));
-    quizApi.saveAnswer(attemptId, q.quizQuestionId, response, token).catch(() => {});
-  }, [attemptId, token, result]);
+    const slots = saveSlotsRef.current;
+    const slot = slots.get(q.quizQuestionId) ?? { latest: response, dirty: false, running: false };
+    slot.latest = response;
+    slot.dirty = true;
+    slots.set(q.quizQuestionId, slot);
+    void pumpSave(q.quizQuestionId);
+  }, [result, pumpSave]);
 
   const toggleFlag = useCallback((id: number) => {
     setFlagged((prev) => {
