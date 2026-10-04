@@ -19,7 +19,7 @@ import { RichTextEditor } from "@/components/RichTextEditor";
 import { SearchableSelect } from "@/components/SearchableSelect";
 import { SortableRow } from "@/components/SortableRow";
 import { ApiError, quizAdminApi, questionBankApi } from "@/lib/api";
-import { categoryOptionLabel } from "@/lib/categoryLabel";
+import { categoryOptionLabel, categorySubtreeIds } from "@/lib/categoryLabel";
 import type {
   PassageSummary,
   QuestionCategoryNode,
@@ -728,6 +728,9 @@ function QuestionsPanel({
   const [passages, setPassages] = useState<PassageSummary[]>([]);
   const [tags, setTags] = useState<QuestionTag[]>([]);
   const [categoryFilter, setCategoryFilter] = useState<number | "">("");
+  // Ô tìm theo tên trong tab "Chọn từ ngân hàng". Chỉ lọc cái đang HIỂN THỊ — các câu đã tick (`selected`) giữ nguyên
+  // dù đổi từ khóa/danh mục, nên tick ở kết quả tìm này rồi đổi từ khóa tick tiếp vẫn cộng dồn.
+  const [bankSearch, setBankSearch] = useState("");
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [mark, setMark] = useState("1");
   const [pageId, setPageId] = useState<number | "">("");
@@ -774,6 +777,16 @@ function QuestionsPanel({
 
   const attachedIds = new Set(detail.questions.map((q) => q.questionId));
   const pagesById = new Map(detail.pages.map((p) => [p.id, p]));
+  // Danh sách câu hiển thị trong tab ngân hàng: bỏ câu đã gắn vào quiz, lọc theo danh mục (gồm cả danh mục con — câu
+  // hỏi thường chỉ gắn ở danh mục lá) và theo từ khóa (tên, danh mục, dạng câu; không phân biệt hoa thường).
+  const categoryScope = categoryFilter === "" ? null : categorySubtreeIds(categoryFilter, categories);
+  const bankQuery = bankSearch.trim().toLowerCase();
+  const visibleBank = (bank ?? []).filter(
+    (q) =>
+      !attachedIds.has(q.id) &&
+      (categoryScope === null || categoryScope.has(q.categoryId)) &&
+      (bankQuery === "" || `${q.name} ${q.categoryName} ${q.type}`.toLowerCase().includes(bankQuery)),
+  );
   // Mọi câu đã tick đều vào Part đang chọn ở ô "Gán vào trang" LÚC BẤM "Thêm" (không nhớ Part theo từng lần tick) — nói rõ
   // ngay cạnh nút để khỏi hiểu nhầm là câu tick lúc đang ở Part 1 sẽ vào Part 1 dù sau đó đã đổi sang Part 2.
   const targetPage = pageId ? pagesById.get(Number(pageId)) : undefined;
@@ -810,6 +823,7 @@ function QuestionsPanel({
     setPicking(true);
     setPickerTab("bank");
     setCreateOpened(false);
+    setBankSearch("");
     if (!bank) {
       questionBankApi.questions(token).then(setBank).catch(() => setBank([]));
     }
@@ -1417,18 +1431,28 @@ function QuestionsPanel({
               Đóng
             </button>
             {pickerTab === "bank" && (
-              <div className="w-56">
-                <SearchableSelect
-                  value={categoryFilter}
-                  onChange={setCategoryFilter}
-                  allowClear
-                  clearLabel="— Tất cả danh mục —"
-                  placeholder="Lọc theo danh mục…"
-                  options={categories.map((c) => ({
-                    value: c.id,
-                    label: categoryOptionLabel(c, categories),
-                  }))}
+              <div className="flex flex-wrap items-center gap-2">
+                <input
+                  data-testid="quiz-picker-search"
+                  type="search"
+                  value={bankSearch}
+                  onChange={(e) => setBankSearch(e.target.value)}
+                  placeholder="Tìm theo tên câu hỏi…"
+                  className="input w-56"
                 />
+                <div className="w-56">
+                  <SearchableSelect
+                    value={categoryFilter}
+                    onChange={setCategoryFilter}
+                    allowClear
+                    clearLabel="— Tất cả danh mục —"
+                    placeholder="Lọc theo danh mục…"
+                    options={categories.map((c) => ({
+                      value: c.id,
+                      label: categoryOptionLabel(c, categories),
+                    }))}
+                  />
+                </div>
               </div>
             )}
           </div>
@@ -1469,11 +1493,14 @@ function QuestionsPanel({
               {bank === null ? (
                 <p className="text-sm text-muted">Đang tải…</p>
               ) : (
+                <>
+                <p data-testid="quiz-picker-result-count" className="mb-1 text-xs text-muted">
+                  {visibleBank.length} câu hỏi
+                  {categoryFilter !== "" || bankQuery !== "" ? " khớp bộ lọc" : " chưa gắn vào quiz"}
+                  {selected.size > 0 ? ` · đã tick ${selected.size} (giữ nguyên khi đổi bộ lọc)` : ""}
+                </p>
                 <ul className="max-h-72 space-y-1 overflow-y-auto">
-                  {bank
-                    .filter((q) => !attachedIds.has(q.id))
-                    .filter((q) => categoryFilter === "" || q.categoryId === categoryFilter)
-                    .map((q) => (
+                  {visibleBank.map((q) => (
                       <li key={q.id}>
                         <label className="flex cursor-pointer items-center gap-2 rounded-lg px-2 py-1.5 text-sm hover:bg-soft">
                           <input
@@ -1510,17 +1537,16 @@ function QuestionsPanel({
                           </button>
                         </label>
                       </li>
-                    ))}
-                  {bank
-                    .filter((q) => !attachedIds.has(q.id))
-                    .filter((q) => categoryFilter === "" || q.categoryId === categoryFilter).length === 0 && (
+                  ))}
+                  {visibleBank.length === 0 && (
                     <li className="px-2 py-4 text-center text-sm text-muted">
-                      {categoryFilter === ""
+                      {categoryFilter === "" && bankQuery === ""
                         ? "Không còn câu hỏi nào để thêm (đã dùng hết ngân hàng)."
-                        : "Không có câu hỏi nào trong danh mục này."}
+                        : "Không có câu hỏi nào khớp bộ lọc."}
                     </li>
                   )}
                 </ul>
+                </>
               )}
               {isAcademic && selected.size > 0 && (
                 <p data-testid="quiz-picker-target-hint" className="mt-3 text-xs text-muted">
