@@ -108,10 +108,17 @@ export default function AdminUsersPage() {
     });
   }
 
+  // So khớp theo từng id chứ không so số lượng: sau khi tìm kiếm, những học sinh đã tick ở lần trước có thể đang bị ẩn,
+  // nên "đã chọn N = đang hiện N" không có nghĩa mọi dòng đang hiện đều đã được chọn.
+  const allStudentsSelected = students.length > 0 && students.every((s) => selected.has(s.id));
+
   function toggleSelectAll() {
-    setSelected((prev) =>
-      prev.size === students.length ? new Set() : new Set(students.map((s) => s.id)),
-    );
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allStudentsSelected) students.forEach((s) => next.delete(s.id));
+      else students.forEach((s) => next.add(s.id));
+      return next;
+    });
   }
 
   async function assignSelected() {
@@ -309,7 +316,7 @@ export default function AdminUsersPage() {
                   <th className="px-4 py-2.5">
                     <input
                       type="checkbox"
-                      checked={students.length > 0 && selected.size === students.length}
+                      checked={allStudentsSelected}
                       onChange={toggleSelectAll}
                     />
                   </th>

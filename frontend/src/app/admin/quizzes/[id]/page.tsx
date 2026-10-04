@@ -720,6 +720,8 @@ function QuestionsPanel({
 }) {
   const [picking, setPicking] = useState(false);
   const [pickerTab, setPickerTab] = useState<"bank" | "create">("bank");
+  // Tab "Tạo câu hỏi mới" đã được mở trong lần mở cửa sổ này chưa (xem chú thích ở chỗ dựng QuestionForm).
+  const [createOpened, setCreateOpened] = useState(false);
   const [bank, setBank] = useState<QuestionSummary[] | null>(null);
   const [categories, setCategories] = useState<QuestionCategoryNode[]>([]);
   const [createCategories, setCreateCategories] = useState<QuestionCategoryNode[]>([]);
@@ -772,6 +774,12 @@ function QuestionsPanel({
 
   const attachedIds = new Set(detail.questions.map((q) => q.questionId));
   const pagesById = new Map(detail.pages.map((p) => [p.id, p]));
+  // Mọi câu đã tick đều vào Part đang chọn ở ô "Gán vào trang" LÚC BẤM "Thêm" (không nhớ Part theo từng lần tick) — nói rõ
+  // ngay cạnh nút để khỏi hiểu nhầm là câu tick lúc đang ở Part 1 sẽ vào Part 1 dù sau đó đã đổi sang Part 2.
+  const targetPage = pageId ? pagesById.get(Number(pageId)) : undefined;
+  const targetPageLabel = targetPage
+    ? `Part ${targetPage.pageNumber}${targetPage.partLabel ? ` — ${targetPage.partLabel}` : ""}`
+    : "quiz (không gán Part)";
 
   // Gợi ý sẵn danh mục/passage khi soạn câu hỏi MỚI ngay trong quiz này — lấy
   // danh mục xuất hiện nhiều nhất trong số câu đã gắn (đa số quiz academic chỉ
@@ -801,6 +809,7 @@ function QuestionsPanel({
   function openPicker() {
     setPicking(true);
     setPickerTab("bank");
+    setCreateOpened(false);
     if (!bank) {
       questionBankApi.questions(token).then(setBank).catch(() => setBank([]));
     }
@@ -827,6 +836,7 @@ function QuestionsPanel({
 
   function openCreateTab() {
     setPickerTab("create");
+    setCreateOpened(true);
     ensureFormData();
   }
 
@@ -1378,6 +1388,7 @@ function QuestionsPanel({
           onClick={() => setPicking(false)}
         >
         <div
+          data-testid="quiz-question-picker"
           className="max-h-[85vh] w-full max-w-5xl overflow-y-auto rounded-lg border border-border bg-surface p-4 shadow-lg"
           onClick={(e) => e.stopPropagation()}
         >
@@ -1453,7 +1464,7 @@ function QuestionsPanel({
           </div>
           {error && <p className="mb-2 text-xs text-red">{error}</p>}
 
-          {pickerTab === "bank" ? (
+          {pickerTab === "bank" && (
             <>
               {bank === null ? (
                 <p className="text-sm text-muted">Đang tải…</p>
@@ -1511,6 +1522,13 @@ function QuestionsPanel({
                   )}
                 </ul>
               )}
+              {isAcademic && selected.size > 0 && (
+                <p data-testid="quiz-picker-target-hint" className="mt-3 text-xs text-muted">
+                  {selected.size} câu đã tick sẽ được thêm vào{" "}
+                  <span className="font-semibold text-text">{targetPageLabel}</span>
+                  {" "}— theo ô &ldquo;Gán vào trang&rdquo; ở trên tại lúc bấm Thêm.
+                </p>
+              )}
               <div className="mt-3 flex gap-2">
                 <button
                   type="button"
@@ -1529,13 +1547,16 @@ function QuestionsPanel({
                 </button>
               </div>
             </>
-          ) : (
-            <div className="rounded-lg bg-bg p-4">
+          )}
+          {/* Form tạo câu hỏi được dựng 1 lần rồi chỉ ẩn/hiện (không gỡ khỏi DOM khi sang tab "Chọn từ ngân hàng"), và
+              KHÔNG gắn key theo "Gán vào trang": đổi Part hay chuyển qua lại giữa 2 tab đều không được làm mất câu hỏi
+              đang soạn dở (nội dung, đáp án đã tick...). Passage gợi ý tự theo Part ngay bên trong QuestionForm. */}
+          {createOpened && (
+            <div data-testid="quiz-picker-create-panel" className={pickerTab === "create" ? "rounded-lg bg-bg p-4" : "hidden"}>
               <p className="mb-3 text-xs text-muted">
                 Tạo xong sẽ tự động gán câu hỏi này vào quiz theo Part/điểm đã chọn ở trên.
               </p>
               <QuestionForm
-                key={pageId}
                 mode="create"
                 categories={createCategories}
                 passages={passages}

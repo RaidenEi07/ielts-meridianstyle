@@ -76,10 +76,16 @@ export default function KidsQuestionBankPage() {
     });
   }
 
+  // So khớp theo từng id chứ không so số lượng (xem chú thích cùng chỗ ở admin/users).
+  const allSelected = questions.length > 0 && questions.every((q) => selected.has(q.id));
+
   function toggleSelectAll() {
-    setSelected((prev) =>
-      prev.size === questions.length ? new Set() : new Set(questions.map((q) => q.id)),
-    );
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allSelected) questions.forEach((q) => next.delete(q.id));
+      else questions.forEach((q) => next.add(q.id));
+      return next;
+    });
   }
 
   async function bulkDelete() {
@@ -278,7 +284,7 @@ export default function KidsQuestionBankPage() {
                   <th className="px-4 py-2.5">
                     <input
                       type="checkbox"
-                      checked={questions.length > 0 && selected.size === questions.length}
+                      checked={allSelected}
                       onChange={toggleSelectAll}
                     />
                   </th>

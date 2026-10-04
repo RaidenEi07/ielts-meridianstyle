@@ -121,6 +121,19 @@ export function QuestionForm({
   const [answerParagraphIndex, setAnswerParagraphIndex] = useState<number | "">(
     initial?.answerParagraphIndex ?? "",
   );
+  // Trang quiz cho đổi "Gán vào trang" thì passage gợi ý (`initialPassageId`) đổi theo. Cập nhật ô Passage tại chỗ
+  // (cùng mẫu "adjusting state on prop change" như `categories` ở trên) thay vì bắt form dựng lại bằng `key` ở bên
+  // ngoài — dựng lại là mất sạch phần đang soạn (nội dung, đáp án đã tick...) chỉ vì đổi Part. Giáo viên đã tự chọn
+  // passage thì giữ nguyên lựa chọn của họ.
+  const [passageTouched, setPassageTouched] = useState(false);
+  const [suggestedPassageSeen, setSuggestedPassageSeen] = useState(initialPassageId);
+  if (mode === "create" && initialPassageId !== suggestedPassageSeen) {
+    setSuggestedPassageSeen(initialPassageId);
+    if (!passageTouched) {
+      setPassageId(initialPassageId ?? "");
+      setAnswerParagraphIndex("");
+    }
+  }
   const [explanation, setExplanation] = useState(initial?.explanation ?? "");
   const [defaultMark, setDefaultMark] = useState(String(initial?.defaultMark ?? "1"));
   const [tagsSelected, setTagsSelected] = useState<string[]>(initial?.tags ?? []);
@@ -383,6 +396,7 @@ export function QuestionForm({
                 onChange={(v) => {
                   setPassageId(v);
                   setAnswerParagraphIndex("");
+                  setPassageTouched(true);
                 }}
                 allowClear
                 clearLabel="— Không gắn passage —"

@@ -842,10 +842,12 @@ function SectionsPanel({
     });
   }
 
+  // So khớp theo từng id chứ không so số lượng: id của section đã bị xóa còn sót trong `selected` làm 2 con số lệch nhau.
+  const allSectionsSelected =
+    sortedSections.length > 0 && sortedSections.every((s) => selected.has(s.id));
+
   function toggleSelectAll() {
-    setSelected((prev) =>
-      prev.size === sortedSections.length ? new Set() : new Set(sortedSections.map((s) => s.id)),
-    );
+    setSelected(allSectionsSelected ? new Set() : new Set(sortedSections.map((s) => s.id)));
   }
 
   async function bulkDeleteSections() {
@@ -947,7 +949,7 @@ function SectionsPanel({
         <label className="mb-2 flex items-center gap-2 text-sm text-muted">
           <input
             type="checkbox"
-            checked={selected.size === sortedSections.length}
+            checked={allSectionsSelected}
             onChange={toggleSelectAll}
           />
           Chọn tất cả
