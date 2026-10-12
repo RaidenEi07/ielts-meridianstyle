@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LegalText } from "@/components/LegalText";
 import { StaticPageShell } from "@/components/StaticPageShell";
 import { getSiteConfig } from "@/lib/publicConfigServer";
 
@@ -8,7 +9,16 @@ export const metadata: Metadata = {
 };
 
 export default async function TermsPage() {
-  const { siteName } = await getSiteConfig();
+  const { siteName, termsText } = await getSiteConfig();
+
+  // Trung tâm đã nhập nội dung riêng (Cấu hình hệ thống) thì hiện đúng nội dung đó, không còn bản mẫu và ghi chú.
+  if (termsText) {
+    return (
+      <StaticPageShell title="Điều khoản sử dụng">
+        <LegalText text={termsText} />
+      </StaticPageShell>
+    );
+  }
 
   return (
     <StaticPageShell title="Điều khoản sử dụng">

@@ -45,9 +45,9 @@ export default function CharacterDubbingPage() {
   }, [hydrated, accessToken]);
 
   useEffect(() => {
-    if (!Number.isFinite(courseId)) return;
-    catalogApi.course(courseId).then(setCourse).catch(() => {});
-  }, [courseId]);
+    if (!hydrated || !Number.isFinite(courseId)) return;
+    catalogApi.course(courseId, accessToken).then(setCourse).catch(() => {});
+  }, [hydrated, accessToken, courseId]);
 
   function loadCharacters() {
     if (!ready || !accessToken) return;

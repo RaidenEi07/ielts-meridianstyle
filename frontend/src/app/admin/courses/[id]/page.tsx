@@ -90,7 +90,7 @@ export default function AdminCourseDetailPage() {
   const refresh = () => {
     setQuizRefreshTick((t) => t + 1);
     return catalogApi
-      .course(courseId)
+      .course(courseId, token)
       .then(setCourse)
       .catch((e) => setError(e instanceof ApiError ? e.message : "Không tải được khóa học"));
   };

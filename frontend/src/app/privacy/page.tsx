@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { LegalText } from "@/components/LegalText";
 import { StaticPageShell } from "@/components/StaticPageShell";
 import { getSiteConfig } from "@/lib/publicConfigServer";
 
@@ -8,7 +9,16 @@ export const metadata: Metadata = {
 };
 
 export default async function PrivacyPage() {
-  const { siteName } = await getSiteConfig();
+  const { siteName, privacyText } = await getSiteConfig();
+
+  // Trung tâm đã nhập nội dung riêng (Cấu hình hệ thống) thì hiện đúng nội dung đó, không còn bản mẫu và ghi chú.
+  if (privacyText) {
+    return (
+      <StaticPageShell title="Chính sách bảo mật">
+        <LegalText text={privacyText} />
+      </StaticPageShell>
+    );
+  }
 
   return (
     <StaticPageShell title="Chính sách bảo mật">

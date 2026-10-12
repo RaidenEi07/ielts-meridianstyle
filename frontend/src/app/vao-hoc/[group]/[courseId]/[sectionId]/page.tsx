@@ -33,9 +33,9 @@ export default function VaoHocLessonPage() {
   const toast = useToast();
 
   useEffect(() => {
-    if (!Number.isFinite(courseId)) return;
-    catalogApi.course(courseId).then(setCourse).catch((e) => setError(e.message));
-  }, [courseId]);
+    if (!hydrated || !Number.isFinite(courseId)) return;
+    catalogApi.course(courseId, accessToken).then(setCourse).catch((e) => setError(e.message));
+  }, [hydrated, accessToken, courseId]);
 
   useEffect(() => {
     if (!hydrated || !accessToken || !Number.isFinite(courseId)) return;

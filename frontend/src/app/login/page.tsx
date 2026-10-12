@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { useSiteConfig } from "@/components/SiteConfigProvider";
 import { ApiError, configApi } from "@/lib/api";
+import { QUESTION_TYPES } from "@/lib/questionTypes";
 import { useAuthStore } from "@/store/auth";
 import { useToast } from "@/store/toast";
 
@@ -105,7 +106,7 @@ export default function AuthPage() {
                 className="text-4xl font-semibold"
                 style={{ fontFamily: "var(--font-serif)" }}
               >
-                10+
+                {QUESTION_TYPES.length}
               </div>
               <div className="text-sm text-white/70">Dạng câu hỏi luyện tập</div>
             </div>

@@ -207,7 +207,12 @@ export const catalogApi = {
     return apiFetch<CourseSummary[]>(`/api/catalog/courses${qs ? `?${qs}` : ""}`);
   },
 
-  course: (id: number) => apiFetch<CourseDetail>(`/api/catalog/courses/${id}`),
+  /**
+   * Chi tiết khóa học. Khóa chưa xuất bản (nháp/lưu trữ) chỉ trả cho người quản lý khóa hoặc học viên đã ghi danh —
+   * nên truyền `token` khi đã đăng nhập, không thì người đang soạn khóa nháp cũng nhận 404 như khách.
+   */
+  course: (id: number, token?: string | null) =>
+    apiFetch<CourseDetail>(`/api/catalog/courses/${id}`, token ? { token } : {}),
 
   examTemplates: () =>
     apiFetch<{ id: number; code: string; name: string }[]>("/api/catalog/exam-templates"),

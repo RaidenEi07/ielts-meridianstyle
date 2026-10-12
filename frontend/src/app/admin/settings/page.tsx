@@ -20,6 +20,7 @@ import { useConfirm } from "@/store/confirm";
 import { useToast } from "@/store/toast";
 import { HeroImageField } from "./HeroImageField";
 import { HOMEPAGE_CONTENT_KEYS, HomepageContentSection } from "./HomepageContentSection";
+import { LegalPagesSection, LEGAL_TEXT_KEYS } from "./LegalPagesSection";
 import { LogoField } from "./LogoField";
 import { THEME_CONFIG_KEYS, ThemeSection } from "./ThemeSection";
 
@@ -43,7 +44,7 @@ const HOMEPAGE_INFO_CARDS_KEY = "HOMEPAGE_INFO_CARDS";
 // Khóa của các phần có xem thử/nút lưu riêng (3 màu thương hiệu ở ThemeSection; con số nổi bật, nhãn giáo viên
 // và lời chứng thực ở HomepageContentSection) nên không nằm trong lưới chung và cũng không đi kèm khi bấm
 // "Lưu thay đổi" của lưới chung, kẻo ghi đè giá trị vừa lưu ở phần riêng bằng bản cũ.
-const SECTION_KEYS: readonly string[] = [...THEME_CONFIG_KEYS, ...HOMEPAGE_CONTENT_KEYS];
+const SECTION_KEYS: readonly string[] = [...THEME_CONFIG_KEYS, ...HOMEPAGE_CONTENT_KEYS, ...LEGAL_TEXT_KEYS];
 const isSectionKey = (key: string) => SECTION_KEYS.includes(key);
 
 // Logo và ảnh đầu trang chủ có ô riêng (LogoField, HeroImageField: tải ảnh, xem thử) chen giữa "Tên hiển
@@ -241,6 +242,22 @@ export default function AdminSettingsPage() {
                 ...Object.fromEntries(HOMEPAGE_CONTENT_KEYS.map((k) => [k, updated[k] ?? ""])),
               }));
               // Trang chủ/trang đăng nhập đổi ngay khi chuyển trang trong phiên này, không cần tải lại.
+              setSiteConfig(siteConfigFromPublic(updated));
+            }}
+          />
+        )}
+
+        {/* Điều khoản & Chính sách bảo mật do trung tâm tự soạn: lưu riêng. */}
+        {Object.keys(config).length > 0 && (
+          <LegalPagesSection
+            key={LEGAL_TEXT_KEYS.map((k) => config[k] ?? "").join("")}
+            token={token}
+            config={config}
+            onSaved={(updated) => {
+              setConfig((c) => ({
+                ...c,
+                ...Object.fromEntries(LEGAL_TEXT_KEYS.map((k) => [k, updated[k] ?? ""])),
+              }));
               setSiteConfig(siteConfigFromPublic(updated));
             }}
           />

@@ -25,6 +25,9 @@ export const HOMEPAGE_LIMITS = {
   testimonialText: 600,
 } as const;
 
+/** Số ký tự tối đa của văn bản Điều khoản / Chính sách bảo mật; backend (ConfigService.MAX_LEGAL_TEXT) kiểm tra đúng con số này. */
+export const LEGAL_TEXT_MAX = 20_000;
+
 export interface SiteConfig {
   siteName: string;
   tagline: string;
@@ -48,6 +51,10 @@ export interface SiteConfig {
   supportPhone: string;
   /** Rỗng = không hiện địa chỉ. */
   supportAddress: string;
+  /** Nội dung trang Điều khoản do trung tâm soạn (văn bản thuần); rỗng = dùng bản mẫu có sẵn. */
+  termsText: string;
+  /** Nội dung trang Chính sách bảo mật do trung tâm soạn; rỗng = dùng bản mẫu có sẵn. */
+  privacyText: string;
 }
 
 /**
@@ -67,6 +74,8 @@ export const SITE_DEFAULTS: Readonly<SiteConfig> = {
   supportEmail: "",
   supportPhone: "",
   supportAddress: "",
+  termsText: "",
+  privacyText: "",
 };
 
 /** Chỉ nhận URL http(s) không có khoảng trắng hay dấu nháy: an toàn để đặt vào <img src> và <link href>. */
@@ -130,6 +139,8 @@ export function siteConfigFromPublic(config: Record<string, string | undefined>)
     supportEmail: (config.SUPPORT_EMAIL ?? "").trim(),
     supportPhone: shortText(config.SUPPORT_PHONE, HOMEPAGE_LIMITS.phone),
     supportAddress: shortText(config.SUPPORT_ADDRESS, HOMEPAGE_LIMITS.address),
+    termsText: shortText(config.LEGAL_TERMS_TEXT, LEGAL_TEXT_MAX),
+    privacyText: shortText(config.LEGAL_PRIVACY_TEXT, LEGAL_TEXT_MAX),
   };
 }
 

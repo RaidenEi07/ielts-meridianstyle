@@ -22,12 +22,12 @@ export default function VaoHocCoursePage() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!Number.isFinite(courseId)) return;
+    if (!hydrated || !Number.isFinite(courseId)) return;
     catalogApi
-      .course(courseId)
+      .course(courseId, accessToken)
       .then(setCourse)
       .catch((e) => setError(e.message));
-  }, [courseId]);
+  }, [hydrated, accessToken, courseId]);
 
   // Ghi danh ngầm (không hiện nút "Ghi danh" cho trẻ em/tiểu học) để bài luyện
   // tập (quiz gắn theo section) chạy được — AttemptService yêu cầu đã ghi danh.

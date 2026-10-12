@@ -143,12 +143,13 @@ export default function CourseDetailPage() {
   }
 
   useEffect(() => {
-    if (!Number.isFinite(courseId)) return;
+    // Chờ khôi phục phiên đăng nhập để gửi kèm token: người quản lý/học viên đã ghi danh mới mở được khóa chưa xuất bản.
+    if (!hydrated || !Number.isFinite(courseId)) return;
     catalogApi
-      .course(courseId)
+      .course(courseId, accessToken)
       .then(setCourse)
       .catch((e) => setError(e.message));
-  }, [courseId]);
+  }, [hydrated, accessToken, courseId]);
 
   if (error) {
     return (
