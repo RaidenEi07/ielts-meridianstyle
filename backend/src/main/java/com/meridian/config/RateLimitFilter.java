@@ -26,7 +26,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
  *
  * <p>IP người gọi: nếu kết nối đến trực tiếp từ IP công cộng thì dùng chính IP đó và BỎ QUA X-Forwarded-For (kẻ
  * tấn công tự đặt được header này). Chỉ khi request đến từ mạng nội bộ/loopback (nginx cùng máy hoặc cùng mạng
- * Docker) mới tin phần tử CUỐI của X-Forwarded-For — chính là địa chỉ mà proxy đã thấy.
+ * Docker) mới tin phần tử CUỐI của X-Forwarded-For — chính là địa chỉ mà proxy đã thấy. Request từ mạng nội bộ mà
+ * KHÔNG có X-Forwarded-For hợp lệ (proxy cấu hình thiếu, gọi nội bộ) thì không xác định được người gọi → không giới
+ * hạn: nếu gộp chung theo IP của proxy thì cả trường dùng chung một bộ đếm và bị chặn cùng lúc.
  */
 @Component
 public class RateLimitFilter extends OncePerRequestFilter {
@@ -54,6 +56,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private final Clock clock;
     private final ConcurrentHashMap<String, Counter> counters = new ConcurrentHashMap<>();
     private volatile long lastSweepMs;
+    private volatile boolean warnedUnidentified;
 
     @Autowired
     public RateLimitFilter(MeridianProperties properties) {
@@ -74,12 +77,22 @@ public class RateLimitFilter extends OncePerRequestFilter {
             chain.doFilter(request, response);
             return;
         }
-        long retryAfterSec = tryAcquire(rule.name() + ":" + clientIp(request), rule);
+        String ip = clientIp(request);
+        if (ip == null) {
+            if (!warnedUnidentified) {
+                warnedUnidentified = true;
+                log.warn("Không xác định được IP người gọi (kết nối nội bộ, thiếu X-Forwarded-For hợp lệ) — bỏ qua "
+                        + "giới hạn tần suất. Kiểm tra proxy có đặt X-Forwarded-For không.");
+            }
+            chain.doFilter(request, response);
+            return;
+        }
+        long retryAfterSec = tryAcquire(rule.name() + ":" + ip, rule);
         if (retryAfterSec == 0) {
             chain.doFilter(request, response);
             return;
         }
-        log.warn("Rate limit '{}' vượt ngưỡng từ {} — chặn {}s", rule.name(), clientIp(request), retryAfterSec);
+        log.warn("Rate limit '{}' vượt ngưỡng từ {} — chặn {}s", rule.name(), ip, retryAfterSec);
         long minutes = Math.max(1, (retryAfterSec + 59) / 60);
         String body = "{\"timestamp\":\"" + Instant.now(clock) + "\",\"status\":429,"
                 + "\"error\":\"Too Many Requests\",\"message\":\"Bạn thao tác quá nhanh. "
@@ -142,19 +155,24 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     // ---- Xác định IP người gọi ----
 
+    /** @return IP người gọi, hoặc null nếu không xác định được (xem mô tả lớp). */
     static String clientIp(HttpServletRequest request) {
         String remote = request.getRemoteAddr();
-        if (remote != null && isInternal(remote)) {
-            String forwarded = request.getHeader("X-Forwarded-For");
-            if (forwarded != null && !forwarded.isBlank()) {
-                String[] parts = forwarded.split(",");
-                String last = parts[parts.length - 1].trim();
-                if (isIpLiteral(last)) {
-                    return last;
-                }
+        if (remote == null || remote.isBlank()) {
+            return null;
+        }
+        if (!isInternal(remote)) {
+            return remote;
+        }
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (forwarded != null && !forwarded.isBlank()) {
+            String[] parts = forwarded.split(",");
+            String last = parts[parts.length - 1].trim();
+            if (isIpLiteral(last)) {
+                return last;
             }
         }
-        return remote == null ? "unknown" : remote;
+        return null;
     }
 
     private static boolean isIpLiteral(String s) {

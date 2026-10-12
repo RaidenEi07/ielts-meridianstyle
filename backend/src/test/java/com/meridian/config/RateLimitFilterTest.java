@@ -146,11 +146,14 @@ class RateLimitFilterTest {
     }
 
     @Test
-    void garbageForwardedHeaderFallsBackToTheSocketAddress() throws Exception {
-        for (int i = 0; i < 3; i++) {
-            call("POST", "/api/inquiries", "172.18.0.5", "not-an-ip");
+    void internalCallerWithoutAUsableForwardedAddressIsNotLimited() throws Exception {
+        // Proxy cấu hình thiếu X-Forwarded-For: gộp mọi người theo IP của proxy sẽ chặn cả trường cùng lúc.
+        for (int i = 0; i < 20; i++) {
+            assertThat(call("POST", "/api/inquiries", "172.18.0.5", null).getStatus()).isEqualTo(200);
+            assertThat(call("POST", "/api/inquiries", "172.18.0.5", "not-an-ip").getStatus()).isEqualTo(200);
+            assertThat(call("POST", "/api/inquiries", "172.18.0.5", "<script>").getStatus()).isEqualTo(200);
         }
-        assertThat(call("POST", "/api/inquiries", "172.18.0.5", "<script>").getStatus()).isEqualTo(429);
+        assertThat(filter.trackedKeys()).isZero();
     }
 
     @Test
