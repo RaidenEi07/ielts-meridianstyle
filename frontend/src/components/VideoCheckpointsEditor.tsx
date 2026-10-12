@@ -150,7 +150,7 @@ export function VideoCheckpointsEditor({
           type="button"
           onClick={save}
           disabled={saving}
-          className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+          className="rounded-lg bg-primary-fill px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
         >
           {saving ? "Đang lưu…" : "Lưu"}
         </button>

@@ -126,7 +126,7 @@ export default function AdminCourseGradebookPage() {
                   {data.totalQuizzes}
                 </p>
               </div>
-              <div className="rounded-lg border border-border bg-primary p-5 text-white">
+              <div className="rounded-lg border border-border bg-primary-fill p-5 text-white">
                 <p className="text-sm text-white/70">Tỷ lệ hoàn thành TB</p>
                 <p className="mt-1 text-3xl font-bold" style={{ fontFamily: "var(--font-serif)" }}>
                   {pct(data.avgCompletionPercent)}
@@ -145,7 +145,7 @@ export default function AdminCourseGradebookPage() {
                 type="button"
                 onClick={() => setTab("students")}
                 className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
-                  tab === "students" ? "bg-primary text-white" : "text-muted hover:text-text"
+                  tab === "students" ? "bg-primary-fill text-white" : "text-muted hover:text-text"
                 }`}
               >
                 <Users className="h-4 w-4" /> Theo học viên
@@ -154,7 +154,7 @@ export default function AdminCourseGradebookPage() {
                 type="button"
                 onClick={() => setTab("quizzes")}
                 className={`flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-semibold transition-colors ${
-                  tab === "quizzes" ? "bg-primary text-white" : "text-muted hover:text-text"
+                  tab === "quizzes" ? "bg-primary-fill text-white" : "text-muted hover:text-text"
                 }`}
               >
                 <FileText className="h-4 w-4" /> Theo đề thi

@@ -120,7 +120,7 @@ function ManualGradeForm({
         type="button"
         disabled={saving || score === ""}
         onClick={save}
-        className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
+        className="rounded-lg bg-primary-fill px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50"
       >
         {saving ? "Đang lưu…" : "Lưu điểm"}
       </button>
@@ -398,7 +398,7 @@ export function GradebookTable({
         </div>
       )}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-lg border border-border bg-primary p-5 text-white">
+        <div className="rounded-lg border border-border bg-primary-fill p-5 text-white">
           <p className="text-sm text-white/70">Band cao nhất</p>
           <p className="mt-1 text-4xl font-bold" style={{ fontFamily: "var(--font-serif)" }}>
             {bestBand != null ? bestBand : "—"}

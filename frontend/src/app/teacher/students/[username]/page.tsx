@@ -158,7 +158,7 @@ export default function TeacherStudentDetailPage() {
             </select>
             <button
               type="button"
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+              className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
               disabled={!selectedCourseId || enrolling}
               onClick={handleEnroll}
             >

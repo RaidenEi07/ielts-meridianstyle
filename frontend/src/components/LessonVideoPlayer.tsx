@@ -193,7 +193,7 @@ export function LessonVideoPlayer({
                   type="button"
                   onClick={submitCheckpointAnswer}
                   disabled={submitting}
-                  className="mt-5 w-full rounded-lg bg-primary py-2.5 font-semibold text-white disabled:opacity-60"
+                  className="mt-5 w-full rounded-lg bg-primary-fill py-2.5 font-semibold text-white disabled:opacity-60"
                 >
                   {submitting ? "Đang nộp…" : "Nộp câu trả lời"}
                 </button>

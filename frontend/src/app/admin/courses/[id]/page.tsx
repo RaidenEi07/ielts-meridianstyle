@@ -410,7 +410,7 @@ function CourseEditForm({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {saving ? "Đang lưu…" : "Lưu thay đổi"}
           </button>
@@ -535,7 +535,7 @@ function DistributeCourseButton({ courseId, token }: { courseId: number; token: 
           type="button"
           onClick={send}
           disabled={sending || selected.length === 0}
-          className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="w-full rounded-lg bg-primary-fill py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {sending ? "Đang gửi…" : `Gửi (${selected.length})`}
         </button>
@@ -740,7 +740,7 @@ function CourseQuizzesPanel({
                   type="button"
                   onClick={bulkDelete}
                   disabled={bulkWorking}
-                  className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+                  className="rounded-lg bg-red-fill px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   Xóa ({selected.size})
                 </button>
@@ -938,7 +938,7 @@ function SectionsPanel({
         />
         <button
           type="submit"
-          className="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-white"
+          className="rounded-lg bg-accent-fill px-5 py-2 text-sm font-semibold text-white"
         >
           + Section
         </button>
@@ -971,7 +971,7 @@ function SectionsPanel({
             type="button"
             onClick={bulkDeleteSections}
             disabled={bulkWorking}
-            className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-red-fill px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
           >
             Xóa ({selected.size})
           </button>
@@ -1271,7 +1271,7 @@ function SectionCard({
           />
           <button
             type="submit"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white"
           >
             Tạo
           </button>

@@ -100,7 +100,7 @@ export default function ParentDashboardPage() {
                     onClick={() => setSelectedChildId(c.id)}
                     className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
                       selectedChildId === c.id
-                        ? "bg-primary text-white"
+                        ? "bg-primary-fill text-white"
                         : "border border-border text-muted hover:text-text"
                     }`}
                   >

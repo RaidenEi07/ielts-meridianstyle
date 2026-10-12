@@ -161,7 +161,7 @@ export function VocabSetPlayer({ setId, token }: { setId: number; token: string 
           type="button"
           onClick={handleToggle}
           className={`grid h-16 w-16 place-items-center rounded-full text-white shadow-md transition-colors disabled:opacity-60 ${
-            isRecording ? "animate-pulse bg-red" : "bg-primary hover:bg-primary/90"
+            isRecording ? "animate-pulse bg-red-fill" : "bg-primary-fill hover:bg-primary-fill/90"
           }`}
           title={isRecording ? "Dừng ghi âm" : "Ghi âm đọc lại"}
         >
@@ -182,7 +182,7 @@ export function VocabSetPlayer({ setId, token }: { setId: number; token: string 
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                className="rounded-lg bg-primary-fill px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
               >
                 {saving ? "Đang lưu…" : "Lưu"}
               </button>

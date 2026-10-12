@@ -582,7 +582,7 @@ export function QuestionForm({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {saving ? "Đang lưu…" : mode === "create" ? "Tạo câu hỏi" : "Lưu thay đổi"}
           </button>

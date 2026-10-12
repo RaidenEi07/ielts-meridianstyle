@@ -114,7 +114,7 @@ export default function ChildSitesPage() {
           <button
             type="button"
             onClick={() => setCreating((v) => !v)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white"
           >
             {creating ? "Đóng" : "+ Thêm web con"}
           </button>
@@ -296,7 +296,7 @@ function CreateChildSiteForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {saving ? "Đang thêm…" : "Thêm web con"}
         </button>

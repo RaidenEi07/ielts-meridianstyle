@@ -67,7 +67,7 @@ export default function MyAttemptsPage() {
                 {a.allowReviewAfterSubmit ? (
                   <Link
                     href={`/quiz/${a.id}`}
-                    className="shrink-0 rounded-lg bg-primary px-4 py-2 text-center text-sm font-semibold text-white"
+                    className="shrink-0 rounded-lg bg-primary-fill px-4 py-2 text-center text-sm font-semibold text-white"
                   >
                     Xem lại →
                   </Link>

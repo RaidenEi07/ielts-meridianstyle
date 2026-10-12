@@ -194,7 +194,7 @@ export default function CourseDetailPage() {
               {course.categoryName}
             </span>
             {course.examTemplateCode && (
-              <span className="rounded-full bg-red px-3 py-1 text-xs font-bold text-white">
+              <span className="rounded-full bg-red-fill px-3 py-1 text-xs font-bold text-white">
                 Mô phỏng {course.examTemplateCode}
               </span>
             )}
@@ -339,7 +339,7 @@ export default function CourseDetailPage() {
                                               <div className="flex items-center gap-2">
                                                 <span className="font-medium">{q.title}</span>
                                                 {q.examTemplateCode && (
-                                                  <span className="rounded-full bg-red px-2 py-0.5 text-[10px] font-bold text-white">
+                                                  <span className="rounded-full bg-red-fill px-2 py-0.5 text-[10px] font-bold text-white">
                                                     {q.examTemplateCode}
                                                   </span>
                                                 )}
@@ -361,7 +361,7 @@ export default function CourseDetailPage() {
                                               type="button"
                                               onClick={() => startQuiz(q.id)}
                                               disabled={startingQuiz === q.id}
-                                              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                                              className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                                             >
                                               {startingQuiz === q.id ? "Đang mở…" : "Làm bài →"}
                                             </button>
@@ -424,7 +424,7 @@ export default function CourseDetailPage() {
                   type="button"
                   onClick={handleEnroll}
                   disabled={enrollState === "loading" || enrollState === "done"}
-                  className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                  className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent-fill py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                 >
                   {enrollState === "loading"
                     ? "Đang xử lý…"

@@ -155,7 +155,7 @@ export default function AdminSettingsPage() {
             <button
               type="button"
               onClick={saveConfig}
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white"
+              className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white"
             >
               Lưu thay đổi
             </button>
@@ -212,7 +212,7 @@ export default function AdminSettingsPage() {
               type="button"
               onClick={saveConfig}
               data-testid="branding-save-bottom"
-              className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white"
+              className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white"
             >
               Lưu thay đổi
             </button>
@@ -367,7 +367,7 @@ function HomepageInfoCardsSection({
         <button
           type="button"
           onClick={save}
-          className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white"
+          className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white"
         >
           Lưu thay đổi
         </button>
@@ -457,7 +457,7 @@ function AnnouncementSection({
           <option value="WARNING">Cảnh báo</option>
           <option value="CRITICAL">Khẩn cấp</option>
         </select>
-        <button type="button" onClick={create} className="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-white">
+        <button type="button" onClick={create} className="rounded-lg bg-accent-fill px-5 py-2 text-sm font-semibold text-white">
           Đăng
         </button>
       </div>
@@ -513,7 +513,7 @@ function BroadcastSection({ token }: { token: string }) {
       <h2 className="mb-3 text-lg font-semibold">Gửi thông báo tới tất cả</h2>
       <div className="flex flex-wrap gap-2">
         <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Tiêu đề" className="input flex-1" />
-        <button type="button" onClick={send} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white">
+        <button type="button" onClick={send} className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white">
           Gửi
         </button>
       </div>
@@ -565,7 +565,7 @@ function BulkImportSection({ token }: { token: string }) {
         className="input font-mono text-sm"
       />
       <div className="mt-2 flex items-center gap-3">
-        <button type="button" onClick={importUsers} className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white">
+        <button type="button" onClick={importUsers} className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white">
           Import
         </button>
         {result && <span className="text-sm text-green">{result}</span>}

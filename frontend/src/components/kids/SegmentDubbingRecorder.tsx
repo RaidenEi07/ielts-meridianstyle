@@ -110,7 +110,7 @@ export function SegmentDubbingRecorder({
           type="button"
           onClick={handleKeepOriginal}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            mode === "original" ? "bg-primary text-white" : "border border-border text-muted"
+            mode === "original" ? "bg-primary-fill text-white" : "border border-border text-muted"
           }`}
         >
           Giữ giọng gốc
@@ -119,7 +119,7 @@ export function SegmentDubbingRecorder({
           type="button"
           onClick={handleSwitchToRecord}
           className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-            mode === "record" ? "bg-primary text-white" : "border border-border text-muted"
+            mode === "record" ? "bg-primary-fill text-white" : "border border-border text-muted"
           }`}
         >
           Ghi âm giọng của bé
@@ -140,7 +140,7 @@ export function SegmentDubbingRecorder({
               type="button"
               onClick={handleToggleRecording}
               className={`grid h-14 w-14 place-items-center rounded-full text-white shadow-md transition-colors disabled:opacity-60 ${
-                isRecording ? "animate-pulse bg-red" : "bg-primary hover:bg-primary/90"
+                isRecording ? "animate-pulse bg-red-fill" : "bg-primary-fill hover:bg-primary-fill/90"
               }`}
               title={isRecording ? "Dừng ghi âm" : "Ghi âm giọng mới"}
             >
@@ -162,7 +162,7 @@ export function SegmentDubbingRecorder({
                 type="button"
                 onClick={handleSave}
                 disabled={saving}
-                className="mt-2 rounded-lg bg-primary px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                className="mt-2 rounded-lg bg-primary-fill px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
               >
                 {saving ? "Đang lưu…" : "Lưu"}
               </button>

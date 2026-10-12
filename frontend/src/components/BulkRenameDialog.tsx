@@ -99,7 +99,7 @@ export function BulkRenameDialog({
             type="button"
             onClick={handleApply}
             disabled={applying || !pattern.trim()}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {applying ? "Đang áp dụng…" : "Áp dụng"}
           </button>

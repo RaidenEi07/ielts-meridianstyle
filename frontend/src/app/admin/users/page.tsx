@@ -220,7 +220,7 @@ export default function AdminUsersPage() {
           <button
             type="button"
             onClick={() => setCreating((v) => !v)}
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+            className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white"
           >
             {creating ? "Đóng" : "+ Tạo tài khoản mới"}
           </button>
@@ -301,7 +301,7 @@ export default function AdminUsersPage() {
               type="button"
               onClick={assignSelected}
               disabled={!assignTeacherId || assigning}
-              className="rounded-lg bg-primary px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+              className="rounded-lg bg-primary-fill px-4 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
             >
               {assigning ? "Đang gán…" : "Gán cho giáo viên"}
             </button>
@@ -587,7 +587,7 @@ function EditUserForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {saving ? "Đang lưu…" : "Lưu thay đổi"}
         </button>
@@ -699,7 +699,7 @@ function CreateUserForm({
         <button
           type="submit"
           disabled={saving}
-          className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {saving ? "Đang tạo…" : "Tạo tài khoản"}
         </button>

@@ -35,7 +35,7 @@ export function ConfirmDialogHost() {
             type="button"
             onClick={() => answer(true)}
             className={`rounded-lg px-4 py-2 text-sm font-semibold text-white ${
-              request.danger === false ? "bg-primary" : "bg-red"
+              request.danger === false ? "bg-primary-fill" : "bg-red-fill"
             }`}
           >
             {request.confirmLabel ?? "Xóa"}

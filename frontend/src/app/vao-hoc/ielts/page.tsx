@@ -45,7 +45,7 @@ export default function VaoHocIeltsPage() {
               <p className="text-muted">Đăng nhập để xem các khóa IELTS bạn đang theo học.</p>
               <Link
                 href="/login"
-                className="mt-4 inline-block rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white"
+                className="mt-4 inline-block rounded-full bg-primary-fill px-5 py-2 text-sm font-semibold text-white"
               >
                 Đăng nhập
               </Link>

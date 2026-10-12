@@ -34,7 +34,7 @@ export function PageHeader({
           </Link>
           {isMaster && (
             <span
-              className="rounded-full bg-primary px-3 py-1 text-xs font-semibold text-white"
+              className="rounded-full bg-primary-fill px-3 py-1 text-xs font-semibold text-white"
               title="Deployment này điều phối khóa học sang các web con"
             >
               🏠 Web tổng

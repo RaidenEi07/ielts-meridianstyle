@@ -77,7 +77,7 @@ export default function HomePage() {
           <div className="flex flex-wrap items-center gap-4">
             <Link
               href="/login"
-              className="rounded-full bg-primary px-7 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+              className="rounded-full bg-primary-fill px-7 py-3 font-semibold text-white transition-opacity hover:opacity-90"
             >
               Bắt đầu ngay
             </Link>
@@ -127,7 +127,7 @@ export default function HomePage() {
               {highlightLabel && <div className="text-xs text-muted">{highlightLabel}</div>}
             </div>
           )}
-          <div className="absolute -right-3 -top-3 rounded-full bg-red px-4 py-2 text-sm font-bold text-white shadow-lg">
+          <div className="absolute -right-3 -top-3 rounded-full bg-red-fill px-4 py-2 text-sm font-bold text-white shadow-lg">
             CDT
           </div>
         </div>
@@ -291,7 +291,7 @@ function ConsultationForm() {
   }
 
   return (
-    <div className="rounded-[18px] border border-border bg-primary p-8 text-white">
+    <div className="rounded-[18px] border border-border bg-primary-fill p-8 text-white">
       <h2 className="text-2xl font-bold">Đăng ký tư vấn miễn phí</h2>
       <p className="mt-1 text-sm text-white/70">
         Để lại thông tin, đội ngũ {siteName} sẽ liên hệ trong 24h.
@@ -307,6 +307,7 @@ function ConsultationForm() {
         <form onSubmit={submit} className="mt-5 space-y-3">
           <input
             required
+            maxLength={150}
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Họ và tên"
@@ -314,12 +315,14 @@ function ConsultationForm() {
           />
           <div className="grid grid-cols-2 gap-3">
             <input
+              maxLength={255}
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="Email"
               className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
             />
             <input
+              maxLength={40}
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               placeholder="Số điện thoại"
@@ -327,6 +330,7 @@ function ConsultationForm() {
             />
           </div>
           <textarea
+            maxLength={2000}
             value={form.message}
             onChange={(e) => setForm({ ...form, message: e.target.value })}
             placeholder="Bạn quan tâm khóa học nào?"
@@ -337,7 +341,7 @@ function ConsultationForm() {
           <button
             type="submit"
             disabled={state === "loading"}
-            className="w-full rounded-lg bg-accent py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="w-full rounded-lg bg-accent-fill py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {state === "loading" ? "Đang gửi…" : "Đăng ký tư vấn"}
           </button>

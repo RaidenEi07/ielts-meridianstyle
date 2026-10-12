@@ -140,7 +140,7 @@ export function ThemeSection({
           onClick={save}
           disabled={!dirty || hasInvalid || saving}
           data-testid="theme-save"
-          className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {saving ? "Đang lưu…" : "Lưu màu sắc"}
         </button>
@@ -197,8 +197,8 @@ export function ThemeSection({
           data-testid="theme-sample"
           className="flex flex-wrap items-center gap-3 rounded-lg border border-border bg-card p-4 text-sm"
         >
-          <span className="rounded-full bg-primary px-4 py-1.5 font-semibold text-white">Nút chính</span>
-          <span className="rounded-full bg-accent px-4 py-1.5 font-semibold text-white">Nút nhấn</span>
+          <span className="rounded-full bg-primary-fill px-4 py-1.5 font-semibold text-white">Nút chính</span>
+          <span className="rounded-full bg-accent-fill px-4 py-1.5 font-semibold text-white">Nút nhấn</span>
           <span className="font-semibold text-accent underline underline-offset-4">Liên kết</span>
           <span className="rounded-full bg-primary-soft px-3 py-1 font-semibold text-primary">Đang học</span>
           <span className="rounded-full bg-accent-soft px-3 py-1 font-semibold text-accent">Chờ duyệt</span>

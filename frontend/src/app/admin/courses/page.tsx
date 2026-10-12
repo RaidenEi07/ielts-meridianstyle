@@ -134,7 +134,7 @@ export default function AdminCoursesPage() {
                     </div>
                     <Link
                       href={`/admin/courses/${c.id}`}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                      className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
                     >
                       Quản lý →
                     </Link>
@@ -249,7 +249,7 @@ function CategoryPanel({
             {error && <p className="text-xs text-red">{error}</p>}
             <button
               type="submit"
-              className="w-full rounded-lg bg-primary py-2 text-sm font-semibold text-white"
+              className="w-full rounded-lg bg-primary-fill py-2 text-sm font-semibold text-white"
             >
               Tạo danh mục
             </button>
@@ -365,7 +365,7 @@ function CreateCourseForm({
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+        className="rounded-lg bg-accent-fill px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
       >
         + Khóa học mới
       </button>
@@ -440,7 +440,7 @@ function CreateCourseForm({
       <div className="flex gap-2">
         <button
           type="submit"
-          className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white"
+          className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white"
         >
           Tạo khóa học (bản nháp)
         </button>

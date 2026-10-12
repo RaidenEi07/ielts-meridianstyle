@@ -28,6 +28,12 @@
   --red: var(--brand-red, #9b2c2c);
   --red-soft: var(--brand-red-soft, #f6e3e0);
   --info: var(--brand-info, #0e7490);
+  /* Nền ĐẶC của nút/huy hiệu (chữ trắng đè lên) — class bg-primary-fill, bg-accent-fill, ... Ở chế độ sáng
+     đúng bằng màu thương hiệu; chế độ tối dùng bản đậm hơn (xem .dark) vì màu chữ ở đó đã được nâng sáng. */
+  --primary-fill: var(--brand-primary-fill, var(--primary));
+  --accent-fill: var(--brand-accent-fill, var(--accent));
+  --green-fill: var(--brand-green-fill, var(--green));
+  --red-fill: var(--brand-red-fill, var(--red));
   /* Khung sau logo ảnh của trung tâm (Logo.tsx): trong suốt trên nền sáng, trắng trên nền tối để logo
      đậm màu không chìm. */
   --logo-chip: var(--brand-logo-chip, transparent);
@@ -68,6 +74,12 @@
   --red: var(--brand-red, #e08585);
   --red-soft: var(--brand-red-soft, #3a2220);
   --info: var(--brand-info, #38bdf8);
+  /* Bản đậm của từng màu để chữ trắng trên nền đặc đạt 4.5:1 (--primary/--accent/... ở trên đã sáng lên để làm
+     chữ trên nền tối nên chữ trắng đè lên chỉ ~3:1). Cùng sắc độ, tính bằng lib/brandTheme.ts (fillOf). */
+  --primary-fill: var(--brand-primary-fill, #3776cd);
+  --accent-fill: var(--brand-accent-fill, #b16315);
+  --green-fill: var(--brand-green-fill, #358558);
+  --red-fill: var(--brand-red-fill, #d04646);
   --logo-chip: var(--brand-logo-chip, #ffffff);
 
   /* Cùng 8 bước, đã kiểm định riêng cho nền tối (xem :root ở trên). */
@@ -104,6 +116,10 @@
   --red: #000000;
   --red-soft: #e6e6e6;
   --info: #000000;
+  --primary-fill: #000000;
+  --accent-fill: #000000;
+  --green-fill: #000000;
+  --red-fill: #000000;
   /* --radius-md/--radius-sm/--radius-xl vẫn dùng var() thật (Tailwind mặc
      định, dự án không override) nên bị làm phẳng qua biến bên trên là đủ. */
   --radius-md: 0px;
@@ -124,6 +140,9 @@
   --red-soft: #f6e3e0;
   --accent: #c2691d;
   --accent-soft: #fbefe2;
+  --green-fill: #1e6f43;
+  --red-fill: #9b2c2c;
+  --accent-fill: #c2691d;
 }
 
 /* --radius-card/--radius-lg đã bị dự án override bằng giá trị cố định ngay
@@ -159,6 +178,10 @@
   --color-red: var(--red);
   --color-red-soft: var(--red-soft);
   --color-info: var(--info);
+  --color-primary-fill: var(--primary-fill);
+  --color-accent-fill: var(--accent-fill);
+  --color-green-fill: var(--green-fill);
+  --color-red-fill: var(--red-fill);
 
   --font-sans: var(--font-be-vietnam), ui-sans-serif, system-ui, sans-serif;
   --font-serif: var(--font-source-serif), ui-serif, Georgia, serif;

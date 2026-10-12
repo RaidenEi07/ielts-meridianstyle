@@ -23,7 +23,7 @@ export default function NotFound() {
       </div>
       <Link
         href="/"
-        className="rounded-full bg-primary px-6 py-3 font-semibold text-white transition-opacity hover:opacity-90"
+        className="rounded-full bg-primary-fill px-6 py-3 font-semibold text-white transition-opacity hover:opacity-90"
       >
         Về trang chủ
       </Link>

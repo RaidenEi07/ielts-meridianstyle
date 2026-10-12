@@ -351,7 +351,7 @@ function QuizSettingsForm({
             {st.label}
           </span>
           {q.examTemplateCode && (
-            <span className="rounded-full bg-red px-2.5 py-0.5 text-xs font-bold text-white">
+            <span className="rounded-full bg-red-fill px-2.5 py-0.5 text-xs font-bold text-white">
               {q.examTemplateCode}
             </span>
           )}
@@ -468,7 +468,7 @@ function QuizSettingsForm({
           <button
             type="submit"
             disabled={saving}
-            className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+            className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
           >
             {saving ? "Đang lưu…" : "Lưu thay đổi"}
           </button>
@@ -654,7 +654,7 @@ function PagesPanel({
           <div className="flex gap-2">
             <button
               type="submit"
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white"
             >
               Lưu Part {pageNumber}
             </button>
@@ -1162,7 +1162,7 @@ function QuestionsPanel({
         <button
           type="button"
           onClick={openPicker}
-          className="rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-white"
+          className="rounded-lg bg-accent-fill px-4 py-2 text-sm font-semibold text-white"
         >
           + Thêm câu hỏi
         </button>
@@ -1323,7 +1323,7 @@ function QuestionsPanel({
                                   type="button"
                                   disabled={savingGroupIntro}
                                   onClick={() => saveGroupIntro(q.quizQuestionId)}
-                                  className="rounded-lg bg-accent px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
+                                  className="rounded-lg bg-accent-fill px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-60"
                                 >
                                   {savingGroupIntro ? "Đang lưu…" : "Lưu"}
                                 </button>
@@ -1560,7 +1560,7 @@ function QuestionsPanel({
                   type="button"
                   onClick={importSelected}
                   disabled={selected.size === 0}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                  className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
                 >
                   Thêm {selected.size > 0 ? `(${selected.size})` : ""}
                 </button>

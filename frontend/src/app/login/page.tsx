@@ -69,7 +69,7 @@ export default function AuthPage() {
   return (
     <div className="grid min-h-screen md:grid-cols-2">
       {/* Cột trái — panel tối với stats */}
-      <aside className="relative hidden flex-col justify-between overflow-hidden bg-primary p-12 text-white md:flex">
+      <aside className="relative hidden flex-col justify-between overflow-hidden bg-primary-fill p-12 text-white md:flex">
         <div
           aria-hidden
           className="absolute inset-0 opacity-20"
@@ -192,6 +192,7 @@ export default function AuthPage() {
                 <input
                   type="text"
                   required
+                  maxLength={150}
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="Nguyễn Văn A"
@@ -221,6 +222,7 @@ export default function AuthPage() {
                 <input
                   type="email"
                   required
+                  maxLength={255}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="ban@email.com"
@@ -234,6 +236,7 @@ export default function AuthPage() {
                   type={showPassword ? "text" : "password"}
                   required
                   minLength={tab === "register" ? 8 : undefined}
+                  maxLength={tab === "register" ? 72 : 200}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
@@ -252,7 +255,7 @@ export default function AuthPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-primary py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="w-full rounded-lg bg-primary-fill py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {loading
                 ? "Đang xử lý…"

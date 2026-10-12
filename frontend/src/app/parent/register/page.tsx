@@ -63,6 +63,7 @@ export default function ParentRegisterPage() {
             <input
               type="text"
               required
+              maxLength={150}
               value={fullName}
               onChange={(e) => setFullName(e.target.value)}
               placeholder="Nguyễn Văn A"
@@ -86,6 +87,7 @@ export default function ParentRegisterPage() {
             <input
               type="email"
               required
+              maxLength={255}
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="ban@email.com"
@@ -98,6 +100,7 @@ export default function ParentRegisterPage() {
                 type={showPassword ? "text" : "password"}
                 required
                 minLength={8}
+                maxLength={72}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -116,7 +119,7 @@ export default function ParentRegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-lg bg-primary py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="w-full rounded-lg bg-primary-fill py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {loading ? "Đang xử lý…" : "Tạo tài khoản phụ huynh"}
           </button>

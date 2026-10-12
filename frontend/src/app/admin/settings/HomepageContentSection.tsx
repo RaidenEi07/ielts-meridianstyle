@@ -104,7 +104,7 @@ export function HomepageContentSection({
           onClick={save}
           disabled={!dirty || saving}
           data-testid="homepage-content-save"
-          className="rounded-lg bg-primary px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
+          className="rounded-lg bg-primary-fill px-5 py-2 text-sm font-semibold text-white disabled:opacity-50"
         >
           {saving ? "Đang lưu…" : "Lưu thay đổi"}
         </button>

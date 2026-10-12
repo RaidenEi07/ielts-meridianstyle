@@ -77,7 +77,7 @@ export function LogoField({
         <div>
           <div
             data-testid="logo-preview-dark"
-            className="flex min-h-16 items-center rounded-lg bg-primary px-4 py-3"
+            className="flex min-h-16 items-center rounded-lg bg-primary-fill px-4 py-3"
           >
             <Logo onDark preview={preview} className="text-white [&_span]:text-white" />
           </div>

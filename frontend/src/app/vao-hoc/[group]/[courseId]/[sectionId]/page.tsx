@@ -220,7 +220,7 @@ export default function VaoHocLessonPage() {
                   type="button"
                   onClick={() => startQuiz(q.id)}
                   disabled={starting === q.id || !allCheckpointsAnswered}
-                  className="rounded-lg bg-accent px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                  className="rounded-lg bg-accent-fill px-5 py-2 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {starting === q.id ? "Đang mở…" : "Luyện tập"}
                 </button>
@@ -234,7 +234,7 @@ export default function VaoHocLessonPage() {
             type="button"
             onClick={markComplete}
             disabled={completing}
-            className="mt-6 w-full rounded-lg bg-primary py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+            className="mt-6 w-full rounded-lg bg-primary-fill py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
           >
             {completing ? "Đang lưu…" : "Đánh dấu đã hoàn thành"}
           </button>

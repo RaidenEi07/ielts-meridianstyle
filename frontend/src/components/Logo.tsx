@@ -50,7 +50,7 @@ export function Logo({
       ) : (
         <span
           aria-hidden
-          className="grid h-9 w-9 place-items-center rounded-md bg-primary text-white"
+          className="grid h-9 w-9 place-items-center rounded-md bg-primary-fill text-white"
           style={{ fontFamily: "var(--font-serif)" }}
         >
           {monogram}

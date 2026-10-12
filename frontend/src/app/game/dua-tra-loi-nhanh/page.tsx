@@ -73,7 +73,7 @@ export default function QuickRaceGamePage() {
               type="button"
               onClick={() => setCategoryId(null)}
               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                categoryId === null ? "bg-primary text-white" : "border border-border text-muted"
+                categoryId === null ? "bg-primary-fill text-white" : "border border-border text-muted"
               }`}
             >
               Tất cả
@@ -84,7 +84,7 @@ export default function QuickRaceGamePage() {
                 type="button"
                 onClick={() => setCategoryId(c.id)}
                 className={`rounded-full px-4 py-1.5 text-sm font-medium transition-colors ${
-                  categoryId === c.id ? "bg-primary text-white" : "border border-border text-muted"
+                  categoryId === c.id ? "bg-primary-fill text-white" : "border border-border text-muted"
                 }`}
               >
                 {c.name}
@@ -115,7 +115,7 @@ export default function QuickRaceGamePage() {
                   <button
                     type="button"
                     onClick={playAgain}
-                    className="rounded-lg bg-primary px-5 py-2.5 font-semibold text-white"
+                    className="rounded-lg bg-primary-fill px-5 py-2.5 font-semibold text-white"
                   >
                     Chơi lại
                   </button>

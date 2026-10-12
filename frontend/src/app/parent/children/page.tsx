@@ -145,7 +145,7 @@ export default function ParentChildrenPage() {
             <button
               type="submit"
               disabled={creating}
-              className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+              className="rounded-lg bg-primary-fill px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
             >
               {creating ? "Đang tạo…" : "+ Thêm hồ sơ"}
             </button>
@@ -174,7 +174,7 @@ export default function ParentChildrenPage() {
                       type="button"
                       onClick={() => handleSwitch(c)}
                       disabled={switching === c.id}
-                      className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                      className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                     >
                       {switching === c.id ? "Đang chuyển…" : `Vào học cùng ${c.fullName}`}
                     </button>

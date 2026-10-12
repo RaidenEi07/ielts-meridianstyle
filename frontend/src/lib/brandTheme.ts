@@ -340,6 +340,33 @@ function darkenUntil(hex: string, ok: (candidate: string) => boolean): string {
   return at(good);
 }
 
+/** Làm sáng `hex` (giữ sắc độ) tới khi `ok` thỏa; `ok` phải đơn điệu: càng sáng càng dễ thỏa. */
+function lightenUntil(hex: string, ok: (candidate: string) => boolean): string {
+  if (ok(hex)) return hex;
+  const [h, s, l0] = rgbToHsl(hexToRgb(hex));
+  const at = (l: number) => hslToHex(h, s, l);
+  if (!ok(at(1))) return at(1);
+  let bad = l0;
+  let good = 1;
+  for (let i = 0; i < 24; i++) {
+    const mid = (bad + good) / 2;
+    if (ok(at(mid))) good = mid;
+    else bad = mid;
+  }
+  return at(good);
+}
+
+/**
+ * Màu dùng làm NỀN đặc của nút/huy hiệu (chữ trắng đè lên). Nền sáng: chính màu thương hiệu (đã khớp ở fitBrand).
+ * Nền tối: màu thương hiệu bị nâng sáng để làm chữ liên kết đọc được trên nền tối, nên chữ trắng trên đó chỉ ~3:1;
+ * không có màu nào vừa đọc được như chữ trên nền tối vừa đỡ được chữ trắng 4.5:1, vì vậy tách làm 2 token:
+ * `--brand-X` cho chữ/liên kết, `--brand-X-fill` (bản đậm hơn, cùng sắc độ) cho nền đặc (class `bg-X-fill`).
+ */
+function fillOf(color: string, ground: Ground): string {
+  if (!ground.dark) return color;
+  return darkenUntil(color, (c) => contrastRatio("#FFFFFF", c) >= TEXT_AA);
+}
+
 /** Màu vừa làm nền nút (chữ trắng) vừa làm chữ liên kết: chủ đạo và nhấn. */
 function fitBrand(hex: string, ground: Ground, targets: Targets): string {
   const lums = ground.surfaces.map(luminance);
@@ -350,13 +377,12 @@ function fitBrand(hex: string, ground: Ground, targets: Targets): string {
     // Chữ còn nằm trên màu nhạt của chính nó (huy hiệu, ô đang chọn), tối hơn nền khung một chút.
     return darkenUntil(color, (c) => contrastRatio(c, softOf(c, ground)) >= targets.link);
   }
+  // Nền tối: màu này chỉ còn là chữ/liên kết (nền đặc của nút dùng bản `-fill` riêng, xem fillOf), nên chỉ cần đủ
+  // sáng để đọc được trên mọi nền khung VÀ trên màu nhạt của chính nó (chữ nhấn nằm trong huy hiệu cùng màu).
   const edge = Math.max(...lums);
   const min = targets.link * (edge + 0.05) - 0.05 + EPS;
-  const max = whiteMaxLuminance(targets.fill) - EPS;
-  if (min <= max) return fitLuminance(hex, min, max);
-  // Nền tối quá sáng nên hai điều kiện không cùng thỏa: chia đều phần thiếu cho cả hai.
-  const target = Math.sqrt(1.05 * (edge + 0.05) * (targets.link / targets.fill)) - 0.05;
-  return fitLuminance(hex, target, target);
+  const color = fitLuminance(hex, min, 1);
+  return lightenUntil(color, (c) => contrastRatio(c, softOf(c, ground)) >= targets.link);
 }
 
 /** Đổi màu nhẹ hơn mắt phân biệt được thì không đáng báo cho admin. */
@@ -386,8 +412,10 @@ function semanticTokens(ground: Ground): TokenMap {
   const out: TokenMap = {
     green,
     "green-soft": softOf(green, ground),
+    "green-fill": fillOf(green, ground),
     red,
     "red-soft": softOf(red, ground),
+    "red-fill": fillOf(red, ground),
     info: fitText(src.info, ground),
   };
   if (ground.dark) SERIES_DARK.forEach((color, i) => (out[`series-${i + 1}`] = color));
@@ -398,12 +426,16 @@ const ALL_VARS = [
   ...NEUTRAL_KEYS,
   "primary",
   "primary-soft",
+  "primary-fill",
   "accent",
   "accent-soft",
+  "accent-fill",
   "green",
   "green-soft",
+  "green-fill",
   "red",
   "red-soft",
+  "red-fill",
   "info",
   ...SERIES_DARK.map((_, i) => `series-${i + 1}`),
   "logo-chip",
@@ -503,8 +535,10 @@ export function deriveBrandTheme(input: BrandColors): BrandTheme | null {
     const darkColor = fitBrand(darkSource, darkGround, darkTargets);
     light[key] = lightColor;
     light[`${key}-soft`] = softOf(lightColor, lightGround);
+    light[`${key}-fill`] = fillOf(lightColor, lightGround);
     dark[key] = darkColor;
     dark[`${key}-soft`] = softOf(darkColor, darkGround);
+    dark[`${key}-fill`] = fillOf(darkColor, darkGround);
     if (noticeablyDifferent(lightColor, lightSource)) {
       const darker = luminance(lightColor) < luminance(lightSource);
       notes.push(

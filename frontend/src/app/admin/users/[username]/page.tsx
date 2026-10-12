@@ -483,7 +483,7 @@ function GrantEditor({
           type="button"
           onClick={onSave}
           disabled={saving || !courseId}
-          className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+          className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
         >
           {saving ? "Đang lưu…" : "Lưu"}
         </button>

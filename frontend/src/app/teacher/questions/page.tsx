@@ -433,7 +433,7 @@ export default function QuestionBankPage() {
               </button>
               <Link
                 href="/teacher/questions/new"
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+                className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white"
               >
                 + Tạo câu hỏi mới
               </Link>
@@ -549,7 +549,7 @@ export default function QuestionBankPage() {
                 type="button"
                 disabled={textImporting || !textImportCategoryId || !textImportText.trim()}
                 onClick={handleImportText}
-                className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
+                className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white disabled:opacity-60"
               >
                 {textImporting ? "Đang nhập…" : "Nhập"}
               </button>
@@ -598,7 +598,7 @@ export default function QuestionBankPage() {
                 type="button"
                 onClick={bulkDelete}
                 disabled={bulkWorking}
-                className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+                className="rounded-lg bg-red-fill px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 Xóa ({selected.size})
               </button>

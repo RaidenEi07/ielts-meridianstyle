@@ -199,7 +199,7 @@ export default function CharacterDubbingPage() {
                   type="button"
                   onClick={handleExport}
                   disabled={exportStage !== null}
-                  className="rounded-lg bg-primary px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                  className="rounded-lg bg-primary-fill px-5 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
                 >
                   {exportStage ?? "🎬 Xuất video"}
                 </button>

@@ -987,7 +987,7 @@ function QuizPlayerPageInner() {
           <span className="relative flex items-center">
             <Bell className="h-4 w-4 opacity-60" aria-hidden />
             {attempt.antiCheatEnabled && violations > 0 && (
-              <span className="absolute -right-1.5 -top-1.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-red text-[9px] font-bold text-white">
+              <span className="absolute -right-1.5 -top-1.5 grid h-3.5 w-3.5 place-items-center rounded-full bg-red-fill text-[9px] font-bold text-white">
                 {violations}
               </span>
             )}
@@ -999,7 +999,7 @@ function QuizPlayerPageInner() {
             }`}>
             <NotebookPen className="h-4 w-4" />
             {notes.length > 0 && (
-              <span className="grid h-4 w-4 place-items-center rounded-full bg-accent text-[9px] font-bold text-white">
+              <span className="grid h-4 w-4 place-items-center rounded-full bg-accent-fill text-[9px] font-bold text-white">
                 {notes.length}
               </span>
             )}
@@ -1151,7 +1151,7 @@ function QuizPlayerPageInner() {
                   else setStepIndex(idx);
                 }}
                 className={`shrink-0 rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                  idx === stepIndex ? "bg-primary text-white" : "bg-soft text-muted hover:text-text"
+                  idx === stepIndex ? "bg-primary-fill text-white" : "bg-soft text-muted hover:text-text"
                 }`}
               >
                 {step.label}
@@ -1227,12 +1227,12 @@ function QuizPlayerPageInner() {
               lại) thì đổi thành lối thoát về khóa học thay vì nộp lại. */}
           {result ? (
             <Link href={returnTo || "/dashboard"}
-              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary-fill px-4 text-xs font-semibold text-white hover:opacity-90">
               {returnTo ? "Về khóa học" : "Về bảng điều khiển"}
             </Link>
           ) : (
             <button type="button" onClick={() => setConfirmingSubmit(true)}
-              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary px-4 text-xs font-semibold text-white hover:opacity-90">
+              className="flex h-8 shrink-0 items-center gap-1.5 rounded-full bg-primary-fill px-4 text-xs font-semibold text-white hover:opacity-90">
               <CheckCircle2 className="h-3.5 w-3.5" /> Nộp bài
             </button>
           )}
@@ -1314,7 +1314,7 @@ function SubmitConfirmScreen({
           Sau khi nộp, bạn sẽ không thể sửa đáp án nữa.
         </p>
         <button type="button" onClick={onConfirm}
-          className="mt-6 w-full rounded-lg bg-primary py-3 text-sm font-semibold text-white hover:opacity-90">
+          className="mt-6 w-full rounded-lg bg-primary-fill py-3 text-sm font-semibold text-white hover:opacity-90">
           Nộp bài chính thức
         </button>
       </div>
@@ -1362,7 +1362,7 @@ function NotesPanel({
           className="input flex-1 resize-none text-sm"
         />
         <button type="button" onClick={submit}
-          className="shrink-0 rounded-lg bg-primary px-3 text-sm font-semibold text-white">
+          className="shrink-0 rounded-lg bg-primary-fill px-3 text-sm font-semibold text-white">
           Thêm
         </button>
       </div>
@@ -1624,7 +1624,7 @@ function NoteComposer({
           Hủy
         </button>
         <button type="button" onClick={() => onSubmit(text)}
-          className="rounded-md bg-accent px-2.5 py-1 text-xs font-semibold text-white hover:opacity-90">
+          className="rounded-md bg-accent-fill px-2.5 py-1 text-xs font-semibold text-white hover:opacity-90">
           Lưu
         </button>
       </div>

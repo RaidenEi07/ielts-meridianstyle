@@ -242,7 +242,7 @@ export default function KidsQuestionBankPage() {
             <h1 className="text-xl font-bold">Câu hỏi ({questions.length})</h1>
             <Link
               href="/teacher/kids-questions/new"
-              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white"
+              className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white"
             >
               + Tạo câu hỏi mới
             </Link>
@@ -271,7 +271,7 @@ export default function KidsQuestionBankPage() {
                 type="button"
                 onClick={bulkDelete}
                 disabled={bulkWorking}
-                className="rounded-lg bg-red px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
+                className="rounded-lg bg-red-fill px-3 py-1.5 text-sm font-semibold text-white disabled:opacity-60"
               >
                 Xóa ({selected.size})
               </button>
