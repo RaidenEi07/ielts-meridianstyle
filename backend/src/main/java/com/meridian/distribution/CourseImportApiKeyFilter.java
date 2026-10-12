@@ -58,8 +58,12 @@ public class CourseImportApiKeyFilter extends OncePerRequestFilter {
         if (!valid) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            // Không nêu tên biến cấu hình trong phản hồi công khai; nguyên nhân cụ thể chỉ ghi vào log máy chủ.
+            logger.warn(expected == null || expected.isBlank()
+                    ? "Từ chối " + uri + ": web con chưa cấu hình MASTER_API_KEY"
+                    : "Từ chối " + uri + ": API key không khớp");
             response.getWriter().write(
-                    "{\"message\":\"API key không hợp lệ hoặc web con chưa cấu hình MASTER_API_KEY\"}");
+                    "{\"message\":\"API key không hợp lệ hoặc web con chưa được bật nhận dữ liệu từ web tổng\"}");
             return;
         }
 

@@ -59,10 +59,14 @@ public class SecurityConfig {
                             "/api/auth/register", "/api/auth/register-parent",
                             "/api/auth/login", "/api/auth/refresh")
                     .permitAll()
+                    // HEAD đi kèm GET: công cụ giám sát/kiểm tra liên kết hay dùng HEAD và trước đây nhận 401.
                     .requestMatchers(HttpMethod.GET, "/api/catalog/**").permitAll()
+                    .requestMatchers(HttpMethod.HEAD, "/api/catalog/**").permitAll()
                     .requestMatchers(HttpMethod.GET, "/api/config/public").permitAll()
+                    .requestMatchers(HttpMethod.HEAD, "/api/config/public").permitAll()
                     .requestMatchers(HttpMethod.POST, "/api/inquiries").permitAll()
                     .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+                    .requestMatchers(HttpMethod.HEAD, "/uploads/**").permitAll()
                     .requestMatchers("/actuator/health", "/error").permitAll()
                     // Xác thực riêng bằng API key (CourseImportApiKeyFilter), không qua JWT.
                     .requestMatchers(HttpMethod.POST, "/api/catalog/import").permitAll()
