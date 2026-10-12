@@ -10,11 +10,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.HttpStatusEntryPoint;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter.ReferrerPolicy;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -25,13 +25,16 @@ public class SecurityConfig {
     private final MeridianProperties properties;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
     private final CourseImportApiKeyFilter courseImportApiKeyFilter;
+    private final RateLimitFilter rateLimitFilter;
 
     public SecurityConfig(MeridianProperties properties,
             JwtAuthenticationFilter jwtAuthenticationFilter,
-            CourseImportApiKeyFilter courseImportApiKeyFilter) {
+            CourseImportApiKeyFilter courseImportApiKeyFilter,
+            RateLimitFilter rateLimitFilter) {
         this.properties = properties;
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
         this.courseImportApiKeyFilter = courseImportApiKeyFilter;
+        this.rateLimitFilter = rateLimitFilter;
     }
 
     @Bean
@@ -41,6 +44,16 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(sm ->
                     sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .headers(headers -> headers
+                    .referrerPolicy(rp -> rp.policy(ReferrerPolicy.NO_REFERRER))
+                    // HSTS chỉ khi request đến qua HTTPS (trực tiếp hoặc proxy báo X-Forwarded-Proto: https) hoặc bật cờ
+                    // force-hsts. Không includeSubDomains: tên miền cha còn các dịch vụ khác có thể chưa có HTTPS.
+                    .httpStrictTransportSecurity(hsts -> hsts
+                            .includeSubDomains(false)
+                            .maxAgeInSeconds(15_552_000)
+                            .requestMatcher(request -> properties.getSecurity().isForceHsts()
+                                    || request.isSecure()
+                                    || "https".equalsIgnoreCase(firstToken(request.getHeader("X-Forwarded-Proto"))))))
             .authorizeHttpRequests(auth -> auth
                     .requestMatchers(HttpMethod.POST,
                             "/api/auth/register", "/api/auth/register-parent",
@@ -59,9 +72,19 @@ public class SecurityConfig {
                     new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED)))
             .addFilterBefore(jwtAuthenticationFilter,
                     UsernamePasswordAuthenticationFilter.class)
-            .addFilterBefore(courseImportApiKeyFilter, JwtAuthenticationFilter.class);
+            .addFilterBefore(courseImportApiKeyFilter, JwtAuthenticationFilter.class)
+            // Sau CorsFilter (nên 429 vẫn có header CORS để trình duyệt đọc được), trước bước xác thực/băm mật khẩu.
+            .addFilterBefore(rateLimitFilter, JwtAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    private static String firstToken(String headerValue) {
+        if (headerValue == null) {
+            return "";
+        }
+        int comma = headerValue.indexOf(',');
+        return (comma < 0 ? headerValue : headerValue.substring(0, comma)).trim();
     }
 
     @Bean
@@ -80,6 +103,6 @@ public class SecurityConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new LengthSafeBCryptPasswordEncoder();
     }
 }

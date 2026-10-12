@@ -14,12 +14,15 @@ public record RegisterRequest(
 
         @NotBlank(message = "Email là bắt buộc")
         @Email(message = "Email không hợp lệ")
+        @Size(max = 255, message = "Email tối đa 255 ký tự")
         String email,
 
         @NotBlank(message = "Mật khẩu là bắt buộc")
-        @Size(min = 8, message = "Mật khẩu tối thiểu 8 ký tự")
+        // 72 = giới hạn của bcrypt (byte thừa bị cắt âm thầm); chặn sớm để khỏi băm chuỗi dài vô nghĩa.
+        @Size(min = 8, max = 72, message = "Mật khẩu từ 8 đến 72 ký tự")
         String password,
 
         @NotBlank(message = "Họ tên là bắt buộc")
+        @Size(max = 150, message = "Họ tên tối đa 150 ký tự")
         String fullName) {
 }

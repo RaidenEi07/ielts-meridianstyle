@@ -13,9 +13,19 @@ public class MeridianProperties {
     private final Cors cors = new Cors();
     private final Uploads uploads = new Uploads();
     private final Distribution distribution = new Distribution();
+    private final RateLimit rateLimit = new RateLimit();
+    private final Security security = new Security();
 
     public Distribution getDistribution() {
         return distribution;
+    }
+
+    public RateLimit getRateLimit() {
+        return rateLimit;
+    }
+
+    public Security getSecurity() {
+        return security;
     }
 
     public Jwt getJwt() {
@@ -115,6 +125,68 @@ public class MeridianProperties {
 
         public void setPublicBaseUrl(String publicBaseUrl) {
             this.publicBaseUrl = publicBaseUrl;
+        }
+    }
+
+    /**
+     * Giới hạn tần suất theo IP cho các endpoint công khai dễ bị lạm dụng (xem RateLimitFilter). Cửa sổ cố định;
+     * vượt ngưỡng trả 429 + Retry-After. Con số đặt rộng để một lớp học dùng chung 1 IP (mạng trường) không bị chặn.
+     */
+    public static class RateLimit {
+        private boolean enabled = true;
+        /** Gửi phiếu đăng ký tư vấn (POST /api/inquiries): tối đa mỗi giờ / IP. */
+        private int inquiriesPerHour = 10;
+        /** Tạo tài khoản (register, register-parent): tối đa mỗi giờ / IP. */
+        private int registerPerHour = 30;
+        /** Đăng nhập: tối đa mỗi 5 phút / IP (đã có khóa tạm theo từng tài khoản; đây chỉ chặn dò hàng loạt). */
+        private int loginPerFiveMinutes = 200;
+
+        public boolean isEnabled() {
+            return enabled;
+        }
+
+        public void setEnabled(boolean enabled) {
+            this.enabled = enabled;
+        }
+
+        public int getInquiriesPerHour() {
+            return inquiriesPerHour;
+        }
+
+        public void setInquiriesPerHour(int inquiriesPerHour) {
+            this.inquiriesPerHour = inquiriesPerHour;
+        }
+
+        public int getRegisterPerHour() {
+            return registerPerHour;
+        }
+
+        public void setRegisterPerHour(int registerPerHour) {
+            this.registerPerHour = registerPerHour;
+        }
+
+        public int getLoginPerFiveMinutes() {
+            return loginPerFiveMinutes;
+        }
+
+        public void setLoginPerFiveMinutes(int loginPerFiveMinutes) {
+            this.loginPerFiveMinutes = loginPerFiveMinutes;
+        }
+    }
+
+    public static class Security {
+        /**
+         * Luôn gửi Strict-Transport-Security. Mặc định chỉ gửi khi request đến qua HTTPS (trực tiếp hoặc
+         * X-Forwarded-Proto: https từ reverse proxy); bật cờ này khi proxy không chuyển tiếp header đó.
+         */
+        private boolean forceHsts = false;
+
+        public boolean isForceHsts() {
+            return forceHsts;
+        }
+
+        public void setForceHsts(boolean forceHsts) {
+            this.forceHsts = forceHsts;
         }
     }
 }
