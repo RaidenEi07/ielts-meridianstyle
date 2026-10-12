@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { GradebookTable } from "@/components/GradebookTable";
@@ -22,6 +23,8 @@ export default function TeacherStudentDetailPage() {
   const token = accessToken ?? "";
 
   const [student, setStudent] = useState<StudentSummary | null>(null);
+  // Đã tải xong danh sách "học sinh của tôi" chưa — để phân biệt "đang tải" với "học sinh này không thuộc danh sách".
+  const [rosterLoaded, setRosterLoaded] = useState(false);
   const [rows, setRows] = useState<GradebookRow[] | null>(null);
   const [wrongTypes, setWrongTypes] = useState<TypeBreakdown[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -48,9 +51,13 @@ export default function TeacherStudentDetailPage() {
 
   useEffect(() => {
     if (!allowed) return;
-    rosterApi.myStudents(token).then((list) => {
-      setStudent(list.find((s) => s.username === params.username) ?? null);
-    });
+    rosterApi
+      .myStudents(token)
+      .then((list) => {
+        setStudent(list.find((s) => s.username === params.username) ?? null);
+      })
+      .catch(() => {})
+      .finally(() => setRosterLoaded(true));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allowed, params.username]);
 
@@ -116,6 +123,37 @@ export default function TeacherStudentDetailPage() {
     return (
       <div className="grid min-h-screen place-items-center px-6 text-center">
         <p className="text-lg font-semibold">Không có quyền truy cập</p>
+      </div>
+    );
+  }
+
+  // Học sinh không có trong danh sách phụ trách (gõ tay đường dẫn, hoặc vừa bị gỡ khỏi danh sách): báo rõ thay vì
+  // để trang treo ở "Đang tải…" mãi.
+  if (rosterLoaded && !student) {
+    return (
+      <div className="min-h-screen bg-bg">
+        <PageHeader
+          title="Học sinh của tôi"
+          backHref="/teacher/students"
+          backLabel="Danh sách học sinh"
+          maxWidthClass="max-w-5xl"
+        />
+        <main data-testid="student-not-in-roster" className="mx-auto max-w-xl px-6 py-16 text-center">
+          <p className="text-lg font-semibold">Học sinh này không có trong danh sách bạn phụ trách</p>
+          <p className="mt-2 text-sm text-muted">
+            Học sinh có thể chưa được phân công cho bạn, hoặc đã được gỡ khỏi danh sách.
+          </p>
+          <div className="mt-5 flex flex-wrap justify-center gap-4 text-sm font-semibold">
+            <Link href="/teacher/students" className="text-accent hover:underline">
+              ← Về danh sách học sinh
+            </Link>
+            {useAuthStore.getState().systemCapabilities.includes("user:manage") && (
+              <Link href={`/admin/students/${params.username}`} className="text-accent hover:underline">
+                Mở hồ sơ trong trang quản trị
+              </Link>
+            )}
+          </div>
+        </main>
       </div>
     );
   }

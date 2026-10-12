@@ -58,7 +58,7 @@ export default function ParentRegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} method="post" className="space-y-4">
           <Field label="Họ và tên">
             <input
               type="text"
@@ -99,6 +99,7 @@ export default function ParentRegisterPage() {
               <input
                 type={showPassword ? "text" : "password"}
                 required
+                autoComplete="new-password"
                 minLength={8}
                 maxLength={72}
                 value={password}
@@ -109,7 +110,9 @@ export default function ParentRegisterPage() {
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted hover:text-text"
+                aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                aria-pressed={showPassword}
+                className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md px-3 py-2 text-xs font-medium text-muted hover:text-text"
               >
                 {showPassword ? "Ẩn" : "Hiện"}
               </button>
@@ -127,11 +130,11 @@ export default function ParentRegisterPage() {
 
         <p className="mt-6 text-center text-sm text-muted">
           Đã có tài khoản?{" "}
-          <Link href="/login" className="text-accent hover:underline">
+          <Link href="/login" className="inline-block py-1.5 text-accent hover:underline">
             Đăng nhập
           </Link>
           {" · "}
-          <Link href="/" className="hover:text-text">
+          <Link href="/" className="inline-block py-1.5 hover:text-text">
             Về trang chủ
           </Link>
         </p>

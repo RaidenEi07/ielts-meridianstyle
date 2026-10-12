@@ -6,6 +6,8 @@ import { getSiteConfig } from "@/lib/publicConfigServer";
 
 export const metadata: Metadata = {
   title: "Chính sách bảo mật",
+  description: "Chính sách bảo mật: dữ liệu được thu thập và cách sử dụng.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default async function PrivacyPage() {

@@ -6,6 +6,8 @@ import { getSiteConfig } from "@/lib/publicConfigServer";
 
 export const metadata: Metadata = {
   title: "Điều khoản sử dụng",
+  description: "Điều khoản sử dụng nền tảng học và luyện thi trực tuyến.",
+  alternates: { canonical: "/terms" },
 };
 
 export default async function TermsPage() {

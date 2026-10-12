@@ -197,7 +197,7 @@ const BG_SPLIT_LUM = 0.1;
 
 const HAND_TUNED = {
   light: { primary: "#1E3A5F", accent: "#C2691D", green: "#1E6F43", red: "#9B2C2C", info: "#0E7490" },
-  dark: { primary: "#5B8FD6", accent: "#E8923A", green: "#5BBE86", red: "#E08585", info: "#38BDF8" },
+  dark: { primary: "#6F9FE0", accent: "#E8923A", green: "#5BBE86", red: "#E08585", info: "#38BDF8" },
 } as const;
 
 const SERIES_DARK = [
@@ -246,7 +246,8 @@ function lightNeutrals(base: string, hue: number, sat: number): Neutrals {
   const border = mix(base, "#000000", 0.1);
   const text = nudge(hslToHex(hue, Math.min(sat, 0.25), 0.12), [base, soft], TEXT_AAA, -1);
   const muted = nudge(mix(text, base, 0.42), [base, soft], TEXT_AA, -1);
-  const faint = nudge(mix(text, base, 0.62), [base], UI_MIN, -1);
+  // Chữ phụ nhạt nhất cũng phải đọc được (AA) trên nền thường lẫn nền nhạt, không chỉ ngang ngưỡng 3:1 của UI.
+  const faint = nudge(mix(text, base, 0.62), [base, soft], TEXT_AA, -1);
   return { dark: false, bg: base, surface, card: base, soft, border, text, muted, faint };
 }
 
@@ -257,7 +258,7 @@ function darkNeutrals(base: string, hue: number, sat: number): Neutrals {
   const border = mix(base, "#FFFFFF", 0.14);
   const text = nudge(hslToHex(hue, Math.min(sat, 0.2), 0.92), [base, soft], TEXT_AAA, 1);
   const muted = nudge(mix(text, base, 0.42), [base, soft], TEXT_AA, 1);
-  const faint = nudge(mix(text, base, 0.62), [base], UI_MIN, 1);
+  const faint = nudge(mix(text, base, 0.62), [base, soft], TEXT_AA, 1);
   return { dark: true, bg: base, surface, card, soft, border, text, muted, faint };
 }
 

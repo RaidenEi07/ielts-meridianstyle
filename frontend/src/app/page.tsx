@@ -311,21 +311,29 @@ function ConsultationForm() {
             value={form.name}
             onChange={(e) => setForm({ ...form, name: e.target.value })}
             placeholder="Họ và tên"
+            aria-label="Họ và tên"
+            autoComplete="name"
             className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
           />
           <div className="grid grid-cols-2 gap-3">
             <input
+              type="email"
               maxLength={255}
               value={form.email}
               onChange={(e) => setForm({ ...form, email: e.target.value })}
               placeholder="Email"
+              aria-label="Email"
+              autoComplete="email"
               className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
             />
             <input
+              type="tel"
               maxLength={40}
               value={form.phone}
               onChange={(e) => setForm({ ...form, phone: e.target.value })}
               placeholder="Số điện thoại"
+              aria-label="Số điện thoại"
+              autoComplete="tel"
               className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
             />
           </div>
@@ -334,6 +342,7 @@ function ConsultationForm() {
             value={form.message}
             onChange={(e) => setForm({ ...form, message: e.target.value })}
             placeholder="Bạn quan tâm khóa học nào?"
+            aria-label="Bạn quan tâm khóa học nào?"
             rows={3}
             className="w-full rounded-lg border border-white/20 bg-white/10 px-4 py-2.5 text-white placeholder:text-white/50 focus:outline-none focus:ring-2 focus:ring-white/30"
           />

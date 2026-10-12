@@ -79,7 +79,7 @@ export default function AuthPage() {
               "radial-gradient(circle at 20% 20%, #ffffff 0, transparent 40%), radial-gradient(circle at 80% 60%, #ffffff 0, transparent 35%)",
           }}
         />
-        <Link href="/">
+        <Link href="/" className="relative inline-block self-start py-1">
           <Logo onDark className="relative text-white [&_span]:text-white" />
         </Link>
         <div className="relative space-y-6">
@@ -119,7 +119,7 @@ export default function AuthPage() {
       <main className="flex items-center justify-center bg-bg px-6 py-12">
         <div className="w-full max-w-md">
           <div className="mb-8 md:hidden">
-            <Link href="/">
+            <Link href="/" className="inline-block py-1">
               <Logo />
             </Link>
           </div>
@@ -162,7 +162,7 @@ export default function AuthPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} method="post" className="space-y-4">
             {tab === "register" && (
               <Field label="Bạn đang tìm khóa học cho:">
                 <div className="grid grid-cols-2 gap-3">
@@ -236,6 +236,7 @@ export default function AuthPage() {
                 <input
                   type={showPassword ? "text" : "password"}
                   required
+                  autoComplete={tab === "register" ? "new-password" : "current-password"}
                   minLength={tab === "register" ? 8 : undefined}
                   maxLength={tab === "register" ? 72 : 200}
                   value={password}
@@ -246,7 +247,9 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-muted hover:text-text"
+                  aria-label={showPassword ? "Ẩn mật khẩu" : "Hiện mật khẩu"}
+                  aria-pressed={showPassword}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded-md px-3 py-2 text-xs font-medium text-muted hover:text-text"
                 >
                   {showPassword ? "Ẩn" : "Hiện"}
                 </button>
@@ -267,11 +270,11 @@ export default function AuthPage() {
           </form>
 
           <p className="mt-6 text-center text-sm text-muted">
-            <Link href="/" className="hover:text-text">
+            <Link href="/" className="inline-block py-1.5 hover:text-text">
               ← Về trang chủ
             </Link>
             {" · "}
-            <Link href="/parent/register" className="text-accent hover:underline">
+            <Link href="/parent/register" className="inline-block py-1.5 text-accent hover:underline">
               Đăng ký tài khoản phụ huynh
             </Link>
           </p>

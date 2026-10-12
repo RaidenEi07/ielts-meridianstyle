@@ -5,6 +5,8 @@ import { getSiteConfig } from "@/lib/publicConfigServer";
 
 export const metadata: Metadata = {
   title: "Liên hệ",
+  description: "Thông tin liên hệ của trung tâm và cách để lại thông tin nhận tư vấn khóa học.",
+  alternates: { canonical: "/contact" },
 };
 
 export default async function ContactPage() {

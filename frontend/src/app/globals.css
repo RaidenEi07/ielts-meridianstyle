@@ -18,7 +18,8 @@
   --border: var(--brand-border, #ece4d8);
   --text: var(--brand-text, #26211b);
   --muted: var(--brand-muted, #6b6155);
-  --faint: var(--brand-faint, #a8997f);
+  /* Chữ phụ nhạt nhất: đủ 4.5:1 trên mọi nền (bản cũ #a8997f chỉ ~2.4:1). */
+  --faint: var(--brand-faint, #776b59);
   --primary: var(--brand-primary, #1e3a5f);
   --primary-soft: var(--brand-primary-soft, #e7edf4);
   --accent: var(--brand-accent, #c2691d);
@@ -64,8 +65,8 @@
   --border: var(--brand-border, #352d24);
   --text: var(--brand-text, #ece4d8);
   --muted: var(--brand-muted, #a89a86);
-  --faint: var(--brand-faint, #6b6155);
-  --primary: var(--brand-primary, #5b8fd6);
+  --faint: var(--brand-faint, #90877b);
+  --primary: var(--brand-primary, #6f9fe0);
   --primary-soft: var(--brand-primary-soft, #22304a);
   --accent: var(--brand-accent, #e8923a);
   --accent-soft: var(--brand-accent-soft, #3a2b18);
@@ -76,7 +77,7 @@
   --info: var(--brand-info, #38bdf8);
   /* Bản đậm của từng màu để chữ trắng trên nền đặc đạt 4.5:1 (--primary/--accent/... ở trên đã sáng lên để làm
      chữ trên nền tối nên chữ trắng đè lên chỉ ~3:1). Cùng sắc độ, tính bằng lib/brandTheme.ts (fillOf). */
-  --primary-fill: var(--brand-primary-fill, #3776cd);
+  --primary-fill: var(--brand-primary-fill, #3176d3);
   --accent-fill: var(--brand-accent-fill, #b16315);
   --green-fill: var(--brand-green-fill, #358558);
   --red-fill: var(--brand-red-fill, #d04646);

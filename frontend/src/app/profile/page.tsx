@@ -106,6 +106,7 @@ export default function ProfilePage() {
               <span className="mb-1 block text-xs font-medium text-muted">Mật khẩu hiện tại</span>
               <input
                 type="password"
+                autoComplete="current-password"
                 value={currentPassword}
                 onChange={(e) => setCurrentPassword(e.target.value)}
                 className="input"
@@ -115,6 +116,7 @@ export default function ProfilePage() {
               <span className="mb-1 block text-xs font-medium text-muted">Mật khẩu mới</span>
               <input
                 type="password"
+                autoComplete="new-password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 className="input"

@@ -68,3 +68,24 @@ export async function getBrandThemeCss(): Promise<string> {
 export async function getSiteConfig(): Promise<SiteConfig> {
   return siteConfigFromPublic(await getPublicConfig());
 }
+
+/**
+ * Tên + mô tả ngắn của một khóa học đã xuất bản, để đặt tiêu đề tab/ảnh chia sẻ đúng theo khóa. Gọi ẩn danh nên khóa
+ * nháp trả 404 → null (tiêu đề rơi về "Khóa học"). Không bao giờ ném lỗi.
+ */
+export async function getPublicCourse(id: number): Promise<{ title: string; summary: string } | null> {
+  try {
+    const res = await fetch(`${INTERNAL_API_BASE}/api/catalog/courses/${id}`, {
+      cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
+    });
+    if (!res.ok) return null;
+    const course = (await res.json()) as { title?: unknown; summary?: unknown };
+    return {
+      title: typeof course.title === "string" ? course.title.trim() : "",
+      summary: typeof course.summary === "string" ? course.summary.trim() : "",
+    };
+  } catch {
+    return null;
+  }
+}
