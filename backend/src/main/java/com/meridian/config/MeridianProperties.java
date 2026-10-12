@@ -16,12 +16,30 @@ public class MeridianProperties {
     private final RateLimit rateLimit = new RateLimit();
     private final Security security = new Security();
 
+    /**
+     * Vai trò của deployment này: MASTER (web tổng) hoặc CHILD (web con, mặc định). Đọc từ biến môi trường SITE_ROLE,
+     * giống AuthService. Web con không được hiển thị công khai nội dung mẫu của web tổng (xem FactoryContent).
+     */
+    private String siteRole = "CHILD";
+
     public Distribution getDistribution() {
         return distribution;
     }
 
     public RateLimit getRateLimit() {
         return rateLimit;
+    }
+
+    public String getSiteRole() {
+        return siteRole;
+    }
+
+    public void setSiteRole(String siteRole) {
+        this.siteRole = siteRole;
+    }
+
+    public boolean isMaster() {
+        return "MASTER".equalsIgnoreCase(siteRole);
     }
 
     public Security getSecurity() {

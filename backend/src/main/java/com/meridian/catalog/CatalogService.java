@@ -225,10 +225,34 @@ public class CatalogService {
                 .toList();
     }
 
+    /**
+     * Chi tiết khóa cho trang công khai. Khóa chưa xuất bản (nháp/lưu trữ) KHÔNG được lộ cho người lạ: trước đây ai
+     * đoán được id cũng đọc được tên + toàn bộ section của khóa đang soạn dở.
+     *
+     * @param viewerId người đang đăng nhập, hoặc null nếu ẩn danh
+     */
     @Transactional(readOnly = true)
-    public CourseDetailDto getCourseDetail(Long id) {
+    public CourseDetailDto getCourseDetail(Long id, UUID viewerId) {
         Course course = getCourse(id);
+        assertVisibleTo(course, viewerId);
         return buildDetail(course);
+    }
+
+    /**
+     * Khóa đã xuất bản: ai cũng xem được. Chưa xuất bản: chỉ người có course:manage tại context của khóa, hoặc học
+     * viên đã ghi danh (khóa bị lưu trữ sau khi họ vào học vẫn phải mở được). Người khác nhận 404 như khóa không
+     * tồn tại — không xác nhận là khóa có thật.
+     */
+    void assertVisibleTo(Course course, UUID viewerId) {
+        if (course.getStatus() == CourseStatus.PUBLISHED) {
+            return;
+        }
+        if (viewerId != null
+                && (permissionService.hasCapability(viewerId, CAP_MANAGE, contextIdOf(course.getContext()))
+                        || enrollmentRepository.existsByUserIdAndCourseId(viewerId, course.getId()))) {
+            return;
+        }
+        throw ApiException.notFound("Không tìm thấy khóa học");
     }
 
     @Transactional
@@ -317,8 +341,8 @@ public class CatalogService {
     // ================= Sections =================
 
     @Transactional(readOnly = true)
-    public List<SectionDto> listSections(Long courseId) {
-        getCourse(courseId); // đảm bảo tồn tại
+    public List<SectionDto> listSections(Long courseId, UUID viewerId) {
+        assertVisibleTo(getCourse(courseId), viewerId); // phải tồn tại và được phép xem
         return sectionRepository.findByCourseIdOrderBySortOrderAscIdAsc(courseId).stream()
                 .map(SectionDto::from).toList();
     }

@@ -26,7 +26,8 @@ public class ConfigService {
             "PRIMARY_COLOR", "ACCENT_COLOR", "BACKGROUND_COLOR", "SITE_LOGO_URL", "SITE_LOGO_HIDE_NAME",
             "HOMEPAGE_HERO_IMAGE_URL", "HOMEPAGE_HIGHLIGHT_VALUE", "HOMEPAGE_HIGHLIGHT_LABEL",
             "HOMEPAGE_TEACHERS_LABEL", "HOMEPAGE_TESTIMONIALS", "SUPPORT_EMAIL", "SUPPORT_PHONE",
-            "SUPPORT_ADDRESS", "REGISTRATION_OPEN", "HOMEPAGE_INFO_CARDS");
+            "SUPPORT_ADDRESS", "REGISTRATION_OPEN", "HOMEPAGE_INFO_CARDS",
+            "LEGAL_TERMS_TEXT", "LEGAL_PRIVACY_TEXT");
 
     private static final Set<String> COLOR_KEYS = Set.of("PRIMARY_COLOR", "ACCENT_COLOR", "BACKGROUND_COLOR");
     private static final Pattern HEX_COLOR = Pattern.compile("^#[0-9A-Fa-f]{6}$");
@@ -47,6 +48,10 @@ public class ConfigService {
             "HOMEPAGE_TEACHERS_LABEL", 40,
             "SUPPORT_PHONE", 40,
             "SUPPORT_ADDRESS", 200);
+
+    /** Nội dung trang Điều khoản / Chính sách bảo mật do trung tâm tự soạn (văn bản thuần). Rỗng = dùng bản mẫu có sẵn. */
+    private static final Set<String> LEGAL_TEXT_KEYS = Set.of("LEGAL_TERMS_TEXT", "LEGAL_PRIVACY_TEXT");
+    private static final int MAX_LEGAL_TEXT = 20_000;
 
     private static final String TESTIMONIALS_KEY = "HOMEPAGE_TESTIMONIALS";
     // Giới hạn lời chứng thực (khớp lib/siteConfig.ts).
@@ -73,19 +78,29 @@ public class ConfigService {
         Map<String, String> out = new LinkedHashMap<>();
         for (WebConfiguration c : repository.findAll()) {
             if (PUBLIC_KEYS.contains(c.getKey())) {
-                out.put(c.getKey(), c.getValue());
+                out.put(c.getKey(), visibleValue(c));
             }
         }
         return out;
+    }
+
+    /**
+     * Web con không hiển thị nội dung MẪU của web tổng (email Meridian, "92%", lời chứng thực mặc định...): các giá
+     * trị đó được migration cài sẵn cho mọi web, và nếu admin web con chưa thay thì học viên sẽ thấy email của một
+     * trung tâm khác cùng những số liệu/lời chứng thực không có thật. Giá trị mẫu được coi như để trống (ẩn mục).
+     */
+    private String visibleValue(WebConfiguration c) {
+        return properties.isMaster() ? c.getValue() : FactoryContent.withoutSample(c.getKey(), c.getValue(), json);
     }
 
     @Transactional(readOnly = true)
     public Map<String, String> allConfig(UUID uid) {
         permissionService.requireSystemCapability(uid, "system:manage");
         Map<String, String> out = new LinkedHashMap<>();
+        // Cùng quy tắc với publicConfig: ô nào đang là nội dung mẫu thì admin cũng thấy trống — thấy gì là công khai đó.
         repository.findAll().stream()
                 .sorted((a, b) -> a.getKey().compareTo(b.getKey()))
-                .forEach(c -> out.put(c.getKey(), c.getValue()));
+                .forEach(c -> out.put(c.getKey(), visibleValue(c)));
         return out;
     }
 
@@ -125,7 +140,20 @@ public class ConfigService {
         if (TESTIMONIALS_KEY.equals(key)) {
             return normalizeTestimonials(key, value);
         }
+        if (LEGAL_TEXT_KEYS.contains(key)) {
+            return normalizeLegalText(key, value);
+        }
         return value;
+    }
+
+    /** Văn bản thuần: thống nhất xuống dòng, bỏ ký tự điều khiển (trừ xuống dòng/tab), giới hạn độ dài. */
+    private static String normalizeLegalText(String key, String value) {
+        String text = value == null ? "" : value.replace("\r\n", "\n").replace('\r', '\n');
+        text = text.replaceAll("[\\p{Cc}&&[^\\n\\t]]", "").trim();
+        if (text.length() > MAX_LEGAL_TEXT) {
+            throw ApiException.badRequest("Nội dung quá dài cho " + key + " — tối đa " + MAX_LEGAL_TEXT + " ký tự");
+        }
+        return text;
     }
 
     private static String normalizeShortText(String key, String value, int maxLength) {
