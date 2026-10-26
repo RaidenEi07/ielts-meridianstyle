@@ -92,6 +92,8 @@ public final class ReportDtos {
             UUID userId,
             String userName,
             String username,
+            String email,
+            Instant enrolledAt,
             int quizzesAttempted,
             int totalQuizzes,
             BigDecimal avgPercent,
@@ -114,6 +116,16 @@ public final class ReportDtos {
             BigDecimal passRate) {
     }
 
+    /** 1 section có đề thi trong tổng quan điểm theo section: bao nhiêu đề, bao nhiêu học viên
+     * đã làm, điểm trung bình (%, mỗi học viên lấy điểm cao nhất từng đề rồi trung bình). */
+    public record CourseGradebookSectionRow(
+            Long sectionId,
+            String sectionTitle,
+            int quizCount,
+            int studentsAttempted,
+            BigDecimal avgPercent) {
+    }
+
     public record CourseGradebook(
             Long courseId,
             String courseTitle,
@@ -122,7 +134,44 @@ public final class ReportDtos {
             BigDecimal avgCompletionPercent,
             BigDecimal avgScorePercent,
             List<CourseGradebookStudentRow> students,
-            List<CourseGradebookQuizRow> quizzes) {
+            List<CourseGradebookQuizRow> quizzes,
+            List<CourseGradebookSectionRow> sections) {
+    }
+
+    /** Cột của bảng điểm 1 section = 1 đề thi trong section đó. */
+    public record SectionGradebookQuiz(Long quizId, String quizTitle, BigDecimal maxScore) {
+    }
+
+    /** 1 ô điểm (1 học viên × 1 đề): lấy lượt có điểm cao nhất. {@code attempts} = 0 nghĩa là
+     * chưa làm; {@code graded} = false mà attempts > 0 nghĩa là đã làm nhưng chưa có điểm
+     * (chưa nộp hoặc đang chờ chấm). */
+    public record SectionGradebookCell(
+            Long quizId,
+            BigDecimal rawScore,
+            BigDecimal maxScore,
+            BigDecimal percent,
+            BigDecimal bandScore,
+            int attempts,
+            boolean graded) {
+    }
+
+    public record SectionGradebookStudentRow(
+            UUID userId,
+            String userName,
+            String username,
+            List<SectionGradebookCell> cells,
+            int quizzesAttempted,
+            BigDecimal avgPercent) {
+    }
+
+    /** Điểm 1 section: mọi học viên ghi danh × mọi đề trong section (vd UNIT 1_listening × 4 bài homework). */
+    public record SectionGradebook(
+            Long courseId,
+            String courseTitle,
+            Long sectionId,
+            String sectionTitle,
+            List<SectionGradebookQuiz> quizzes,
+            List<SectionGradebookStudentRow> students) {
     }
 
     public record SystemAnalytics(

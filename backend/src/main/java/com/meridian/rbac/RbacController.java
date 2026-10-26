@@ -4,6 +4,8 @@ import com.meridian.auth.dto.RoleAssignmentDto;
 import com.meridian.common.ApiException;
 import com.meridian.rbac.dto.AdminUserDto;
 import com.meridian.rbac.dto.AssignRoleRequest;
+import com.meridian.rbac.dto.BulkStatusRequest;
+import com.meridian.rbac.dto.BulkStatusResult;
 import com.meridian.rbac.dto.CapabilityDto;
 import com.meridian.rbac.dto.CreateUserRequest;
 import com.meridian.rbac.dto.RoleDto;
@@ -66,6 +68,14 @@ public class RbacController {
     public ResponseEntity<AdminUserDto> createUser(@Valid @RequestBody CreateUserRequest request) {
         requireSystem("user:manage");
         return ResponseEntity.status(HttpStatus.CREATED).body(rbacService.createUser(request));
+    }
+
+    /** Khóa / mở khóa nhiều tài khoản đã chọn (literal "bulk-status" thắng "{id}" khi khớp đường dẫn). */
+    @PatchMapping("/users/bulk-status")
+    public BulkStatusResult bulkStatus(@Valid @RequestBody BulkStatusRequest request) {
+        AuthenticatedUser current = currentUserProvider.require();
+        permissionService.requireSystemCapability(current.id(), "user:manage");
+        return rbacService.bulkSetStatus(current.id(), request.userIds(), request.status());
     }
 
     @PatchMapping("/users/{id}")

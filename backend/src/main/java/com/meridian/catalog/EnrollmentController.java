@@ -1,5 +1,6 @@
 package com.meridian.catalog;
 
+import com.meridian.catalog.dto.BulkEnrollResult;
 import com.meridian.catalog.dto.EnrollmentDto;
 import com.meridian.catalog.dto.EnrollmentRequests;
 import com.meridian.security.CurrentUserProvider;
@@ -39,6 +40,12 @@ public class EnrollmentController {
             @Valid @RequestBody EnrollmentRequests.Enroll req) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(enrollmentService.enroll(uid(), req));
+    }
+
+    /** Admin/quản lý ghi danh nhiều tài khoản đã chọn vào 1 khóa trong 1 lần. */
+    @PostMapping("/bulk")
+    public BulkEnrollResult bulkEnroll(@Valid @RequestBody EnrollmentRequests.BulkEnroll req) {
+        return enrollmentService.enrollUsersByAdmin(uid(), req.userIds(), req.courseId());
     }
 
     @GetMapping("/me")

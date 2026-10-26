@@ -6,6 +6,7 @@ import com.meridian.gradebook.dto.GradeHistoryDto;
 import com.meridian.gradebook.dto.ReportDtos.CourseGradebook;
 import com.meridian.gradebook.dto.ReportDtos.GradebookRow;
 import com.meridian.gradebook.dto.ReportDtos.QuizReport;
+import com.meridian.gradebook.dto.ReportDtos.SectionGradebook;
 import com.meridian.gradebook.dto.ReportDtos.SystemAnalytics;
 import com.meridian.gradebook.dto.ReportDtos.TypeBreakdown;
 import com.meridian.quiz.dto.AttemptDtos.AttemptResult;
@@ -54,6 +55,11 @@ public class ReportController {
     @GetMapping("/courses/{courseId}/gradebook")
     public CourseGradebook courseGradebook(@PathVariable Long courseId) {
         return reportService.courseGradebook(uid(), courseId);
+    }
+
+    @GetMapping("/courses/{courseId}/sections/{sectionId}/gradebook")
+    public SectionGradebook sectionGradebook(@PathVariable Long courseId, @PathVariable Long sectionId) {
+        return reportService.sectionGradebook(uid(), courseId, sectionId);
     }
 
     @GetMapping("/students/{userId}/gradebook")

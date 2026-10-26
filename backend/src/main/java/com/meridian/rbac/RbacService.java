@@ -6,6 +6,7 @@ import com.meridian.catalog.CourseRepository;
 import com.meridian.common.ApiException;
 import com.meridian.rbac.dto.AdminUserDto;
 import com.meridian.rbac.dto.AssignRoleRequest;
+import com.meridian.rbac.dto.BulkStatusResult;
 import com.meridian.rbac.dto.CapabilityDto;
 import com.meridian.rbac.dto.CreateUserRequest;
 import com.meridian.rbac.dto.RoleDto;
@@ -181,6 +182,42 @@ public class RbacService {
         List<RoleAssignmentDto> assignments = roleAssignmentRepository.findByUserId(user.getId())
                 .stream().map(RoleAssignmentDto::from).toList();
         return AdminUserDto.from(user, assignments);
+    }
+
+    /**
+     * Khóa hoặc mở khóa nhiều tài khoản cùng lúc. Người thao tác không tự khóa được chính mình (tránh tự
+     * đá mình ra khỏi hệ thống). Mở khóa cũng xóa luôn trạng thái bị khóa tạm do đăng nhập sai nhiều lần.
+     * Controller đã kiểm 'user:manage'.
+     */
+    @Transactional
+    public BulkStatusResult bulkSetStatus(UUID actorId, java.util.Collection<UUID> userIds, String status) {
+        UserStatus target;
+        try {
+            target = UserStatus.valueOf(status.trim().toUpperCase());
+        } catch (IllegalArgumentException e) {
+            throw ApiException.badRequest("Trạng thái không hợp lệ");
+        }
+        if (target != UserStatus.ACTIVE && target != UserStatus.SUSPENDED) {
+            throw ApiException.badRequest("Chỉ khóa (SUSPENDED) hoặc mở khóa (ACTIVE) được");
+        }
+        java.util.Set<UUID> ids = new java.util.LinkedHashSet<>(userIds);
+        List<User> users = userRepository.findAllById(ids);
+        int updated = 0;
+        int skippedSelf = 0;
+        for (User user : users) {
+            if (user.getId().equals(actorId)) {
+                skippedSelf++;
+                continue;
+            }
+            user.setStatus(target);
+            if (target == UserStatus.ACTIVE) {
+                user.setFailedLoginAttempts(0);
+                user.setLockedUntil(null);
+            }
+            userRepository.save(user);
+            updated++;
+        }
+        return new BulkStatusResult(updated, skippedSelf, ids.size() - users.size());
     }
 
     /**

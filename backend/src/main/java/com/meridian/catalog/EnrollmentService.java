@@ -1,5 +1,6 @@
 package com.meridian.catalog;
 
+import com.meridian.catalog.dto.BulkEnrollResult;
 import com.meridian.catalog.dto.EnrollmentDto;
 import com.meridian.catalog.dto.EnrollmentRequests;
 import com.meridian.common.ApiException;
@@ -9,7 +10,10 @@ import com.meridian.rbac.PermissionService;
 import com.meridian.roster.RosterService;
 import com.meridian.user.User;
 import com.meridian.user.UserRepository;
+import java.util.Collection;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -87,6 +91,38 @@ public class EnrollmentService {
         return doEnroll(requireUser(studentId), course);
     }
 
+    /**
+     * Admin/quản lý ghi danh NHIỀU tài khoản vào 1 khóa trong 1 lần (chọn nhiều ở trang Quản lý tài
+     * khoản). Cùng quyền 'enrollment:manage' với {@link #enrollByAdmin}.
+     */
+    @Transactional
+    public BulkEnrollResult enrollUsersByAdmin(UUID adminId, Collection<UUID> userIds, Long courseId) {
+        permissionService.requireSystemCapability(adminId, "enrollment:manage");
+        return enrollUsersInCourse(userIds, courseId);
+    }
+
+    /**
+     * Ghi danh nhiều tài khoản vào 1 khóa, bỏ qua người đã ghi danh (không báo lỗi). KHÔNG tự kiểm quyền —
+     * chỉ gọi sau khi caller đã kiểm (xem {@link #enrollUsersByAdmin}, ClassService).
+     */
+    @Transactional
+    public BulkEnrollResult enrollUsersInCourse(Collection<UUID> userIds, Long courseId) {
+        Course course = getPublishedCourse(courseId);
+        Set<UUID> ids = new LinkedHashSet<>(userIds);
+        List<User> users = userRepository.findAllById(ids);
+        int enrolled = 0;
+        int already = 0;
+        for (User user : users) {
+            if (enrollmentRepository.existsByUserIdAndCourseId(user.getId(), course.getId())) {
+                already++;
+            } else {
+                enrollmentRepository.save(newEnrollment(user, course));
+                enrolled++;
+            }
+        }
+        return new BulkEnrollResult(enrolled, already, ids.size() - users.size());
+    }
+
     private Course getPublishedCourse(Long courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> ApiException.notFound("Không tìm thấy khóa học"));
@@ -105,11 +141,15 @@ public class EnrollmentService {
         if (enrollmentRepository.existsByUserIdAndCourseId(user.getId(), course.getId())) {
             throw ApiException.conflict("Đã ghi danh khóa học này");
         }
+        return EnrollmentDto.from(enrollmentRepository.save(newEnrollment(user, course)));
+    }
+
+    private Enrollment newEnrollment(User user, Course course) {
         Enrollment enrollment = new Enrollment();
         enrollment.setUser(user);
         enrollment.setCourse(course);
         enrollment.setStatus(EnrollmentStatus.ACTIVE);
-        return EnrollmentDto.from(enrollmentRepository.save(enrollment));
+        return enrollment;
     }
 
     private Long contextIdOf(Context ctx) {

@@ -10,12 +10,17 @@ import com.meridian.common.ApiException;
 import com.meridian.gradebook.dto.ReportDtos.AttemptSummary;
 import com.meridian.gradebook.dto.ReportDtos.CourseGradebook;
 import com.meridian.gradebook.dto.ReportDtos.CourseGradebookQuizRow;
+import com.meridian.gradebook.dto.ReportDtos.CourseGradebookSectionRow;
 import com.meridian.gradebook.dto.ReportDtos.CourseGradebookStudentRow;
 import com.meridian.gradebook.dto.ReportDtos.GradebookRow;
 import com.meridian.gradebook.dto.ReportDtos.MonthlyPoint;
 import com.meridian.gradebook.dto.ReportDtos.QuizReport;
 import com.meridian.gradebook.dto.ReportDtos.QuizReportRow;
 import com.meridian.gradebook.dto.ReportDtos.QuizReportStats;
+import com.meridian.gradebook.dto.ReportDtos.SectionGradebook;
+import com.meridian.gradebook.dto.ReportDtos.SectionGradebookCell;
+import com.meridian.gradebook.dto.ReportDtos.SectionGradebookQuiz;
+import com.meridian.gradebook.dto.ReportDtos.SectionGradebookStudentRow;
 import com.meridian.gradebook.dto.ReportDtos.SkillBreakdown;
 import com.meridian.gradebook.dto.ReportDtos.SystemAnalytics;
 import com.meridian.gradebook.dto.ReportDtos.TypeBreakdown;
@@ -43,6 +48,8 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
@@ -455,8 +462,8 @@ public class ReportService {
                             .divide(BigDecimal.valueOf(percents.size()), 4, RoundingMode.HALF_UP));
 
             studentRows.add(new CourseGradebookStudentRow(userId, enr.getUser().getFullName(),
-                    enr.getUser().getUsername(), byQuiz.size(), quizzes.size(), avgPercent, bestBand,
-                    lastActivity));
+                    enr.getUser().getUsername(), enr.getUser().getEmail(), enr.getEnrolledAt(),
+                    byQuiz.size(), quizzes.size(), avgPercent, bestBand, lastActivity));
         }
         studentRows.sort(Comparator.comparing(CourseGradebookStudentRow::userName,
                 Comparator.nullsLast(Comparator.naturalOrder())));
@@ -476,7 +483,144 @@ public class ReportService {
                         .divide(BigDecimal.valueOf(validAvgs.size()), 4, RoundingMode.HALF_UP));
 
         return new CourseGradebook(courseId, course.getTitle(), enrollments.size(), quizzes.size(),
-                avgCompletion, avgScorePercent, studentRows, quizRows);
+                avgCompletion, avgScorePercent, studentRows, quizRows,
+                sectionSummaries(sections, quizzes, enrollments, attemptsByUser));
+    }
+
+    /**
+     * Mỗi section có đề thi: bao nhiêu đề, bao nhiêu học viên ghi danh đã làm ít nhất 1 đề, điểm
+     * trung bình (mỗi học viên lấy điểm cao nhất từng đề trong section rồi trung bình, sau đó
+     * trung bình các học viên). Section không có đề thi bị bỏ qua — không có gì để xem điểm.
+     */
+    private List<CourseGradebookSectionRow> sectionSummaries(List<CourseSection> sections,
+            List<Quiz> quizzes, List<Enrollment> enrollments, Map<UUID, List<QuizAttempt>> attemptsByUser) {
+        Map<Long, Set<Long>> quizIdsBySection = new java.util.HashMap<>();
+        for (Quiz q : quizzes) {
+            // .getSection().getId() đọc thẳng FK trên proxy lazy, không chạm DB (xem courseGradebook).
+            quizIdsBySection.computeIfAbsent(q.getSection().getId(), k -> new java.util.HashSet<>()).add(q.getId());
+        }
+        List<CourseGradebookSectionRow> rows = new ArrayList<>();
+        for (CourseSection sec : sections) {
+            Set<Long> quizIds = quizIdsBySection.get(sec.getId());
+            if (quizIds == null || quizIds.isEmpty()) {
+                continue;
+            }
+            int attempted = 0;
+            List<BigDecimal> studentAvgs = new ArrayList<>();
+            for (Enrollment enr : enrollments) {
+                Map<Long, List<QuizAttempt>> byQuiz = attemptsByUser
+                        .getOrDefault(enr.getUser().getId(), List.of()).stream()
+                        .filter(a -> quizIds.contains(a.getQuiz().getId()))
+                        .collect(Collectors.groupingBy(a -> a.getQuiz().getId()));
+                if (byQuiz.isEmpty()) {
+                    continue;
+                }
+                attempted++;
+                List<BigDecimal> percents = byQuiz.values().stream()
+                        .map(list -> percentOf(bestAttempt(list)))
+                        .filter(Objects::nonNull).toList();
+                if (!percents.isEmpty()) {
+                    studentAvgs.add(average(percents));
+                }
+            }
+            rows.add(new CourseGradebookSectionRow(sec.getId(), sec.getTitle(), quizIds.size(), attempted,
+                    studentAvgs.isEmpty() ? null : average(studentAvgs)));
+        }
+        return rows;
+    }
+
+    /**
+     * Điểm của 1 section: mọi học viên ghi danh × mọi đề trong section (vd UNIT 1_listening có 4 bài
+     * homework thì mỗi học viên 1 dòng, 4 cột điểm + điểm trung bình section). Mỗi ô lấy lượt làm có
+     * điểm cao nhất, cùng cách tính với sổ điểm cả khóa. Cùng quyền 'report:viewlive' theo context
+     * của khóa học như {@link #courseGradebook}.
+     */
+    @Transactional(readOnly = true)
+    public SectionGradebook sectionGradebook(UUID uid, Long courseId, Long sectionId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy khóa học"));
+        permissionService.requireCapability(uid, "report:viewlive", ctxId(course.getContext()));
+        CourseSection section = courseSectionRepository.findById(sectionId)
+                .filter(s -> s.getCourse().getId().equals(courseId))
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy section trong khóa học này"));
+
+        List<Quiz> quizzes = new ArrayList<>(quizRepository.findBySectionIdIn(List.of(sectionId)));
+        quizzes.sort(Comparator.comparingInt(Quiz::getSortOrder).thenComparing(Quiz::getId));
+        List<Long> quizIds = quizzes.stream().map(Quiz::getId).toList();
+        List<QuizAttempt> attempts = quizIds.isEmpty()
+                ? List.of() : attemptRepository.findByQuizIdIn(quizIds);
+        Map<UUID, Map<Long, List<QuizAttempt>>> attemptsByUserQuiz = attempts.stream()
+                .collect(Collectors.groupingBy(QuizAttempt::getUserId,
+                        Collectors.groupingBy(a -> a.getQuiz().getId())));
+
+        List<SectionGradebookQuiz> columns = new ArrayList<>();
+        for (Quiz quiz : quizzes) {
+            BigDecimal maxScore = attempts.stream()
+                    .filter(a -> a.getQuiz().getId().equals(quiz.getId()) && a.getMaxScore() != null)
+                    .map(QuizAttempt::getMaxScore).findFirst().orElse(null);
+            columns.add(new SectionGradebookQuiz(quiz.getId(), quiz.getTitle(), maxScore));
+        }
+
+        List<SectionGradebookStudentRow> rows = new ArrayList<>();
+        for (Enrollment enr : enrollmentRepository.findByCourseId(courseId)) {
+            Map<Long, List<QuizAttempt>> byQuiz = attemptsByUserQuiz
+                    .getOrDefault(enr.getUser().getId(), Map.of());
+            List<SectionGradebookCell> cells = new ArrayList<>();
+            List<BigDecimal> percents = new ArrayList<>();
+            int attempted = 0;
+            for (Quiz quiz : quizzes) {
+                SectionGradebookCell cell = cellFor(quiz.getId(), byQuiz.getOrDefault(quiz.getId(), List.of()));
+                cells.add(cell);
+                if (cell.attempts() > 0) {
+                    attempted++;
+                }
+                if (cell.percent() != null) {
+                    percents.add(cell.percent());
+                }
+            }
+            rows.add(new SectionGradebookStudentRow(enr.getUser().getId(), enr.getUser().getFullName(),
+                    enr.getUser().getUsername(), cells, attempted,
+                    percents.isEmpty() ? null : average(percents)));
+        }
+        rows.sort(Comparator.comparing(SectionGradebookStudentRow::userName,
+                Comparator.nullsLast(Comparator.naturalOrder())));
+
+        return new SectionGradebook(courseId, course.getTitle(), section.getId(), section.getTitle(),
+                columns, rows);
+    }
+
+    private SectionGradebookCell cellFor(Long quizId, List<QuizAttempt> attempts) {
+        QuizAttempt best = bestAttempt(attempts);
+        if (best == null) {
+            return new SectionGradebookCell(quizId, null, null, null, null, 0, false);
+        }
+        BigDecimal percent = percentOf(best);
+        return new SectionGradebookCell(quizId, best.getRawScore(), best.getMaxScore(),
+                percent == null ? null : scale(percent), best.getBandScore(), attempts.size(),
+                best.getRawScore() != null);
+    }
+
+    /** Lượt làm có điểm cao nhất; lượt chưa có điểm xếp sau mọi lượt đã có điểm. */
+    static QuizAttempt bestAttempt(List<QuizAttempt> attempts) {
+        return attempts.stream()
+                .max(Comparator.comparing(a -> a.getRawScore() != null
+                        ? a.getRawScore() : BigDecimal.valueOf(-1)))
+                .orElse(null);
+    }
+
+    /** Phần trăm điểm của 1 lượt làm, null nếu chưa có điểm hoặc không có điểm tối đa. */
+    static BigDecimal percentOf(QuizAttempt a) {
+        if (a == null || a.getRawScore() == null || a.getMaxScore() == null
+                || a.getMaxScore().compareTo(BigDecimal.ZERO) <= 0) {
+            return null;
+        }
+        return a.getRawScore().divide(a.getMaxScore(), 6, RoundingMode.HALF_UP)
+                .multiply(BigDecimal.valueOf(100));
+    }
+
+    private BigDecimal average(List<BigDecimal> values) {
+        return scale(values.stream().reduce(BigDecimal.ZERO, BigDecimal::add)
+                .divide(BigDecimal.valueOf(values.size()), 4, RoundingMode.HALF_UP));
     }
 
     // ---- Admin system analytics ----
