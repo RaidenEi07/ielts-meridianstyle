@@ -296,7 +296,7 @@ function CourseEditForm({
             href={`/admin/courses/${course.id}/gradebook`}
             className="flex items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-accent hover:bg-soft"
           >
-            <BarChart3 className="h-4 w-4" /> Sổ điểm
+            <BarChart3 className="h-4 w-4" /> Học viên & điểm số
           </Link>
           <DistributeCourseButton courseId={course.id} token={token} />
           <button type="button" onClick={remove} className="text-sm text-red">

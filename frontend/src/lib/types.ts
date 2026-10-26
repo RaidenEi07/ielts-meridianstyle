@@ -605,6 +605,8 @@ export interface CourseGradebookStudentRow {
   userId: string;
   userName: string;
   username: string;
+  email: string | null;
+  enrolledAt: string | null;
   quizzesAttempted: number;
   totalQuizzes: number;
   avgPercent: number | null;
@@ -625,6 +627,15 @@ export interface CourseGradebookQuizRow {
   passRate: number | null;
 }
 
+/** 1 section có đề thi trong tổng quan điểm theo section của khóa học. */
+export interface CourseGradebookSectionRow {
+  sectionId: number;
+  sectionTitle: string;
+  quizCount: number;
+  studentsAttempted: number;
+  avgPercent: number | null;
+}
+
 export interface CourseGradebook {
   courseId: number;
   courseTitle: string;
@@ -634,6 +645,44 @@ export interface CourseGradebook {
   avgScorePercent: number | null;
   students: CourseGradebookStudentRow[];
   quizzes: CourseGradebookQuizRow[];
+  sections: CourseGradebookSectionRow[];
+}
+
+/** Cột của bảng điểm 1 section = 1 đề thi trong section đó. */
+export interface SectionGradebookQuiz {
+  quizId: number;
+  quizTitle: string;
+  maxScore: number | null;
+}
+
+/** 1 ô điểm (1 học viên × 1 đề). attempts = 0: chưa làm; attempts > 0 mà graded = false:
+ * đã làm nhưng chưa có điểm (chưa nộp hoặc đang chờ chấm). */
+export interface SectionGradebookCell {
+  quizId: number;
+  rawScore: number | null;
+  maxScore: number | null;
+  percent: number | null;
+  bandScore: number | null;
+  attempts: number;
+  graded: boolean;
+}
+
+export interface SectionGradebookStudentRow {
+  userId: string;
+  userName: string;
+  username: string;
+  cells: SectionGradebookCell[];
+  quizzesAttempted: number;
+  avgPercent: number | null;
+}
+
+export interface SectionGradebook {
+  courseId: number;
+  courseTitle: string;
+  sectionId: number;
+  sectionTitle: string;
+  quizzes: SectionGradebookQuiz[];
+  students: SectionGradebookStudentRow[];
 }
 
 // ---- Admin tools (Giai đoạn 6) ----
@@ -905,4 +954,89 @@ export interface VocabCardInput {
   text: string;
   acceptedAnswer: string | null;
   audioUrl: string;
+}
+
+// ---- Lớp học (nhóm học viên) + thao tác hàng loạt (đợt 2) ----
+
+export interface ClassSummary {
+  id: number;
+  name: string;
+  description: string | null;
+  memberCount: number;
+  courseCount: number;
+}
+
+export interface ClassMember {
+  userId: string;
+  username: string;
+  fullName: string;
+  email: string;
+  status: "ACTIVE" | "SUSPENDED" | "PENDING";
+}
+
+export interface ClassCourse {
+  courseId: number;
+  title: string;
+  status: string;
+}
+
+export interface ClassDetail {
+  id: number;
+  name: string;
+  description: string | null;
+  members: ClassMember[];
+  courses: ClassCourse[];
+}
+
+export interface AddMembersResult {
+  added: number;
+  alreadyInClass: number;
+  notFound: number;
+  newlyEnrolled: number;
+}
+
+export interface LinkCourseResult {
+  memberCount: number;
+  newlyEnrolled: number;
+  alreadyEnrolled: number;
+}
+
+export interface BulkEnrollResult {
+  enrolled: number;
+  alreadyEnrolled: number;
+  notFound: number;
+}
+
+export interface BulkStatusResult {
+  updated: number;
+  skippedSelf: number;
+  notFound: number;
+}
+
+// ---- Nhập tài khoản từ file Excel/CSV (đợt 3) ----
+
+export interface ImportRow {
+  fullName: string;
+  email: string;
+  username?: string;
+}
+
+export interface ImportRowResult {
+  line: number;
+  fullName: string | null;
+  email: string | null;
+  username: string | null;
+  /** Mật khẩu ngẫu nhiên của tài khoản MỚI tạo — chỉ có ở đây, đúng 1 lần. */
+  password: string | null;
+  status: "CREATED" | "EXISTING" | "ERROR";
+  message: string | null;
+}
+
+export interface ImportUsersResult {
+  created: number;
+  existing: number;
+  errors: number;
+  addedToClass: number;
+  newlyEnrolled: number;
+  rows: ImportRowResult[];
 }

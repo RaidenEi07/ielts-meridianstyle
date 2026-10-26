@@ -18,6 +18,15 @@ import type {
   CourseAudienceGroup,
   CourseDetail,
   CourseGradebook,
+  AddMembersResult,
+  BulkEnrollResult,
+  BulkStatusResult,
+  ClassDetail,
+  ClassSummary,
+  ImportRow,
+  ImportUsersResult,
+  LinkCourseResult,
+  SectionGradebook,
   CourseProgress,
   CourseSummary,
   DistributeResult,
@@ -566,6 +575,14 @@ export const enrollmentApi = {
       token,
     }),
 
+  /** Ghi danh nhiều tài khoản đã chọn vào 1 khóa (bỏ qua người đã ghi danh). */
+  bulkEnroll: (token: string, userIds: string[], courseId: number) =>
+    apiFetch<BulkEnrollResult>("/api/enrollments/bulk", {
+      method: "POST",
+      body: { userIds, courseId },
+      token,
+    }),
+
   unenrollAsAdmin: (token: string, enrollmentId: number) =>
     apiFetch<void>(`/api/enrollments/admin/${enrollmentId}`, {
       method: "DELETE",
@@ -908,6 +925,12 @@ export const reportApi = {
 
   courseGradebook: (token: string, courseId: number) =>
     apiFetch<CourseGradebook>(`/api/admin/courses/${courseId}/gradebook`, { token }),
+
+  sectionGradebook: (token: string, courseId: number, sectionId: number) =>
+    apiFetch<SectionGradebook>(
+      `/api/admin/courses/${courseId}/sections/${sectionId}/gradebook`,
+      { token },
+    ),
 };
 
 // ---- Roster giáo viên–học sinh ----
@@ -988,6 +1011,14 @@ export const notificationApi = {
 };
 
 export const adminUserApi = {
+  /** Nhập từ file Excel/CSV (đã đọc ở trình duyệt, tối đa 200 dòng mỗi lần). Mật khẩu do hệ thống tự sinh, trả về 1 lần. */
+  importFile: (token: string, req: { rows: ImportRow[]; classId?: number; courseId?: number }) =>
+    apiFetch<ImportUsersResult>("/api/admin/users/import", {
+      method: "POST",
+      body: req,
+      token,
+    }),
+
   bulk: (
     token: string,
     users: { email: string; fullName: string; password?: string }[],
@@ -1105,6 +1136,14 @@ export const usersAdminApi = {
     apiFetch<AdminUser>(`/api/admin/users/${userId}`, {
       method: "PATCH",
       body: req,
+      token,
+    }),
+
+  /** Khóa (SUSPENDED) / mở khóa (ACTIVE) nhiều tài khoản cùng lúc. */
+  bulkStatus: (token: string, userIds: string[], status: "ACTIVE" | "SUSPENDED") =>
+    apiFetch<BulkStatusResult>("/api/admin/users/bulk-status", {
+      method: "PATCH",
+      body: { userIds, status },
       token,
     }),
 
@@ -1435,4 +1474,44 @@ export const gameApi = {
     apiFetch<LeaderboardEntry[]>(`/api/game/leaderboard?limit=${limit}`, { token }),
 
   badges: (token: string) => apiFetch<Badge[]>("/api/game/badges", { token }),
+};
+
+export const classApi = {
+  list: (token: string, courseId?: number) =>
+    apiFetch<ClassSummary[]>(
+      courseId ? `/api/admin/classes?courseId=${courseId}` : "/api/admin/classes",
+      { token },
+    ),
+
+  detail: (token: string, id: number) =>
+    apiFetch<ClassDetail>(`/api/admin/classes/${id}`, { token }),
+
+  create: (token: string, req: { name: string; description?: string }) =>
+    apiFetch<ClassSummary>("/api/admin/classes", { method: "POST", body: req, token }),
+
+  update: (token: string, id: number, req: { name: string; description?: string }) =>
+    apiFetch<ClassSummary>(`/api/admin/classes/${id}`, { method: "PUT", body: req, token }),
+
+  remove: (token: string, id: number) =>
+    apiFetch<void>(`/api/admin/classes/${id}`, { method: "DELETE", token }),
+
+  addMembers: (token: string, id: number, userIds: string[]) =>
+    apiFetch<AddMembersResult>(`/api/admin/classes/${id}/members`, {
+      method: "POST",
+      body: { userIds },
+      token,
+    }),
+
+  removeMember: (token: string, id: number, userId: string) =>
+    apiFetch<void>(`/api/admin/classes/${id}/members/${userId}`, { method: "DELETE", token }),
+
+  linkCourse: (token: string, id: number, courseId: number) =>
+    apiFetch<LinkCourseResult>(`/api/admin/classes/${id}/courses`, {
+      method: "POST",
+      body: { courseId },
+      token,
+    }),
+
+  unlinkCourse: (token: string, id: number, courseId: number) =>
+    apiFetch<void>(`/api/admin/classes/${id}/courses/${courseId}`, { method: "DELETE", token }),
 };

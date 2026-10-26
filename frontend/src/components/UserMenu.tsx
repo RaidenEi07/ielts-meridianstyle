@@ -7,6 +7,7 @@ import {
   BarChart3,
   BookOpen,
   ChevronDown,
+  GraduationCap,
   History,
   LayoutDashboard,
   LogOut,
@@ -42,6 +43,7 @@ const MANAGE_ITEMS: MenuItem[] = [
   { icon: BookOpen, label: "Ngân hàng câu hỏi", href: "/teacher/question-bank", capability: "question:manage" },
   { icon: Settings, label: "Cấu hình hệ thống", href: "/admin/settings", capability: "system:manage" },
   { icon: Users, label: "Quản lý tài khoản", href: "/admin/users", capability: "user:manage" },
+  { icon: GraduationCap, label: "Lớp học", href: "/admin/classes", capability: "enrollment:manage" },
   {
     icon: Network,
     label: "Web con",

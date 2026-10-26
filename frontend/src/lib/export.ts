@@ -280,3 +280,4 @@ export async function downloadAttemptPdf(params: {
 
   await htmlToPdf(html, 900, `bai-lam-${safeFilePart(studentName)}-${safeFilePart(quizTitle)}-lot${attemptNumber}.pdf`);
 }
+

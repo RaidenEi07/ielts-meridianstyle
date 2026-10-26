@@ -9,6 +9,8 @@ import type { AdminUser, RoleOption, StudentSummary } from "@/lib/types";
 import { useAuthStore } from "@/store/auth";
 import { useConfirm } from "@/store/confirm";
 import { useToast } from "@/store/toast";
+import { AddToClassDialog, AddToCourseDialog } from "./BulkDialogs";
+import { ImportUsersDialog } from "./ImportUsersDialog";
 
 type RoleTab = "all" | "student" | "teacher";
 
@@ -49,6 +51,12 @@ export default function AdminUsersPage() {
   const [rosters, setRosters] = useState<Record<string, StudentSummary[]>>({});
   const [editingUserId, setEditingUserId] = useState<string | null>(null);
   const [page, setPage] = useState(0);
+  const [dialog, setDialog] = useState<null | "course" | "class" | "import">(null);
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const systemCapabilities = useAuthStore((s) => s.systemCapabilities);
+  // Thêm vào khóa / lớp cần enrollment:manage; nhập từ file cần user:bulkupload (admin có đủ cả hai).
+  const canEnroll = systemCapabilities.includes("enrollment:manage");
+  const canBulkUpload = systemCapabilities.includes("user:bulkupload");
 
   useEffect(() => {
     if (!hydrated) return;
@@ -108,17 +116,46 @@ export default function AdminUsersPage() {
     });
   }
 
-  // So khớp theo từng id chứ không so số lượng: sau khi tìm kiếm, những học sinh đã tick ở lần trước có thể đang bị ẩn,
+  // So khớp theo từng id chứ không so số lượng: sau khi tìm kiếm, những tài khoản đã tick ở lần trước có thể đang bị ẩn,
   // nên "đã chọn N = đang hiện N" không có nghĩa mọi dòng đang hiện đều đã được chọn.
-  const allStudentsSelected = students.length > 0 && students.every((s) => selected.has(s.id));
+  // "Chọn tất cả" lấy mọi tài khoản đang lọc (cả các trang khác), không chỉ trang đang xem.
+  const allVisibleSelected = visibleUsers.length > 0 && visibleUsers.every((u) => selected.has(u.id));
 
   function toggleSelectAll() {
     setSelected((prev) => {
       const next = new Set(prev);
-      if (allStudentsSelected) students.forEach((s) => next.delete(s.id));
-      else students.forEach((s) => next.add(s.id));
+      if (allVisibleSelected) visibleUsers.forEach((u) => next.delete(u.id));
+      else visibleUsers.forEach((u) => next.add(u.id));
       return next;
     });
+  }
+
+  async function bulkStatus(status: "ACTIVE" | "SUSPENDED") {
+    if (selected.size === 0) return;
+    const verb = status === "SUSPENDED" ? "Khóa" : "Mở khóa";
+    const note = status === "SUSPENDED" ? " Họ sẽ không đăng nhập được cho tới khi được mở khóa." : "";
+    const ok = await confirm(`${verb} ${selected.size} tài khoản đã chọn?${note}`, {
+      title: `${verb} tài khoản`,
+      confirmLabel: verb,
+      danger: status === "SUSPENDED",
+    });
+    if (!ok) return;
+    setError(null);
+    setBulkBusy(true);
+    try {
+      const r = await usersAdminApi.bulkStatus(token, [...selected], status);
+      const parts = [`${verb} ${r.updated} tài khoản`];
+      if (r.skippedSelf > 0) parts.push("bỏ qua tài khoản của chính bạn");
+      toast.success(parts.join(", "));
+      setSelected(new Set());
+      refresh();
+    } catch (err) {
+      const msg = err instanceof ApiError ? err.message : `${verb} thất bại`;
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setBulkBusy(false);
+    }
   }
 
   async function assignSelected() {
@@ -217,13 +254,32 @@ export default function AdminUsersPage() {
       <main className="mx-auto max-w-6xl space-y-6 px-6 py-8">
         <div className="flex items-center justify-between">
           <h1 className="text-xl font-bold">Tài khoản ({users.length})</h1>
-          <button
-            type="button"
-            onClick={() => setCreating((v) => !v)}
-            className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white"
-          >
-            {creating ? "Đóng" : "+ Tạo tài khoản mới"}
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            {canEnroll && (
+              <Link
+                href="/admin/classes"
+                className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-accent hover:bg-soft"
+              >
+                Quản lý lớp học
+              </Link>
+            )}
+            {canBulkUpload && (
+              <button
+                type="button"
+                onClick={() => setDialog("import")}
+                className="rounded-lg border border-border bg-surface px-4 py-2 text-sm font-semibold text-accent hover:bg-soft"
+              >
+                Nhập từ file Excel
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setCreating((v) => !v)}
+              className="rounded-lg bg-primary-fill px-4 py-2 text-sm font-semibold text-white"
+            >
+              {creating ? "Đóng" : "+ Tạo tài khoản mới"}
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -282,9 +338,57 @@ export default function AdminUsersPage() {
           />
         )}
 
-        {tab === "student" && selected.size > 0 && (
-          <div className="flex flex-wrap items-center gap-3 rounded-lg bg-primary-soft p-3 text-sm">
-            <span className="font-medium text-primary">{selected.size} học sinh đã chọn</span>
+        {selected.size > 0 && (
+          <div
+            data-testid="users-bulk-bar"
+            className="flex flex-wrap items-center gap-3 rounded-lg bg-primary-soft p-3 text-sm"
+          >
+            <span className="font-medium text-primary">{selected.size} tài khoản đã chọn</span>
+            <button
+              type="button"
+              onClick={() => setSelected(new Set())}
+              className="text-xs font-semibold text-muted underline hover:text-text"
+            >
+              Bỏ chọn
+            </button>
+            <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
+            {canEnroll && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setDialog("course")}
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold hover:bg-soft"
+                >
+                  Thêm vào khóa học
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDialog("class")}
+                  className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold hover:bg-soft"
+                >
+                  Thêm vào lớp
+                </button>
+              </>
+            )}
+            <button
+              type="button"
+              onClick={() => bulkStatus("SUSPENDED")}
+              disabled={bulkBusy}
+              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold text-red hover:bg-soft disabled:opacity-60"
+            >
+              Khóa
+            </button>
+            <button
+              type="button"
+              onClick={() => bulkStatus("ACTIVE")}
+              disabled={bulkBusy}
+              className="rounded-lg border border-border bg-surface px-3 py-1.5 text-sm font-semibold hover:bg-soft disabled:opacity-60"
+            >
+              Mở khóa
+            </button>
+            {tab === "student" && (
+              <>
+            <span className="mx-1 hidden h-5 w-px bg-border sm:block" />
             <select
               value={assignTeacherId}
               onChange={(e) => setAssignTeacherId(e.target.value)}
@@ -305,6 +409,8 @@ export default function AdminUsersPage() {
             >
               {assigning ? "Đang gán…" : "Gán cho giáo viên"}
             </button>
+              </>
+            )}
           </div>
         )}
 
@@ -312,15 +418,14 @@ export default function AdminUsersPage() {
           <table className="w-full text-left text-sm">
             <thead className="bg-soft text-muted">
               <tr>
-                {tab === "student" && (
-                  <th className="px-4 py-2.5">
-                    <input
-                      type="checkbox"
-                      checked={allStudentsSelected}
-                      onChange={toggleSelectAll}
-                    />
-                  </th>
-                )}
+                <th className="px-4 py-2.5">
+                  <input
+                    type="checkbox"
+                    checked={allVisibleSelected}
+                    onChange={toggleSelectAll}
+                    aria-label="Chọn tất cả tài khoản đang lọc"
+                  />
+                </th>
                 <th className="px-4 py-2.5 font-medium">Tên đăng nhập</th>
                 <th className="px-4 py-2.5 font-medium">Email</th>
                 <th className="px-4 py-2.5 font-medium">Họ tên</th>
@@ -341,15 +446,14 @@ export default function AdminUsersPage() {
                 return (
                   <Fragment key={u.id}>
                   <tr className="border-t border-border align-top">
-                    {tab === "student" && (
-                      <td className="px-4 py-3">
-                        <input
-                          type="checkbox"
-                          checked={selected.has(u.id)}
-                          onChange={() => toggleSelected(u.id)}
-                        />
-                      </td>
-                    )}
+                    <td className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        checked={selected.has(u.id)}
+                        onChange={() => toggleSelected(u.id)}
+                        aria-label={`Chọn ${u.username}`}
+                      />
+                    </td>
                     <td className="px-4 py-3 font-medium">{u.username}</td>
                     <td className="px-4 py-3 text-muted">{u.email}</td>
                     <td className="px-4 py-3">{u.fullName}</td>
@@ -448,7 +552,7 @@ export default function AdminUsersPage() {
                   {editingUserId === u.id && (
                     <tr className="border-t border-border">
                       <td
-                        colSpan={(tab === "student" ? 1 : 0) + 6 + (tab === "teacher" ? 1 : 0) + 1}
+                        colSpan={1 + 6 + (tab === "teacher" ? 1 : 0) + 1}
                         className="bg-bg px-4 py-4"
                       >
                         <EditUserForm
@@ -469,6 +573,30 @@ export default function AdminUsersPage() {
             </tbody>
           </table>
         </div>
+        {dialog === "course" && (
+          <AddToCourseDialog
+            token={token}
+            userIds={[...selected]}
+            onClose={() => setDialog(null)}
+            onDone={() => setSelected(new Set())}
+          />
+        )}
+        {dialog === "class" && (
+          <AddToClassDialog
+            token={token}
+            userIds={[...selected]}
+            onClose={() => setDialog(null)}
+            onDone={() => setSelected(new Set())}
+          />
+        )}
+        {dialog === "import" && (
+          <ImportUsersDialog
+            token={token}
+            canAssign={canEnroll}
+            onClose={() => setDialog(null)}
+            onDone={refresh}
+          />
+        )}
         {visibleUsers.length > PAGE_SIZE && (
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted">
