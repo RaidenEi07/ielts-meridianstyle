@@ -7,6 +7,7 @@ import { Check } from "lucide-react";
 import { DubbingEntryLink } from "@/components/DubbingEntryLink";
 import { HomeworkMaterialsList } from "@/components/HomeworkMaterialsList";
 import { LessonVideoPlayer } from "@/components/LessonVideoPlayer";
+import { NotEnrolledNotice } from "@/components/NotEnrolledNotice";
 import { KidsVoiceRecorder } from "@/components/kids/KidsVoiceRecorder";
 import { SiteHeader } from "@/components/SiteHeader";
 import { VocabPracticeList } from "@/components/VocabPracticeList";
@@ -37,18 +38,21 @@ export default function VaoHocLessonPage() {
     catalogApi.course(courseId, accessToken).then(setCourse).catch((e) => setError(e.message));
   }, [hydrated, accessToken, courseId]);
 
+  // Chỉ người đã được ghi danh (hoặc phụ trách khóa) mới tải nội dung buổi học.
+  const canAccess = course?.canAccessContent === true;
+
   useEffect(() => {
-    if (!hydrated || !accessToken || !Number.isFinite(courseId)) return;
+    if (!hydrated || !accessToken || !canAccess || !Number.isFinite(courseId)) return;
     quizApi
       .courseQuizzes(courseId, accessToken)
       .then((all) => setQuizzes(all.filter((q) => q.sectionId === sectionId)))
       .catch(() => {});
-  }, [hydrated, accessToken, courseId, sectionId]);
+  }, [hydrated, accessToken, canAccess, courseId, sectionId]);
 
   useEffect(() => {
-    if (!hydrated || !accessToken || !Number.isFinite(sectionId)) return;
+    if (!hydrated || !accessToken || !canAccess || !Number.isFinite(sectionId)) return;
     checkpointApi.listForSection(accessToken, sectionId).then(setCheckpoints).catch(() => {});
-  }, [hydrated, accessToken, sectionId]);
+  }, [hydrated, accessToken, canAccess, sectionId]);
 
   function handleCheckpointAnswered(checkpointId: number) {
     setCheckpoints((prev) => prev.map((c) => (c.id === checkpointId ? { ...c, answered: true } : c)));
@@ -144,6 +148,21 @@ export default function VaoHocLessonPage() {
       <div className="min-h-screen">
         <SiteHeader />
         <div className="mx-auto max-w-3xl px-6 py-20 text-center text-muted">Đang tải…</div>
+      </div>
+    );
+  }
+
+  if (!canAccess) {
+    return (
+      <div className="min-h-screen">
+        <SiteHeader />
+        <div className="mx-auto max-w-3xl px-6 py-10">
+          <Link href={`/vao-hoc/${params.group}/${courseId}`} className="text-sm text-accent">
+            ← {course.title}
+          </Link>
+          <h1 className="mt-2 text-2xl font-bold">{section?.title ?? "Bài học"}</h1>
+          <NotEnrolledNotice loggedIn={!!accessToken} className="mt-6" />
+        </div>
       </div>
     );
   }

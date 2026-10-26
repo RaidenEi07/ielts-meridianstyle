@@ -4,9 +4,11 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Check, CheckCircle2, ChevronDown, Lock } from "lucide-react";
 import { useEffect, useState } from "react";
+import { NotEnrolledNotice } from "@/components/NotEnrolledNotice";
 import { SiteHeader } from "@/components/SiteHeader";
 import { VocabPracticeList } from "@/components/VocabPracticeList";
-import { ApiError, authApi, catalogApi, enrollmentApi, quizApi } from "@/lib/api";
+import { ApiError, authApi, catalogApi, quizApi } from "@/lib/api";
+import { audienceToGroupSlug } from "@/lib/audienceGroups";
 import { formatPrice } from "@/lib/format";
 import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 import type { CourseDetail, QuizSummary } from "@/lib/types";
@@ -21,13 +23,9 @@ export default function CourseDetailPage() {
   const { accessToken, hydrated, loadMe, hasCapability } = useAuthStore();
   const [course, setCourse] = useState<CourseDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  // Tự ghi danh chỉ còn áp dụng cho khóa Trẻ em/Tiểu học (miễn phí, mở sẵn) —
-  // khóa IELTS bắt buộc admin/giáo viên phụ trách ghi danh, không hiện nút
-  // này nữa (xem khối thông báo thay thế bên dưới JSX nút).
-  const [enrollState, setEnrollState] = useState<
-    "idle" | "loading" | "done" | "already"
-  >("idle");
-  const [enrollMsg, setEnrollMsg] = useState<string | null>(null);
+  // Học viên không tự ghi danh nữa (mọi khóa, kể cả Trẻ em/Tiểu học) — giáo viên
+  // hoặc quản trị viên ghi danh cho họ. course.canAccessContent cho biết người
+  // xem đã được ghi danh (hoặc phụ trách khóa) hay chỉ xem được giới thiệu.
   const [showAllSections, setShowAllSections] = useState(false);
   const [pendingScrollSectionId, setPendingScrollSectionId] = useState<number | null>(null);
   const [expandedSections, setExpandedSections] = useState<Set<number>>(new Set());
@@ -45,10 +43,11 @@ export default function CourseDetailPage() {
     }
   }, [pendingScrollSectionId, showAllSections]);
 
+  const canAccessContent = course?.canAccessContent === true;
   useEffect(() => {
-    if (!hydrated || !accessToken) return;
+    if (!hydrated || !accessToken || !canAccessContent) return;
     quizApi.courseQuizzes(courseId, accessToken).then(setQuizzes).catch(() => {});
-  }, [hydrated, accessToken, courseId]);
+  }, [hydrated, accessToken, courseId, canAccessContent]);
 
   useEffect(() => {
     if (!hydrated || !accessToken) return;
@@ -69,43 +68,6 @@ export default function CourseDetailPage() {
       .then((caps) => setCanManageThisCourse(caps.includes("course:manage")))
       .catch(() => {});
   }, [hydrated, accessToken, courseId]);
-
-  useEffect(() => {
-    if (!hydrated || !accessToken || course?.audienceGroup === "IELTS") return;
-    enrollmentApi
-      .mine(accessToken)
-      .then((enrollments) => {
-        if (enrollments.some((e) => e.courseId === courseId)) {
-          setEnrollState("already");
-        }
-      })
-      .catch(() => {});
-  }, [hydrated, accessToken, courseId, course?.audienceGroup]);
-
-  async function handleEnroll() {
-    if (!accessToken) {
-      router.push("/login");
-      return;
-    }
-    setEnrollState("loading");
-    setEnrollMsg(null);
-    try {
-      await enrollmentApi.enroll(courseId, accessToken);
-      setEnrollState("done");
-      setEnrollMsg("Ghi danh thành công! Vào bảng điều khiển để bắt đầu học.");
-      toast.success("Ghi danh thành công!");
-    } catch (err) {
-      if (err instanceof ApiError && err.status === 409) {
-        setEnrollState("already");
-        setEnrollMsg("Bạn đã ghi danh khóa học này rồi.");
-      } else {
-        setEnrollState("idle");
-        const msg = err instanceof ApiError ? err.message : "Ghi danh thất bại";
-        setEnrollMsg(msg);
-        toast.error(msg);
-      }
-    }
-  }
 
   function jumpToSection(id: number) {
     setShowAllSections(true);
@@ -317,6 +279,11 @@ export default function CourseDetailPage() {
                                   </Link>{" "}
                                   để xem nội dung của section này.
                                 </p>
+                              ) : !canAccessContent ? (
+                                <p className="flex items-center gap-2 text-sm text-muted">
+                                  <Lock className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                                  Nội dung buổi này dành cho học viên đã được ghi danh.
+                                </p>
                               ) : (
                                 <>
                                   {quizzes === null ? (
@@ -411,49 +378,24 @@ export default function CourseDetailPage() {
               {course.enrolledCount} học viên đã ghi danh
             </p>
 
-            {course.audienceGroup === "IELTS" ? (
-              // Khóa IELTS không cho tự ghi danh nữa — chỉ admin/giáo viên
-              // phụ trách mới cấp quyền truy cập (xem admin/users hoặc trang
-              // "Học sinh của tôi" của giáo viên). Khóa Trẻ em/Tiểu học vẫn
-              // tự ghi danh được (miễn phí, mở sẵn) — xem nhánh else.
-              <p className="mt-5 rounded-lg border border-border bg-soft px-4 py-3 text-sm text-muted">
-                Liên hệ giáo viên hoặc quản trị viên để được ghi danh vào khóa học này.
-              </p>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={handleEnroll}
-                  disabled={enrollState === "loading" || enrollState === "done"}
-                  className="mt-5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-accent-fill py-3 font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                >
-                  {enrollState === "loading"
-                    ? "Đang xử lý…"
-                    : enrollState === "done"
-                      ? (
-                        <>
-                          <CheckCircle2 className="h-4 w-4" /> Đã ghi danh
-                        </>
-                      )
-                      : enrollState === "already"
-                        ? "Đã ghi danh trước đó"
-                        : hydrated && !accessToken
-                          ? "Đăng nhập để ghi danh"
-                          : "Ghi danh ngay"}
-                </button>
-
-                {enrollMsg && (
-                  <p
-                    className={`mt-3 text-sm ${
-                      enrollState === "done" || enrollState === "already"
-                        ? "text-green"
-                        : "text-red"
-                    }`}
+            {/* Học viên không tự ghi danh — giáo viên/quản trị viên ghi danh cho họ. */}
+            {!hydrated ? null : canAccessContent ? (
+              <div data-testid="course-access-granted" className="mt-5 space-y-3">
+                <p className="flex items-center gap-2 rounded-lg bg-green-soft px-4 py-3 text-sm font-medium text-green">
+                  <CheckCircle2 className="h-4 w-4 shrink-0" aria-hidden />
+                  Bạn đã có quyền vào học khóa này.
+                </p>
+                {audienceToGroupSlug(course.audienceGroup) && (
+                  <Link
+                    href={`/vao-hoc/${audienceToGroupSlug(course.audienceGroup)}/${courseId}`}
+                    className="flex w-full items-center justify-center rounded-lg bg-accent-fill py-3 font-semibold text-white transition-opacity hover:opacity-90"
                   >
-                    {enrollMsg}
-                  </p>
+                    Vào học →
+                  </Link>
                 )}
-              </>
+              </div>
+            ) : (
+              <NotEnrolledNotice loggedIn={!!accessToken} className="mt-5" />
             )}
 
             <Link

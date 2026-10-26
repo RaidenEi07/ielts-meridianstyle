@@ -163,6 +163,8 @@ export interface CourseDetail extends CourseSummary {
   descriptionHtml: string | null;
   objectives: string[];
   prerequisites: string | null;
+  /** Người xem đã được ghi danh (hoặc phụ trách khóa) — false thì chỉ có giới thiệu + tên các buổi, không có video. */
+  canAccessContent: boolean;
 }
 
 export interface Enrollment {

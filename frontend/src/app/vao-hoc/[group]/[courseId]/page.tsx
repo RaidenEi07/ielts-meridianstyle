@@ -4,8 +4,9 @@ import Link from "next/link";
 import { notFound, useParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Check, Lock, Search } from "lucide-react";
+import { NotEnrolledNotice } from "@/components/NotEnrolledNotice";
 import { SiteHeader } from "@/components/SiteHeader";
-import { ApiError, authApi, catalogApi, enrollmentApi, progressApi } from "@/lib/api";
+import { authApi, catalogApi, progressApi } from "@/lib/api";
 import { groupLabel, isGroupSlug } from "@/lib/audienceGroups";
 import { stripInlineTextColors } from "@/lib/sanitizeHtml";
 import type { CourseDetail, Section } from "@/lib/types";
@@ -29,14 +30,8 @@ export default function VaoHocCoursePage() {
       .catch((e) => setError(e.message));
   }, [hydrated, accessToken, courseId]);
 
-  // Ghi danh ngầm (không hiện nút "Ghi danh" cho trẻ em/tiểu học) để bài luyện
-  // tập (quiz gắn theo section) chạy được — AttemptService yêu cầu đã ghi danh.
-  useEffect(() => {
-    if (!hydrated || !accessToken || !Number.isFinite(courseId)) return;
-    enrollmentApi.enroll(courseId, accessToken).catch((e) => {
-      if (e instanceof ApiError && e.status === 409) return; // đã ghi danh rồi, bỏ qua
-    });
-  }, [hydrated, accessToken, courseId]);
+  // Không còn ghi danh ngầm: học viên chỉ vào học được khi giáo viên/quản trị viên
+  // đã ghi danh cho họ (course.canAccessContent do backend tính).
 
   // Nạp systemCapabilities để biết có nên hiện nút "Chỉnh sửa khóa học" (admin/giáo viên) không.
   useEffect(() => {
@@ -118,6 +113,7 @@ export default function VaoHocCoursePage() {
     );
   }
 
+  const canAccess = course.canAccessContent;
   const total = sortedSections.length;
   const doneCount = sortedSections.filter((s) => completedSectionIds.has(s.id)).length;
   const pct = total > 0 ? Math.round((doneCount / total) * 100) : 0;
@@ -181,7 +177,11 @@ export default function VaoHocCoursePage() {
           </div>
         )}
 
-        {total > 0 && (
+        {hydrated && !canAccess && (
+          <NotEnrolledNotice loggedIn={!!accessToken} className="mt-6" />
+        )}
+
+        {canAccess && total > 0 && (
           <div className="mt-6">
             <div className="mb-1 flex items-center justify-between text-sm">
               <span className="font-medium">Tiến độ</span>
@@ -220,7 +220,7 @@ export default function VaoHocCoursePage() {
             filteredSections.map((s) => {
               const index = sortedSections.findIndex((x) => x.id === s.id);
               const completed = completedSectionIds.has(s.id);
-              const unlocked = isUnlocked(index, s);
+              const unlocked = canAccess && isUnlocked(index, s);
 
               const badge = completed ? (
                 <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-green-soft text-green">
@@ -259,7 +259,11 @@ export default function VaoHocCoursePage() {
               ) : (
                 <div
                   key={s.id}
-                  title="Hoàn thành buổi trước để mở khóa"
+                  title={
+                    canAccess
+                      ? "Hoàn thành buổi trước để mở khóa"
+                      : "Cần được ghi danh để vào học buổi này"
+                  }
                   className="flex cursor-not-allowed items-center gap-4 rounded-lg border border-border bg-surface/60 p-4 opacity-70"
                 >
                   {content}
