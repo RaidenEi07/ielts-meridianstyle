@@ -23,10 +23,13 @@ public class CatalogPublicController {
 
     private final CatalogService catalogService;
     private final CurrentUserProvider currentUser;
+    private final CourseAccessGuard accessGuard;
 
-    public CatalogPublicController(CatalogService catalogService, CurrentUserProvider currentUser) {
+    public CatalogPublicController(CatalogService catalogService, CurrentUserProvider currentUser,
+            CourseAccessGuard accessGuard) {
         this.catalogService = catalogService;
         this.currentUser = currentUser;
+        this.accessGuard = accessGuard;
     }
 
     @GetMapping("/exam-templates")
@@ -48,11 +51,16 @@ public class CatalogPublicController {
 
     @GetMapping("/courses/{id}")
     public CourseDetailDto course(@PathVariable Long id) {
-        return catalogService.getCourseDetail(id, currentUser.optionalUserId());
+        java.util.UUID viewer = currentUser.optionalUserId();
+        CourseDetailDto detail = catalogService.getCourseDetail(id, viewer);
+        // Giới thiệu + đề cương vẫn công khai; video / phụ đề chỉ cho người đã ghi danh hoặc phụ trách khóa.
+        return accessGuard.canAccessContent(viewer, id) ? detail : detail.outlineOnly();
     }
 
     @GetMapping("/courses/{id}/sections")
     public List<SectionDto> sections(@PathVariable Long id) {
-        return catalogService.listSections(id, currentUser.optionalUserId());
+        java.util.UUID viewer = currentUser.optionalUserId();
+        List<SectionDto> sections = catalogService.listSections(id, viewer);
+        return accessGuard.canAccessContent(viewer, id) ? sections : sections.stream().map(SectionDto::outline).toList();
     }
 }

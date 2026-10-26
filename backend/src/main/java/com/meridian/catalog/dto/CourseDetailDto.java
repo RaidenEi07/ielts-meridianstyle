@@ -22,7 +22,9 @@ public record CourseDetailDto(
         List<SectionDto> sections,
         String descriptionHtml,
         List<String> objectives,
-        String prerequisites) {
+        String prerequisites,
+        /** Người xem có được xem nội dung học (video, tài liệu…) hay chỉ xem giới thiệu + đề cương. */
+        boolean canAccessContent) {
 
     public static CourseDetailDto from(Course c, long enrolledCount, List<SectionDto> sections,
             List<String> objectives) {
@@ -44,6 +46,15 @@ public record CourseDetailDto(
                 sections,
                 c.getDescriptionHtml(),
                 objectives,
-                c.getPrerequisites());
+                c.getPrerequisites(),
+                true);
+    }
+
+    /** Bản cho người chưa được ghi danh: giữ giới thiệu + tên các buổi, bỏ đường dẫn video / phụ đề. */
+    public CourseDetailDto outlineOnly() {
+        return new CourseDetailDto(id, title, shortname, summary, status, coverImageUrl, price, categoryId,
+                categoryName, audienceGroup, examTemplateCode, contextId, enrolledCount,
+                sections.stream().map(SectionDto::outline).toList(), descriptionHtml, objectives,
+                prerequisites, false);
     }
 }

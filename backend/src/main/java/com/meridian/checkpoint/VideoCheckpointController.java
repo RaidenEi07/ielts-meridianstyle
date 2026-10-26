@@ -1,9 +1,11 @@
 package com.meridian.checkpoint;
 
+import com.meridian.catalog.CourseAccessGuard;
 import com.meridian.checkpoint.dto.CheckpointAnswerResultDto;
 import com.meridian.checkpoint.dto.CheckpointQuestionDto;
 import com.meridian.checkpoint.dto.VideoCheckpointDto;
 import com.meridian.checkpoint.dto.VideoCheckpointRequests;
+import com.meridian.common.ApiException;
 import com.meridian.security.CurrentUserProvider;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -22,11 +24,16 @@ public class VideoCheckpointController {
 
     private final VideoCheckpointService checkpointService;
     private final CurrentUserProvider currentUser;
+    private final CourseAccessGuard accessGuard;
+    private final SectionVideoCheckpointRepository checkpointRepository;
 
     public VideoCheckpointController(VideoCheckpointService checkpointService,
-            CurrentUserProvider currentUser) {
+            CurrentUserProvider currentUser, CourseAccessGuard accessGuard,
+            SectionVideoCheckpointRepository checkpointRepository) {
         this.checkpointService = checkpointService;
         this.currentUser = currentUser;
+        this.accessGuard = accessGuard;
+        this.checkpointRepository = checkpointRepository;
     }
 
     private UUID uid() {
@@ -35,7 +42,9 @@ public class VideoCheckpointController {
 
     @GetMapping("/sections/{id}/checkpoints")
     public List<VideoCheckpointDto> listForStudent(@PathVariable Long id) {
-        return checkpointService.listForStudent(uid(), id);
+        UUID uid = uid();
+        accessGuard.requireSectionAccess(uid, id);
+        return checkpointService.listForStudent(uid, id);
     }
 
     @PutMapping("/admin/sections/{id}/checkpoints")
@@ -46,12 +55,23 @@ public class VideoCheckpointController {
 
     @GetMapping("/checkpoints/{id}/question")
     public CheckpointQuestionDto getPlayerQuestion(@PathVariable Long id) {
+        requireCheckpointAccess(uid(), id);
         return checkpointService.getPlayerQuestion(id);
     }
 
     @PostMapping("/checkpoints/{id}/answer")
     public CheckpointAnswerResultDto submitAnswer(@PathVariable Long id,
             @RequestBody VideoCheckpointRequests.SubmitAnswer req) {
-        return checkpointService.submitAnswer(uid(), id, req.answer());
+        UUID uid = uid();
+        requireCheckpointAccess(uid, id);
+        return checkpointService.submitAnswer(uid, id, req.answer());
+    }
+
+    /** Câu hỏi chèn trong video thuộc buổi học nào thì người hỏi phải được ghi danh khóa của buổi đó. */
+    private void requireCheckpointAccess(UUID uid, Long checkpointId) {
+        Long sectionId = checkpointRepository.findById(checkpointId)
+                .map(c -> c.getSection().getId())
+                .orElseThrow(() -> ApiException.notFound("Không tìm thấy checkpoint"));
+        accessGuard.requireSectionAccess(uid, sectionId);
     }
 }

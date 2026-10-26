@@ -1,5 +1,6 @@
 package com.meridian.quiz;
 
+import com.meridian.catalog.CourseAccessGuard;
 import com.meridian.quiz.dto.AttemptDtos.AttemptPlayer;
 import com.meridian.quiz.dto.AttemptDtos.AttemptResult;
 import com.meridian.quiz.dto.AttemptDtos.AttemptSummary;
@@ -26,9 +27,11 @@ public class QuizPlayerController {
     private final QuizService quizService;
     private final AttemptService attemptService;
     private final CurrentUserProvider currentUser;
+    private final CourseAccessGuard accessGuard;
 
     public QuizPlayerController(QuizService quizService, AttemptService attemptService,
-            CurrentUserProvider currentUser) {
+            CurrentUserProvider currentUser, CourseAccessGuard accessGuard) {
+        this.accessGuard = accessGuard;
         this.quizService = quizService;
         this.attemptService = attemptService;
         this.currentUser = currentUser;
@@ -40,7 +43,7 @@ public class QuizPlayerController {
 
     @GetMapping("/api/courses/{courseId}/quizzes")
     public List<QuizDto> courseQuizzes(@PathVariable Long courseId) {
-        currentUser.require();
+        accessGuard.requireCourseAccess(currentUser.require().id(), courseId);
         return quizService.listPublishedByCourse(courseId);
     }
 

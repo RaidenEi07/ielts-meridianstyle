@@ -1,5 +1,6 @@
 package com.meridian.dubbing;
 
+import com.meridian.catalog.CourseAccessGuard;
 import com.meridian.dubbing.dto.DubbingDtos.CharacterDto;
 import com.meridian.dubbing.dto.DubbingDtos.RecordingDto;
 import com.meridian.security.CurrentUserProvider;
@@ -22,15 +23,18 @@ public class DubbingController {
 
     private final DubbingService dubbingService;
     private final CurrentUserProvider currentUser;
+    private final CourseAccessGuard accessGuard;
 
-    public DubbingController(DubbingService dubbingService, CurrentUserProvider currentUser) {
+    public DubbingController(DubbingService dubbingService, CurrentUserProvider currentUser,
+            CourseAccessGuard accessGuard) {
         this.dubbingService = dubbingService;
         this.currentUser = currentUser;
+        this.accessGuard = accessGuard;
     }
 
     @GetMapping("/sections/{sectionId}/characters")
     public List<CharacterDto> characters(@PathVariable Long sectionId) {
-        currentUser.require();
+        accessGuard.requireSectionAccess(currentUser.require().id(), sectionId);
         return dubbingService.listCharacters(sectionId);
     }
 

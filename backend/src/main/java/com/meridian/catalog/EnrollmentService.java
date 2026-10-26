@@ -43,20 +43,15 @@ public class EnrollmentService {
     }
 
     /**
-     * Tự ghi danh — CHỈ còn cho phép với khóa Trẻ em/Tiểu học (miễn phí, mở
-     * sẵn, trang "vào học" tự âm thầm ghi danh khi học sinh vào xem — không
-     * hiện nút, không cần ai duyệt). Khóa IELTS (trả phí/quản lý theo lớp)
-     * bắt buộc phải do admin hoặc giáo viên phụ trách ghi danh, không cho tự
-     * ghi danh nữa — nếu không phải 2 nhóm trên thì chặn ở đây.
+     * Tự ghi danh đã TẮT cho mọi khóa, kể cả Trẻ em/Tiểu học (Đợt 4, theo yêu cầu: chỉ quản trị viên hoặc
+     * giáo viên ghi danh). Giữ endpoint để trả thông báo rõ ràng thay vì 404; khóa không tồn tại / chưa xuất
+     * bản vẫn báo đúng lỗi đó trước.
      */
     @Transactional
     public EnrollmentDto enroll(UUID userId, EnrollmentRequests.Enroll req) {
-        Course course = getPublishedCourse(req.courseId());
-        if (course.getCategory().getAudienceGroup() == CourseAudienceGroup.IELTS) {
-            throw ApiException.forbidden(
-                    "Khóa học này cần admin hoặc giáo viên phụ trách ghi danh cho bạn.");
-        }
-        return doEnroll(requireUser(userId), course);
+        getPublishedCourse(req.courseId());
+        throw ApiException.forbidden(
+                "Khóa học này cần quản trị viên hoặc giáo viên phụ trách ghi danh cho bạn.");
     }
 
     /**
